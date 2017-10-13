@@ -1,0 +1,15 @@
+{
+  "name": "graphein",
+  "version": "0.0.0",
+  "description": "Vector drawing tool",
+  "main": "dist/graphein.js",
+  "author": "cpsdqs",
+  "license": "MIT",
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "standard": "^10.0.3",
+    "webpack": "^3.7.1"
+  }
+}
