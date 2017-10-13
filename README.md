@@ -1,4 +1,4 @@
 # Graphein
 Vector drawing tool in the browser.
 
-[Test Page](https://cpsdqs.github.io/graphein/test/)
+[Test Page](https://cpsdqs.github.io/graphein/test/index.html)
