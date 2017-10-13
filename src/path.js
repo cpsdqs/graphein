@@ -76,7 +76,7 @@ class StrokeRenderer {
       let length = path.getTotalLength()
 
       while (true) {
-        if (x > length) return Infinity
+        if (x > length) return length
         if (path.getPointAtLength(x).x >= target) {
           return x
         }
@@ -146,9 +146,9 @@ const instructionFunctions = {
 }
 
 class Instruction {
-  constructor () {
-    this.type = 0
-    this.data = []
+  constructor (type, ...data) {
+    this.type = type | 0
+    this.data = data || []
   }
 
   render (renderer) {

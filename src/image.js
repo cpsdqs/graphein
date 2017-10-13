@@ -20,6 +20,7 @@ module.exports = class Image extends Layer {
   }
 
   render (ctx) {
+    ctx.clearRect(0, 0, this.width, this.height)
     ctx.save()
     ctx.beginPath()
     ctx.rect(0, 0, this.width, this.height)
