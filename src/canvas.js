@@ -6,7 +6,7 @@ class Canvas extends window.HTMLElement {
     super()
 
     this.canvas = document.createElement('canvas')
-    this.ctx = this.canvas.getContext('2d')
+    this.gl = this.canvas.getContext('webgl')
 
     this.brush = new Brush()
     this.brush.bind(this.canvas)
@@ -35,7 +35,13 @@ class Canvas extends window.HTMLElement {
 
   render () {
     let start = performance.now()
-    this.image.render(this.ctx)
+
+    this.gl.clearColor(1, 1, .9, 1)
+    this.gl.viewport(0, 0, this.image.width, this.image.height)
+    this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
+    this.gl.enable(this.gl.DEPTH_TEST)
+    this.image.render(this.gl)
+
     let end = performance.now()
     console.log(`Rendered in ${end - start}ms`)
   }

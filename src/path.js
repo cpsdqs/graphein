@@ -1,162 +1,249 @@
+const { mat4 } = require('gl-matrix')
+const bezier = require('adaptive-bezier-curve')
+const getNormals = require('polyline-normals')
+const createBuffer = require('gl-buffer')
+const createShader = require('gl-shader')
+const createVAO = require('gl-vao')
 const Layer = require('./layer')
 const Color = require('./color')
 
-// TODO: redo properly
-
-// reuse svg elements
-let basePath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-let widthL = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-let widthR = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-
 class StrokeRenderer {
-  constructor () {
-    this.path = []
-    this.widthL = [['M', 0, 0]]
-    this.widthR = [['M', 0, 0]]
+  constructor (gl, transform, color) {
+    this.currentPath = []
+    this.paths = [this.currentPath]
+    this.widthL = [[0, 0]]
+    this.widthR = [[0, 0]]
     this.cursor = [0, 0]
     this.cursorL = [0, 0]
     this.cursorR = [0, 0]
+
+    this.transform = transform
+    this.color = color
+
+    // TODO: maybe don't recompile it every frame
+    this.shader = createShader(gl, `
+precision mediump float;
+
+attribute vec2 position;
+attribute vec2 normal;
+attribute float miter;
+attribute float thickness;
+uniform mat4 transform;
+
+void main() {
+  vec2 pos = position + vec2(normal * thickness / 2.0 * miter);
+  gl_Position = transform * vec4(pos, 0.0, 1.0);
+}
+      `, `
+precision highp float;
+
+uniform vec4 color;
+
+void main() {
+  gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+}
+    `)
+
+    this.shader.bind()
+
+    this.shader.attributes.position.location = 0
+    this.shader.attributes.normal.location = 1
+    this.shader.attributes.miter.location = 2
+    this.shader.attributes.thickness.location = 3
   }
 
   add (type, ...args) {
-    if (type.startsWith('_')) {
-      type = type.substr(1)
-      if (type === 'L') {
-        this.cursorL = [args[0], args[1]]
-        this.cursorR = [args[0], args[2]]
-        this.widthL.push([type, ...this.cursorL])
-        this.widthR.push([type, ...this.cursorR])
-      } else if (type === 'l') {
-        this.cursorL[0] += args[0]
-        this.cursorR[0] += args[0]
-        this.cursorL[1] += args[1]
-        this.cursorR[1] += args[2]
-        this.widthL.push([type, ...this.cursorL])
-        this.widthR.push([type, ...this.cursorR])
-      } else if (type === 'C') {
-        let leftArgs = args.slice(1, 5).concat([args[0], args[5]])
-        let rightArgs = args.slice(6, 10).concat([args[0], args[10]])
-        this.cursorL = [args[0], args[5]]
-        this.cursorR = [args[0], args[10]]
-        this.widthL.push(['C', ...leftArgs])
-        this.widthR.push(['C', ...rightArgs])
+    let lastCursor = this.cursor.slice()
+
+    if (type === 0x10) {
+      // moveto
+      this.cursor = args
+      this.paths.push(this.currentPath = [this.cursor])
+    } else if (type === 0x11) {
+      // moveto relative
+      this.cursor = this.cursor.map((x, i) => x + args[i])
+      this.paths.push(this.currentPath = [this.cursor])
+    } else if (type === 0x20) {
+      // lineto
+      this.currentPath.push(this.cursor = args)
+    } else if (type === 0x21) {
+      // lineto relative
+      this.cursor = this.cursor.map((x, i) => x + args[i])
+      this.currentPath.push(this.cursor)
+    } else if (type === 0x30 || type === 0x31) {
+      // curveto / relative
+      let c1 = args.slice(0, 2)
+      let c2 = args.slice(2, 4)
+      this.cursor = args.slice(4)
+
+      if (type === 0x31) {
+        c1 = c1.map((x, i) => x + lastCursor[i])
+        c2 = c2.map((x, i) => x + lastCursor[i])
+        this.cursor = this.cursor.map((x, i) => x + lastCursor[i])
       }
-      // TODO: c
+
+      this.currentPath.push(...bezier(lastCursor, c1, c2, this.cursor).slice(1))
+      // TODO: quadratic curves
+    } else if (type === 0x50 || type === 0x51) {
+      // TODO
+    } else if (type === 0x60) {
+      // stroke width to
+      this.widthL.push(args)
+      this.cursorL = args
+      this.widthR.push(args)
+      this.cursorR = args
+    } else if (type === 0x61) {
+      // stroke width relative
+      this.widthL.push(args)
+      this.cursorL = this.cursorL.map((x, i) => x + args[i])
+      this.widthR.push(args)
+      this.cursorR = this.cursorR.map((x, i) => x + args[i])
+    } else if (type === 0x62) {
+      // stroke width bezier
+      let c1L = args.slice(1, 3)
+      let c2L = args.slice(3, 5)
+      let lastCursorL = this.cursorL.slice()
+      this.cursorL = [args[0], args[5]]
+      bezier(lastCursorL, c1L, c2L, this.cursorL, 1, this.widthL)
+
+      let c1R = args.slice(6, 8)
+      let c2R = args.slice(8, 10)
+      let lastCursorR = this.cursorR.slice()
+      this.cursorR = [args[0], args[10]]
+      bezier(lastCursorR, c1R, c2R, this.cursorR, 1, this.widthR)
     } else {
-      this.path.push([type, ...args])
+      // TODO: stroke width bezier relative
     }
   }
 
-  getPath () {
-    return this.path.map(item => item.join(' ')).join(' ')
+  render (gl) {
+    // TODO: render all paths instead of only one
+    let path = this.currentPath.slice()
+    let normals = getNormals(path)
+
+    let getWidthL = StrokeRenderer.curveToFunction(this.widthL)
+    let getWidthR = StrokeRenderer.curveToFunction(this.widthR)
+
+    // TODO: include stroke width in resolution
+
+    if (path.length === 1) {
+      // can't draw triangles with only one point, so here's a dummy
+      path.push(path[0])
+
+      // can't compute normals for only one point, so here's a dummy
+      normals = [[[1, 0], 1], [[1, 0], 1]]
+    }
+
+    let positions = []
+    let vnormals = []
+    let miters = []
+    let thicknesses = []
+
+    let length = 0
+    let lastPoint = null
+    for (let i = 0; i < path.length; i++) {
+      let point = path[i]
+
+      if (lastPoint) {
+        length += Math.hypot(...point.map((x, i) => x - lastPoint[i]))
+      }
+      lastPoint = point
+
+      let left = getWidthL(length)
+      let right = getWidthR(length)
+
+      thicknesses.push(right)
+
+      positions.push(...point)
+      vnormals.push(...normals[i][0])
+      miters.push(normals[i][1])
+
+      thicknesses.push(left)
+
+      positions.push(...point)
+      vnormals.push(...normals[i][0])
+      miters.push(-normals[i][1])
+    }
+
+    const vao = createVAO(gl, [
+      {
+        buffer: createBuffer(gl, positions),
+        type: gl.FLOAT,
+        size: 2
+      },
+      {
+        buffer: createBuffer(gl, vnormals),
+        type: gl.FLOAT,
+        size: 2
+      },
+      {
+        buffer: createBuffer(gl, miters),
+        type: gl.FLOAT,
+        size: 1
+      },
+      {
+        buffer: createBuffer(gl, thicknesses),
+        type: gl.FLOAT,
+        size: 1
+      },
+    ])
+
+    this.shader.bind()
+    this.shader.uniforms.color = this.color
+    this.shader.uniforms.transform = this.transform
+
+    vao.bind()
+    vao.draw(gl.TRIANGLE_STRIP, positions.length / 2)
+    vao.unbind()
   }
 
-  getWidthL () {
-    return this.widthL.map(item => item.join(' ')).join(' ')
-  }
+  static curveToFunction (points) {
+    let path = new Map()
+    let x = 0
 
-  getWidthR () {
-    return this.widthR.map(item => item.join(' ')).join(' ')
-  }
+    for (let i = 0; i < points.length; i++) {
+      let pointX = Math.max(points[i][0], x) // prevent overlap
+      path.set(pointX, points[i][1])
+    }
 
-  render (ctx) {
-    basePath.setAttribute('d', this.getPath())
-    widthL.setAttribute('d', this.getWidthL())
-    widthR.setAttribute('d', this.getWidthR())
+    return (x) => {
+      let left = -Infinity
+      let right = Infinity
+      let leftPoint = null
+      let rightPoint = null
 
-    let baseLength = basePath.getTotalLength()
-    let resolution = 1 / window.devicePixelRatio
-
-    let cursor = null
-    let currentL = 0
-    let currentR = 0
-
-    let findNextPointAtX = (path, target, start = 0) => {
-      let x = start
-      let length = path.getTotalLength()
-
-      while (true) {
-        if (x > length) return length
-        if (path.getPointAtLength(x).x >= target) {
-          return x
+      for (let pointX of path.keys()) {
+        if (pointX <= x && pointX > left) {
+          left = pointX
+          leftPoint = path.get(pointX)
         }
-        x += resolution
+        if (pointX > x && pointX < right) {
+          right = pointX
+          rightPoint = path.get(pointX)
+        }
       }
+
+      if (Number.isFinite(left) && Number.isFinite(right)) {
+        let mix = (x - left) / (right - left)
+        return rightPoint * mix + leftPoint
+      } else if (Number.isFinite(left)) return leftPoint
+      else if (Number.isFinite(right)) return rightPoint
+      else return 0
     }
-
-    let lastLeftPos = 0
-    let lastRightPos = 0
-
-    for (let x = 0; x < baseLength; x += resolution) {
-      let point = basePath.getPointAtLength(x)
-
-      let leftPos = findNextPointAtX(widthL, x, lastLeftPos)
-      let rightPos = findNextPointAtX(widthR, x, lastRightPos)
-
-      let left = widthL.getPointAtLength(leftPos).y
-      let right = widthR.getPointAtLength(rightPos).y
-
-      // TODO: support jumps (M/m) midway
-
-      if (!cursor) {
-        ctx.beginPath()
-        ctx.moveTo(point.x, point.y)
-        cursor = [point.x, point.y]
-      }
-
-      if (left !== currentL || right !== currentR) {
-        currentL = left
-        currentR = right
-
-        // TODO: support asymmetry
-        ctx.stroke()
-        ctx.lineWidth = (currentL + currentR) / 2 // average for now
-        ctx.beginPath()
-        ctx.moveTo(...cursor)
-      }
-
-      ctx.lineTo(point.x, point.y)
-      cursor = [point.x, point.y]
-    }
-
-    ctx.stroke()
   }
 }
-
-const instructionFunctions = {
-  0x00: 'Z',
-  0x10: 'M',
-  0x11: 'm',
-  0x20: 'L',
-  0x21: 'l',
-  0x30: 'C',
-  0x31: 'c',
-  0x32: 'S',
-  0x33: 's',
-  0x40: 'Q',
-  0x41: 'q',
-  0x42: 'T',
-  0x43: 't',
-  0x50: 'A',
-  0x51: 'a',
-  0x60: '_L',
-  0x61: '_l',
-  0x62: '_C',
-  0x63: '_c'
-}
-
-class Instruction {
+class PathCommand {
   constructor (type, ...data) {
     this.type = type | 0
     this.data = data || []
   }
 
   render (renderer) {
-    renderer.add(instructionFunctions[this.type], ...this.data)
+    renderer.add(this.type, ...this.data)
   }
 
   serialize () {
-    return [this.type, this.data]
+    return [this.type, ...this.data]
   }
 
   static types = {
@@ -194,17 +281,20 @@ module.exports = class Path extends Layer {
     this.data = []
   }
 
-  render (ctx) {
-    let renderer = new StrokeRenderer()
-    this.data.forEach(instruction => instruction.render(renderer))
+  render (gl, transform) {
+    let subTransform = mat4.create()
+    mat4.multiply(subTransform, transform, this.transform.toMat4())
+
+    let renderer = new StrokeRenderer(gl, subTransform, this.stroke.toVec4())
+    this.data.forEach(command => command.render(renderer))
 
     if (this.fill.alpha) {
-      ctx.fillStyle = this.fill.toCSS()
-      ctx.fill(new window.Path2D(renderer.getPath()))
+      // ctx.fillStyle = this.fill.toCSS()
+      // ctx.fill(new window.Path2D(renderer.getPath()))
     }
     if (this.stroke.alpha) {
-      ctx.strokeStyle = this.stroke.toCSS()
-      renderer.render(ctx)
+      // ctx.strokeStyle = this.stroke.toCSS()
+      renderer.render(gl)
     }
   }
 
@@ -220,5 +310,5 @@ module.exports = class Path extends Layer {
     MITER: 2
   }
 
-  static Instruction = Instruction
+  static Command = PathCommand
 }

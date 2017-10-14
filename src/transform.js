@@ -1,3 +1,5 @@
+const { mat4 } = require('gl-matrix')
+
 module.exports = class Transform {
   constructor () {
     this.type = Transform.types.NONE
@@ -8,13 +10,32 @@ module.exports = class Transform {
     return this.data
   }
 
-  render (ctx) {
+  toMat4 () {
+    let mat = mat4.create()
+
     if (this.type === Transform.types.MAT3) {
-      ctx.transform(...this.data)
-    } else if (this.type == Transform.types.MAT4) {
-      console.warn('Cannot properly render Mat4 on canvas')
-      ctx.transform(this.data[0], this.data[1], this.data[3], this.data[4], this.data[9], this.data[10])
+      mat[0] = this.data[0]
+      mat[1] = this.data[1]
+      mat[4] = this.data[2]
+      mat[5] = this.data[3]
+      mat[12] = this.data[4]
+      mat[13] = this.data[5]
+    } else if (this.type === Transform.types.MAT4) {
+      mat[0] = this.data[0]
+      mat[1] = this.data[1]
+      mat[2] = this.data[2]
+      mat[4] = this.data[3]
+      mat[5] = this.data[4]
+      mat[6] = this.data[5]
+      mat[8] = this.data[3]
+      mat[9] = this.data[4]
+      mat[10] = this.data[5]
+      mat[12] = this.data[6]
+      mat[13] = this.data[7]
+      mat[14] = this.data[8]
     }
+
+    return mat
   }
 
   static deserialize (data) {

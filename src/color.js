@@ -9,4 +9,8 @@ module.exports = class Color {
   toCSS () {
     return `rgba(${this.red * 255}, ${this.green * 255}, ${this.blue * 255}, ${this.alpha})`
   }
+
+  toVec4 () {
+    return [this.red, this.green, this.blue, this.alpha]
+  }
 }

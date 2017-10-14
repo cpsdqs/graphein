@@ -1,4 +1,5 @@
 const Transform = require('./transform')
+const { mat4 } = require('gl-matrix')
 
 module.exports = class Layer {
   constructor () {
@@ -15,11 +16,10 @@ module.exports = class Layer {
     }
   }
 
-  render (ctx) {
-    ctx.save()
-    this.transform.render(ctx)
-    this.children.forEach(child => child.render(ctx))
-    ctx.restore()
+  render (gl, transform) {
+    let subTransform = mat4.create()
+    mat4.multiply(subTransform, transform, this.transform.toMat4())
+    this.children.forEach(child => child.render(gl, subTransform))
   }
 
   static types = {

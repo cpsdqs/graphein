@@ -1,9 +1,9 @@
 const canvas = new (window.graphein.Canvas)()
-canvas.canvas.width = canvas.canvas.height = 600
+canvas.canvas.width = canvas.canvas.height = 300
 document.body.appendChild(canvas)
 
 const image = new (window.graphein.Image)()
-image.width = image.height = 600
+image.width = image.height = 300
 const layer = new (window.graphein.Layer)()
 image.children.push(layer)
 
@@ -15,13 +15,13 @@ path.stroke.alpha = 1
 path.data = [
   [0x10, 12, 12],
   [0x30, 0, 50, 50, 80, 90, 50],
-  [0x62, 50, /* L */ 10, 0, 20, 10, 10, /* R */ 10, 0, 20, 10, 10],
+  [0x62, 50, /* L */ 10, 0, 20, 10, 0, /* R */ 10, 0, 20, 10, 10],
   [0x62, 100, /* L */ 70, 10, 80, 0, 0, /* R */ 70, 10, 80, 0, 0],
 ].map(x => {
-  let instruction = new (window.graphein.Path.Instruction)()
-  instruction.type = x[0]
-  instruction.data = x.slice(1)
-  return instruction
+  let command = new (window.graphein.Path.Command)()
+  command.type = x[0]
+  command.data = x.slice(1)
+  return command
 })
 
 canvas.image = image
