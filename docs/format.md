@@ -47,7 +47,7 @@ A path draws an arbitrary path using a compact version of the SVG path `d` synta
 | s    | color or nil   | Stroke color. See color for more info
 | f    | color or nil   | Fill color
 | d    | arr            | Data. An array of path instructions. See below
-| c    | uint8 or nil   | Line cap. `0` for butt, `1` for round, `2` for projecting. Will be inherited
+| e    | uint8 or nil   | Line cap. `0` for butt, `1` for round, `2` for projecting. Will be inherited
 | j    | uint8 or nil   | Line join. `0` for bevel, `1` for round, `2` for miter. Will be inherited
 | m    | float32 or nil | Miter limit for miter line joins. Will be inherited
 

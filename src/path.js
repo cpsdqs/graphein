@@ -8,7 +8,7 @@ const Layer = require('./layer')
 const Color = require('./color')
 
 class StrokeRenderer {
-  constructor (gl, transform, color) {
+  constructor (gl, transform, context, color) {
     this.currentPath = []
     this.paths = [this.currentPath]
     this.widthL = [[0, 0]]
@@ -17,39 +17,10 @@ class StrokeRenderer {
     this.cursorL = [0, 0]
     this.cursorR = [0, 0]
 
+    this.gl = gl
     this.transform = transform
     this.color = color
-
-    // TODO: maybe don't recompile it every frame
-    this.shader = createShader(gl, `
-precision mediump float;
-
-attribute vec2 position;
-attribute vec2 normal;
-attribute float miter;
-attribute float thickness;
-uniform mat4 transform;
-
-void main() {
-  vec2 pos = position + vec2(normal * thickness / 2.0 * miter);
-  gl_Position = transform * vec4(pos, 0.0, 1.0);
-}
-      `, `
-precision highp float;
-
-uniform vec4 color;
-
-void main() {
-  gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-}
-    `)
-
-    this.shader.bind()
-
-    this.shader.attributes.position.location = 0
-    this.shader.attributes.normal.location = 1
-    this.shader.attributes.miter.location = 2
-    this.shader.attributes.thickness.location = 3
+    this.shader = context.shaders.path
   }
 
   add (type, ...args) {
@@ -116,7 +87,9 @@ void main() {
     }
   }
 
-  render (gl) {
+  render () {
+    const gl = this.gl
+
     // TODO: render all paths instead of only one
     let path = this.currentPath.slice()
     let normals = getNormals(path)
@@ -273,29 +246,42 @@ module.exports = class Path extends Layer {
   constructor () {
     super()
 
-    this.stroke = new Color()
-    this.fill = new Color()
+    this.type = 'p'
+
+    this.stroke = null
+    this.fill = null
     this.cap = Path.cap.BUTT
-    this.join = Path.join.BEVEL
+    this.join = Path.join.MITER
     this.miter = 0
     this.data = []
   }
 
-  render (gl, transform) {
+  render (gl, transform, context) {
     let subTransform = mat4.create()
     mat4.multiply(subTransform, transform, this.transform.toMat4())
 
-    let renderer = new StrokeRenderer(gl, subTransform, this.stroke.toVec4())
+    let renderer = new StrokeRenderer(gl, subTransform, context, this.stroke.toVec4())
     this.data.forEach(command => command.render(renderer))
 
-    if (this.fill.alpha) {
+    if (this.fill && this.fill.alpha) {
       // ctx.fillStyle = this.fill.toCSS()
       // ctx.fill(new window.Path2D(renderer.getPath()))
     }
-    if (this.stroke.alpha) {
+    if (this.stroke && this.stroke.alpha) {
       // ctx.strokeStyle = this.stroke.toCSS()
-      renderer.render(gl)
+      renderer.render()
     }
+  }
+
+  serialize () {
+    return Object.assign(super.serialize(), {
+      d: this.data.map(x => x.serialize()),
+      e: this.cap,
+      j: this.join,
+      m: this.miter,
+      s: this.stroke ? this.stroke.serialize() : null,
+      f: this.fill ? this.fill.serialize() : null
+    })
   }
 
   static cap = {

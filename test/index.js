@@ -1,5 +1,5 @@
 const canvas = new (window.graphein.Canvas)()
-canvas.canvas.width = canvas.canvas.height = 300
+canvas.canvas.style.background = '#fff9da'
 document.body.appendChild(canvas)
 
 const image = new (window.graphein.Image)()
@@ -10,7 +10,7 @@ image.children.push(layer)
 const path = new (window.graphein.Path)()
 layer.children.push(path)
 
-path.stroke.alpha = 1
+path.stroke = new (window.graphein.Color)(0, 0, 0, 1)
 
 path.data = [
   [0x10, 12, 12],

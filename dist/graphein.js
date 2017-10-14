@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 15);
+/******/ 	return __webpack_require__(__webpack_require__.s = 17);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -148,12 +148,12 @@ function equals(a, b) {
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__ = __webpack_require__(17);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__ = __webpack_require__(18);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__ = __webpack_require__(19);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__ = __webpack_require__(20);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__ = __webpack_require__(5);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__ = __webpack_require__(19);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__ = __webpack_require__(20);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__ = __webpack_require__(21);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__ = __webpack_require__(21);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__ = __webpack_require__(22);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__ = __webpack_require__(23);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__ = __webpack_require__(6);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__ = __webpack_require__(7);
 /* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "glMatrix", function() { return __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__; });
@@ -230,7 +230,7 @@ module.exports = GLError
 
 var _class, _temp;
 
-const Transform = __webpack_require__(8);
+const Transform = __webpack_require__(9);
 const { mat4 } = __webpack_require__(1);
 
 module.exports = (_temp = _class = class Layer {
@@ -242,16 +242,22 @@ module.exports = (_temp = _class = class Layer {
 
   serialize() {
     return {
-      type: this.type,
-      transform: this.transform.serialize(),
-      children: this.children.map(child => child.serialize())
+      t: this.type,
+      a: this.transform.serialize(),
+      c: this.children.map(child => child.serialize())
     };
   }
 
-  render(gl, transform) {
+  render(gl, transform, context) {
     let subTransform = mat4.create();
     mat4.multiply(subTransform, transform, this.transform.toMat4());
-    this.children.forEach(child => child.render(gl, subTransform));
+    this.renderChildren(gl, subTransform, context);
+  }
+
+  renderChildren(gl, transform, context) {
+    for (let i = this.children.length - 1; i >= 0; i--) {
+      this.children[i].render(gl, transform, context);
+    }
   }
 
 }, _class.types = {
@@ -266,46 +272,34 @@ module.exports = (_temp = _class = class Layer {
 
 /***/ }),
 /* 4 */
-/***/ (function(module, exports, __webpack_require__) {
+/***/ (function(module, exports) {
 
-const { mat4 } = __webpack_require__(1);
-const Layer = __webpack_require__(3);
+module.exports = class Color {
+  constructor(r = 0, g = 0, b = 0, a = 1) {
+    this.alpha = a;
+    this.red = r;
+    this.green = g;
+    this.blue = b;
+  }
 
-module.exports = class Image extends Layer {
-  constructor() {
-    super();
+  toCSS() {
+    return `rgba(${this.red * 255}, ${this.green * 255}, ${this.blue * 255}, ${this.alpha})`;
+  }
 
-    // TODO: don't hardcode
-    this.version = 0;
-    this.width = 100;
-    this.height = 100;
+  toVec4() {
+    return [this.red, this.green, this.blue, this.alpha];
   }
 
   serialize() {
-    return {
-      version: this.version,
-      w: this.width,
-      h: this.height,
-      c: this.children.map(child => child.serialize())
-    };
+    let color = 255 - this.alpha * 255 | 0;
+    color |= this.red * 255 << 8;
+    color |= this.green * 255 << 8;
+    color |= this.blue * 255 << 8;
+    return color;
   }
 
-  render(gl) {
-    let near = 0.1;
-    let far = 1000;
-    let fov = Math.PI;
-    let width = this.width;
-    let height = this.height;
-    let aspect = width / height;
-
-    let projection = mat4.create();
-    // TODO: projection
-
-    let result = mat4.create();
-    mat4.scale(result, projection, [2 / width, -2 / height, 1]);
-    mat4.translate(result, result, [-width / 2, -height / 2, 0]);
-
-    this.children.forEach(child => child.render(gl, result));
+  static deserialize(color) {
+    return new Color((color >> 8 & 0xFF) / 255, (color >> 16 & 0xFF) / 255, (color >> 24) / 255, 1 - (color & 0xFF) / 255);
   }
 };
 
@@ -2623,6 +2617,74 @@ const forEach = (function() {
 /* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
+const { mat4 } = __webpack_require__(1);
+const Layer = __webpack_require__(3);
+
+module.exports = class Image extends Layer {
+  constructor() {
+    super();
+
+    // TODO: don't hardcode
+    this.version = 0;
+    this.width = 100;
+    this.height = 100;
+    this.depth = 100;
+  }
+
+  serialize() {
+    return {
+      version: this.version,
+      w: this.width,
+      h: this.height,
+      c: this.children.map(child => child.serialize())
+    };
+  }
+
+  render(gl, context) {
+    let near = 0.1;
+    let far = 1000;
+    let fov = Math.PI;
+
+    let projection = mat4.create();
+
+    // copied from three.js
+    let top = near * Math.tan(fov / 2);
+    let height = 2 * top;
+    let width = this.width / this.height * height;
+    let left = -width / 2;
+    let right = left + width;
+    let bottom = top - height;
+
+    let x = 2 * near / (right - left);
+    let y = 2 * near / (top - bottom);
+    let a = (right + left) / (right - left);
+    let b = (top + bottom) / (top - bottom);
+    let c = -(far + near) / (far - near);
+    let d = -2 * far * near / (far - near);
+
+    // doesn't work for some reason
+    // TODO: look into how this actually works
+    /* projection[0] = x
+    projection[5] = y
+    projection[8] = a
+    projection[9] = b
+    projection[10] = c
+    projection[11] = -1
+    projection[14] = d
+    projection[15] = 0 */
+
+    let result = mat4.create();
+    mat4.scale(result, projection, [2 / this.width, -2 / this.height, 1]);
+    mat4.translate(result, result, [-this.width / 2, -this.height / 2, 0]);
+
+    this.renderChildren(gl, result, context);
+  }
+};
+
+/***/ }),
+/* 9 */
+/***/ (function(module, exports, __webpack_require__) {
+
 var _class, _temp;
 
 const { mat4 } = __webpack_require__(1);
@@ -2654,12 +2716,12 @@ module.exports = (_temp = _class = class Transform {
       mat[4] = this.data[3];
       mat[5] = this.data[4];
       mat[6] = this.data[5];
-      mat[8] = this.data[3];
-      mat[9] = this.data[4];
-      mat[10] = this.data[5];
-      mat[12] = this.data[6];
-      mat[13] = this.data[7];
-      mat[14] = this.data[8];
+      mat[8] = this.data[6];
+      mat[9] = this.data[7];
+      mat[10] = this.data[8];
+      mat[12] = this.data[9];
+      mat[13] = this.data[10];
+      mat[14] = this.data[11];
     }
 
     return mat;
@@ -2679,22 +2741,22 @@ module.exports = (_temp = _class = class Transform {
 }, _temp);
 
 /***/ }),
-/* 9 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var _class, _temp;
 
 const { mat4 } = __webpack_require__(1);
-const bezier = __webpack_require__(24);
-const getNormals = __webpack_require__(26);
-const createBuffer = __webpack_require__(33);
-const createShader = __webpack_require__(49);
-const createVAO = __webpack_require__(71);
+const bezier = __webpack_require__(26);
+const getNormals = __webpack_require__(28);
+const createBuffer = __webpack_require__(35);
+const createShader = __webpack_require__(12);
+const createVAO = __webpack_require__(72);
 const Layer = __webpack_require__(3);
-const Color = __webpack_require__(74);
+const Color = __webpack_require__(4);
 
 class StrokeRenderer {
-  constructor(gl, transform, color) {
+  constructor(gl, transform, context, color) {
     this.currentPath = [];
     this.paths = [this.currentPath];
     this.widthL = [[0, 0]];
@@ -2703,39 +2765,10 @@ class StrokeRenderer {
     this.cursorL = [0, 0];
     this.cursorR = [0, 0];
 
+    this.gl = gl;
     this.transform = transform;
     this.color = color;
-
-    // TODO: maybe don't recompile it every frame
-    this.shader = createShader(gl, `
-precision mediump float;
-
-attribute vec2 position;
-attribute vec2 normal;
-attribute float miter;
-attribute float thickness;
-uniform mat4 transform;
-
-void main() {
-  vec2 pos = position + vec2(normal * thickness / 2.0 * miter);
-  gl_Position = transform * vec4(pos, 0.0, 1.0);
-}
-      `, `
-precision highp float;
-
-uniform vec4 color;
-
-void main() {
-  gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-}
-    `);
-
-    this.shader.bind();
-
-    this.shader.attributes.position.location = 0;
-    this.shader.attributes.normal.location = 1;
-    this.shader.attributes.miter.location = 2;
-    this.shader.attributes.thickness.location = 3;
+    this.shader = context.shaders.path;
   }
 
   add(type, ...args) {
@@ -2802,7 +2835,9 @@ void main() {
     }
   }
 
-  render(gl) {
+  render() {
+    const gl = this.gl;
+
     // TODO: render all paths instead of only one
     let path = this.currentPath.slice();
     let normals = getNormals(path);
@@ -2952,29 +2987,42 @@ module.exports = (_temp = _class = class Path extends Layer {
   constructor() {
     super();
 
-    this.stroke = new Color();
-    this.fill = new Color();
+    this.type = 'p';
+
+    this.stroke = null;
+    this.fill = null;
     this.cap = Path.cap.BUTT;
-    this.join = Path.join.BEVEL;
+    this.join = Path.join.MITER;
     this.miter = 0;
     this.data = [];
   }
 
-  render(gl, transform) {
+  render(gl, transform, context) {
     let subTransform = mat4.create();
     mat4.multiply(subTransform, transform, this.transform.toMat4());
 
-    let renderer = new StrokeRenderer(gl, subTransform, this.stroke.toVec4());
+    let renderer = new StrokeRenderer(gl, subTransform, context, this.stroke.toVec4());
     this.data.forEach(command => command.render(renderer));
 
-    if (this.fill.alpha) {
+    if (this.fill && this.fill.alpha) {
       // ctx.fillStyle = this.fill.toCSS()
       // ctx.fill(new window.Path2D(renderer.getPath()))
     }
-    if (this.stroke.alpha) {
+    if (this.stroke && this.stroke.alpha) {
       // ctx.strokeStyle = this.stroke.toCSS()
-      renderer.render(gl);
+      renderer.render();
     }
+  }
+
+  serialize() {
+    return Object.assign(super.serialize(), {
+      d: this.data.map(x => x.serialize()),
+      e: this.cap,
+      j: this.join,
+      m: this.miter,
+      s: this.stroke ? this.stroke.serialize() : null,
+      f: this.fill ? this.fill.serialize() : null
+    });
   }
 
 }, _class.cap = {
@@ -2988,7 +3036,7 @@ module.exports = (_temp = _class = class Path extends Layer {
 }, _class.Command = PathCommand, _temp);
 
 /***/ }),
-/* 10 */
+/* 11 */
 /***/ (function(module, exports) {
 
 var g;
@@ -3015,7 +3063,278 @@ module.exports = g;
 
 
 /***/ }),
-/* 11 */
+/* 12 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var createUniformWrapper   = __webpack_require__(51)
+var createAttributeWrapper = __webpack_require__(52)
+var makeReflect            = __webpack_require__(13)
+var shaderCache            = __webpack_require__(53)
+var runtime                = __webpack_require__(71)
+var GLError                = __webpack_require__(2)
+
+//Shader object
+function Shader(gl) {
+  this.gl         = gl
+  this.gl.lastAttribCount = 0  // fixme where else should we store info, safe but not nice on the gl object
+
+  //Default initialize these to null
+  this._vref      =
+  this._fref      =
+  this._relink    =
+  this.vertShader =
+  this.fragShader =
+  this.program    =
+  this.attributes =
+  this.uniforms   =
+  this.types      = null
+}
+
+var proto = Shader.prototype
+
+proto.bind = function() {
+  if(!this.program) {
+    this._relink()
+  }
+
+  // ensuring that we have the right number of enabled vertex attributes
+  var i
+  var newAttribCount = this.gl.getProgramParameter(this.program, this.gl.ACTIVE_ATTRIBUTES) // more robust approach
+  //var newAttribCount = Object.keys(this.attributes).length // avoids the probably immaterial introspection slowdown
+  var oldAttribCount = this.gl.lastAttribCount
+  if(newAttribCount > oldAttribCount) {
+    for(i = oldAttribCount; i < newAttribCount; i++) {
+      this.gl.enableVertexAttribArray(i)
+    }
+  } else if(oldAttribCount > newAttribCount) {
+    for(i = newAttribCount; i < oldAttribCount; i++) {
+      this.gl.disableVertexAttribArray(i)
+    }
+  }
+
+  this.gl.lastAttribCount = newAttribCount
+
+  this.gl.useProgram(this.program)
+}
+
+proto.dispose = function() {
+
+  // disabling vertex attributes so new shader starts with zero
+  // and it's also useful if all shaders are disposed but the
+  // gl context is reused for subsequent replotting
+  var oldAttribCount = this.gl.lastAttribCount
+  for (var i = 0; i < oldAttribCount; i++) {
+    this.gl.disableVertexAttribArray(i)
+  }
+  this.gl.lastAttribCount = 0
+
+  if(this._fref) {
+    this._fref.dispose()
+  }
+  if(this._vref) {
+    this._vref.dispose()
+  }
+  this.attributes =
+  this.types      =
+  this.vertShader =
+  this.fragShader =
+  this.program    =
+  this._relink    =
+  this._fref      =
+  this._vref      = null
+}
+
+function compareAttributes(a, b) {
+  if(a.name < b.name) {
+    return -1
+  }
+  return 1
+}
+
+//Update export hook for glslify-live
+proto.update = function(
+    vertSource
+  , fragSource
+  , uniforms
+  , attributes) {
+
+  //If only one object passed, assume glslify style output
+  if(!fragSource || arguments.length === 1) {
+    var obj = vertSource
+    vertSource = obj.vertex
+    fragSource = obj.fragment
+    uniforms   = obj.uniforms
+    attributes = obj.attributes
+  }
+
+  var wrapper = this
+  var gl      = wrapper.gl
+
+  //Compile vertex and fragment shaders
+  var pvref = wrapper._vref
+  wrapper._vref = shaderCache.shader(gl, gl.VERTEX_SHADER, vertSource)
+  if(pvref) {
+    pvref.dispose()
+  }
+  wrapper.vertShader = wrapper._vref.shader
+  var pfref = this._fref
+  wrapper._fref = shaderCache.shader(gl, gl.FRAGMENT_SHADER, fragSource)
+  if(pfref) {
+    pfref.dispose()
+  }
+  wrapper.fragShader = wrapper._fref.shader
+
+  //If uniforms/attributes is not specified, use RT reflection
+  if(!uniforms || !attributes) {
+
+    //Create initial test program
+    var testProgram = gl.createProgram()
+    gl.attachShader(testProgram, wrapper.fragShader)
+    gl.attachShader(testProgram, wrapper.vertShader)
+    gl.linkProgram(testProgram)
+    if(!gl.getProgramParameter(testProgram, gl.LINK_STATUS)) {
+      var errLog = gl.getProgramInfoLog(testProgram)
+      throw new GLError(errLog, 'Error linking program:' + errLog)
+    }
+
+    //Load data from runtime
+    uniforms   = uniforms   || runtime.uniforms(gl, testProgram)
+    attributes = attributes || runtime.attributes(gl, testProgram)
+
+    //Release test program
+    gl.deleteProgram(testProgram)
+  }
+
+  //Sort attributes lexicographically
+  // overrides undefined WebGL behavior for attribute locations
+  attributes = attributes.slice()
+  attributes.sort(compareAttributes)
+
+  //Convert attribute types, read out locations
+  var attributeUnpacked  = []
+  var attributeNames     = []
+  var attributeLocations = []
+  var i
+  for(i=0; i<attributes.length; ++i) {
+    var attr = attributes[i]
+    if(attr.type.indexOf('mat') >= 0) {
+      var size = attr.type.charAt(attr.type.length-1)|0
+      var locVector = new Array(size)
+      for(var j=0; j<size; ++j) {
+        locVector[j] = attributeLocations.length
+        attributeNames.push(attr.name + '[' + j + ']')
+        if(typeof attr.location === 'number') {
+          attributeLocations.push(attr.location + j)
+        } else if(Array.isArray(attr.location) &&
+                  attr.location.length === size &&
+                  typeof attr.location[j] === 'number') {
+          attributeLocations.push(attr.location[j]|0)
+        } else {
+          attributeLocations.push(-1)
+        }
+      }
+      attributeUnpacked.push({
+        name: attr.name,
+        type: attr.type,
+        locations: locVector
+      })
+    } else {
+      attributeUnpacked.push({
+        name: attr.name,
+        type: attr.type,
+        locations: [ attributeLocations.length ]
+      })
+      attributeNames.push(attr.name)
+      if(typeof attr.location === 'number') {
+        attributeLocations.push(attr.location|0)
+      } else {
+        attributeLocations.push(-1)
+      }
+    }
+  }
+
+  //For all unspecified attributes, assign them lexicographically min attribute
+  var curLocation = 0
+  for(i=0; i<attributeLocations.length; ++i) {
+    if(attributeLocations[i] < 0) {
+      while(attributeLocations.indexOf(curLocation) >= 0) {
+        curLocation += 1
+      }
+      attributeLocations[i] = curLocation
+    }
+  }
+
+  //Rebuild program and recompute all uniform locations
+  var uniformLocations = new Array(uniforms.length)
+  function relink() {
+    wrapper.program = shaderCache.program(
+        gl
+      , wrapper._vref
+      , wrapper._fref
+      , attributeNames
+      , attributeLocations)
+
+    for(var i=0; i<uniforms.length; ++i) {
+      uniformLocations[i] = gl.getUniformLocation(
+          wrapper.program
+        , uniforms[i].name)
+    }
+  }
+
+  //Perform initial linking, reuse program used for reflection
+  relink()
+
+  //Save relinking procedure, defer until runtime
+  wrapper._relink = relink
+
+  //Generate type info
+  wrapper.types = {
+    uniforms:   makeReflect(uniforms),
+    attributes: makeReflect(attributes)
+  }
+
+  //Generate attribute wrappers
+  wrapper.attributes = createAttributeWrapper(
+      gl
+    , wrapper
+    , attributeUnpacked
+    , attributeLocations)
+
+  //Generate uniform wrappers
+  Object.defineProperty(wrapper, 'uniforms', createUniformWrapper(
+      gl
+    , wrapper
+    , uniforms
+    , uniformLocations))
+}
+
+//Compiles and links a shader program with the given attribute and vertex list
+function createShader(
+    gl
+  , vertSource
+  , fragSource
+  , uniforms
+  , attributes) {
+
+  var shader = new Shader(gl)
+
+  shader.update(
+      vertSource
+    , fragSource
+    , uniforms
+    , attributes)
+
+  return shader
+}
+
+module.exports = createShader
+
+
+/***/ }),
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3078,7 +3397,7 @@ function makeReflectTypes(uniforms, useIndex) {
 }
 
 /***/ }),
-/* 12 */
+/* 14 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -3177,7 +3496,7 @@ module.exports = [
 
 
 /***/ }),
-/* 13 */
+/* 15 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -3333,7 +3652,7 @@ module.exports = [
 
 
 /***/ }),
-/* 14 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3393,17 +3712,19 @@ function doBind(gl, elements, attributes) {
 module.exports = doBind
 
 /***/ }),
-/* 15 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Canvas = __webpack_require__(16);
-const Image = __webpack_require__(4);
+const Canvas = __webpack_require__(18);
+const Color = __webpack_require__(4);
+const Image = __webpack_require__(8);
 const Layer = __webpack_require__(3);
-const Transform = __webpack_require__(8);
-const Path = __webpack_require__(9);
+const Transform = __webpack_require__(9);
+const Path = __webpack_require__(10);
 
 const graphein = {
   Canvas,
+  Color,
   Image,
   Layer,
   Transform,
@@ -3413,11 +3734,13 @@ const graphein = {
 module.exports = window.graphein = graphein;
 
 /***/ }),
-/* 16 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Image = __webpack_require__(4);
-const Brush = __webpack_require__(22);
+const { mat4 } = __webpack_require__(1);
+const Image = __webpack_require__(8);
+const Brush = __webpack_require__(24);
+const shaders = __webpack_require__(75);
 
 class Canvas extends window.HTMLElement {
   constructor() {
@@ -3426,12 +3749,19 @@ class Canvas extends window.HTMLElement {
     this.canvas = document.createElement('canvas');
     this.gl = this.canvas.getContext('webgl');
 
+    this.shaders = shaders(this.gl);
+
     this.brush = new Brush();
     this.brush.bind(this.canvas);
 
     this._image = new Image();
+    this.updateSize();
+
     this.brush.previewLayer = this._image;
     this.brush.on('update', () => this.render());
+    this.brush.on('stroke', stroke => {
+      this.image.children[this.image.children.length - 1].children.push(stroke);
+    });
   }
 
   connectedCallback() {
@@ -3441,6 +3771,13 @@ class Canvas extends window.HTMLElement {
     }
   }
 
+  updateSize() {
+    this.canvas.width = this.image.width * window.devicePixelRatio;
+    this.canvas.height = this.image.height * window.devicePixelRatio;
+    this.canvas.style.width = `${this.image.width}px`;
+    this.canvas.style.height = `${this.image.height}px`;
+  }
+
   get image() {
     return this._image;
   }
@@ -3448,17 +3785,21 @@ class Canvas extends window.HTMLElement {
   set image(v) {
     this._image = v;
     this.brush.previewLayer = v;
+    this.updateSize();
     this.render();
   }
 
   render() {
     let start = performance.now();
 
-    this.gl.clearColor(1, 1, .9, 1);
-    this.gl.viewport(0, 0, this.image.width, this.image.height);
+    this.gl.clearColor(0, 0, 0, 0);
+    this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
     this.gl.enable(this.gl.DEPTH_TEST);
-    this.image.render(this.gl);
+
+    this.image.render(this.gl, {
+      shaders: this.shaders
+    });
 
     let end = performance.now();
     console.log(`Rendered in ${end - start}ms`);
@@ -3469,7 +3810,7 @@ window.customElements.define('graphein-canvas', Canvas);
 module.exports = Canvas;
 
 /***/ }),
-/* 17 */
+/* 19 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -3939,7 +4280,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 18 */
+/* 20 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -4441,7 +4782,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 19 */
+/* 21 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -6179,7 +6520,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 20 */
+/* 22 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -6870,7 +7211,7 @@ const setAxes = (function() {
 
 
 /***/ }),
-/* 21 */
+/* 23 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -7513,11 +7854,12 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 22 */
+/* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const EventEmitter = __webpack_require__(23);
-const Path = __webpack_require__(9);
+const EventEmitter = __webpack_require__(25);
+const Path = __webpack_require__(10);
+const Color = __webpack_require__(4);
 
 // TODO: pen tilt
 
@@ -7537,8 +7879,7 @@ module.exports = class Brush extends EventEmitter {
       this.onPointerMove({
         offsetX: e.offsetX,
         offsetY: e.offsetY,
-        pressure: 0.5,
-        getCoalescedEvents: () => []
+        pressure: 0.5
       });
     };
 
@@ -7556,10 +7897,11 @@ module.exports = class Brush extends EventEmitter {
       this.points.push({
         x: e.offsetX,
         y: e.offsetY,
-        pressure: e.pressure
+        pressure: e.pressure,
+        isStart: true
       });
       this.previewStroke = new Path();
-      this.previewStroke.stroke.alpha = 1;
+      this.previewStroke.stroke = new Color(Math.random(), Math.random(), Math.random(), Math.random());
       this.previewStroke.data.push(new Path.Command(0x10, e.offsetX, e.offsetY));
       this.previewStroke.data.push(new Path.Command(0x60, 0, e.pressure * this.size / 2, e.pressure * this.size / 2));
       if (this.previewLayer) this.previewLayer.children.push(this.previewStroke);
@@ -7580,10 +7922,8 @@ module.exports = class Brush extends EventEmitter {
           pressure: event.pressure
         };
 
-        console.log(point.pressure);
-
         let lastPoint = this.points[this.points.length - 1];
-        if (point.x === lastPoint.x && point.y === lastPoint.y) {
+        if (!lastPoint.isStart && point.x === lastPoint.x && point.y === lastPoint.y) {
           this.points.pop();
           this.previewStroke.data.pop();
           this.previewStroke.data.pop();
@@ -7601,17 +7941,16 @@ module.exports = class Brush extends EventEmitter {
       this.points.push({
         x: e.offsetX,
         y: e.offsetY,
-        pressure: e.pressure
+        pressure: e.pressure,
+        isEnd: true
       });
 
       this.previewStroke.data.push(new Path.Command(0x20, e.offsetX, e.offsetY));
       this.previewStroke.data.push(new Path.Command(0x60, this.getCurrentLength(), e.pressure * this.size / 2, e.pressure * this.size / 2));
 
       if (this.previewLayer) {
-        // this.previewLayer.children.splice(this.previewLayer.children.indexOf(this.previewStroke), 1)
+        this.previewLayer.children.splice(this.previewLayer.children.indexOf(this.previewStroke), 1);
       }
-
-      console.log(this.previewStroke);
 
       this.stroke();
 
@@ -7656,7 +7995,11 @@ module.exports = class Brush extends EventEmitter {
     }
   }
 
-  stroke() {}
+  stroke() {
+    // TODO: curve smoothing
+
+    this.emit('stroke', this.previewStroke);
+  }
 
   getCurrentLength() {
     let length = 0;
@@ -7675,7 +8018,7 @@ module.exports = class Brush extends EventEmitter {
 };
 
 /***/ }),
-/* 23 */
+/* 25 */
 /***/ (function(module, exports) {
 
 // Copyright Joyent, Inc. and other Node contributors.
@@ -7983,13 +8326,13 @@ function isUndefined(arg) {
 
 
 /***/ }),
-/* 24 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__(25)()
+module.exports = __webpack_require__(27)()
 
 /***/ }),
-/* 25 */
+/* 27 */
 /***/ (function(module, exports) {
 
 function clone(point) { //TODO: use gl-vec2 for this
@@ -8192,10 +8535,10 @@ module.exports = function createBezierBuilder(opt) {
 
 
 /***/ }),
-/* 26 */
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var util = __webpack_require__(27)
+var util = __webpack_require__(29)
 
 var lineA = [0, 0]
 var lineB = [0, 0]
@@ -8264,14 +8607,14 @@ function addNext(out, normal, length) {
 }
 
 /***/ }),
-/* 27 */
+/* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var add = __webpack_require__(28)
-var set = __webpack_require__(29)
-var normalize = __webpack_require__(30)
-var subtract = __webpack_require__(31)
-var dot = __webpack_require__(32)
+var add = __webpack_require__(30)
+var set = __webpack_require__(31)
+var normalize = __webpack_require__(32)
+var subtract = __webpack_require__(33)
+var dot = __webpack_require__(34)
 
 var tmp = [0, 0]
 
@@ -8302,7 +8645,7 @@ module.exports.direction = function direction(out, a, b) {
 }
 
 /***/ }),
-/* 28 */
+/* 30 */
 /***/ (function(module, exports) {
 
 module.exports = add
@@ -8322,7 +8665,7 @@ function add(out, a, b) {
 }
 
 /***/ }),
-/* 29 */
+/* 31 */
 /***/ (function(module, exports) {
 
 module.exports = set
@@ -8342,7 +8685,7 @@ function set(out, x, y) {
 }
 
 /***/ }),
-/* 30 */
+/* 32 */
 /***/ (function(module, exports) {
 
 module.exports = normalize
@@ -8368,7 +8711,7 @@ function normalize(out, a) {
 }
 
 /***/ }),
-/* 31 */
+/* 33 */
 /***/ (function(module, exports) {
 
 module.exports = subtract
@@ -8388,7 +8731,7 @@ function subtract(out, a, b) {
 }
 
 /***/ }),
-/* 32 */
+/* 34 */
 /***/ (function(module, exports) {
 
 module.exports = dot
@@ -8405,15 +8748,15 @@ function dot(a, b) {
 }
 
 /***/ }),
-/* 33 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var pool = __webpack_require__(34)
-var ops = __webpack_require__(41)
-var ndarray = __webpack_require__(46)
+var pool = __webpack_require__(36)
+var ops = __webpack_require__(43)
+var ndarray = __webpack_require__(48)
 
 var SUPPORTED_TYPES = [
   "uint8",
@@ -8564,14 +8907,14 @@ module.exports = createBuffer
 
 
 /***/ }),
-/* 34 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 /* WEBPACK VAR INJECTION */(function(global, Buffer) {
 
-var bits = __webpack_require__(39)
-var dup = __webpack_require__(40)
+var bits = __webpack_require__(41)
+var dup = __webpack_require__(42)
 
 //Legacy pool support
 if(!global.__TYPEDARRAY_POOL) {
@@ -8782,10 +9125,10 @@ exports.clearCache = function clearCache() {
     BUFFER[i].length = 0
   }
 }
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(10), __webpack_require__(35).Buffer))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(11), __webpack_require__(37).Buffer))
 
 /***/ }),
-/* 35 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -8799,9 +9142,9 @@ exports.clearCache = function clearCache() {
 
 
 
-var base64 = __webpack_require__(36)
-var ieee754 = __webpack_require__(37)
-var isArray = __webpack_require__(38)
+var base64 = __webpack_require__(38)
+var ieee754 = __webpack_require__(39)
+var isArray = __webpack_require__(40)
 
 exports.Buffer = Buffer
 exports.SlowBuffer = SlowBuffer
@@ -10579,10 +10922,10 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(10)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(11)))
 
 /***/ }),
-/* 36 */
+/* 38 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10703,7 +11046,7 @@ function fromByteArray (uint8) {
 
 
 /***/ }),
-/* 37 */
+/* 39 */
 /***/ (function(module, exports) {
 
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
@@ -10793,7 +11136,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
 
 /***/ }),
-/* 38 */
+/* 40 */
 /***/ (function(module, exports) {
 
 var toString = {}.toString;
@@ -10804,7 +11147,7 @@ module.exports = Array.isArray || function (arr) {
 
 
 /***/ }),
-/* 39 */
+/* 41 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11015,7 +11358,7 @@ exports.nextCombination = function(v) {
 
 
 /***/ }),
-/* 40 */
+/* 42 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11070,13 +11413,13 @@ function dupe(count, value) {
 module.exports = dupe
 
 /***/ }),
-/* 41 */
+/* 43 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var compile = __webpack_require__(42)
+var compile = __webpack_require__(44)
 
 var EmptyProc = {
   body: "",
@@ -11538,13 +11881,13 @@ exports.equals = compile({
 
 
 /***/ }),
-/* 42 */
+/* 44 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var createThunk = __webpack_require__(43)
+var createThunk = __webpack_require__(45)
 
 function Procedure() {
   this.argTypes = []
@@ -11654,7 +11997,7 @@ module.exports = compileCwise
 
 
 /***/ }),
-/* 43 */
+/* 45 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11683,7 +12026,7 @@ module.exports = compileCwise
 //   return thunk(compile.bind1(proc))
 // }
 
-var compile = __webpack_require__(44)
+var compile = __webpack_require__(46)
 
 function createThunk(proc) {
   var code = ["'use strict'", "var CACHED={}"]
@@ -11747,13 +12090,13 @@ module.exports = createThunk
 
 
 /***/ }),
-/* 44 */
+/* 46 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var uniq = __webpack_require__(45)
+var uniq = __webpack_require__(47)
 
 // This function generates very simple loops analogous to how you typically traverse arrays (the outermost loop corresponds to the slowest changing index, the innermost loop to the fastest changing index)
 // TODO: If two arrays have the same strides (and offsets) there is potential for decreasing the number of "pointers" and related variables. The drawback is that the type signature would become more specific and that there would thus be less potential for caching, but it might still be worth it, especially when dealing with large numbers of arguments.
@@ -12112,7 +12455,7 @@ module.exports = generateCWiseOp
 
 
 /***/ }),
-/* 45 */
+/* 47 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12176,11 +12519,11 @@ module.exports = unique
 
 
 /***/ }),
-/* 46 */
+/* 48 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var iota = __webpack_require__(47)
-var isBuffer = __webpack_require__(48)
+var iota = __webpack_require__(49)
+var isBuffer = __webpack_require__(50)
 
 var hasTypedArrays  = ((typeof Float64Array) !== "undefined")
 
@@ -12525,7 +12868,7 @@ module.exports = wrappedNDArrayCtor
 
 
 /***/ }),
-/* 47 */
+/* 49 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12542,7 +12885,7 @@ function iota(n) {
 module.exports = iota
 
 /***/ }),
-/* 48 */
+/* 50 */
 /***/ (function(module, exports) {
 
 /*!
@@ -12569,284 +12912,13 @@ function isSlowBuffer (obj) {
 
 
 /***/ }),
-/* 49 */
+/* 51 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var createUniformWrapper   = __webpack_require__(50)
-var createAttributeWrapper = __webpack_require__(51)
-var makeReflect            = __webpack_require__(11)
-var shaderCache            = __webpack_require__(52)
-var runtime                = __webpack_require__(70)
-var GLError                = __webpack_require__(2)
-
-//Shader object
-function Shader(gl) {
-  this.gl         = gl
-  this.gl.lastAttribCount = 0  // fixme where else should we store info, safe but not nice on the gl object
-
-  //Default initialize these to null
-  this._vref      =
-  this._fref      =
-  this._relink    =
-  this.vertShader =
-  this.fragShader =
-  this.program    =
-  this.attributes =
-  this.uniforms   =
-  this.types      = null
-}
-
-var proto = Shader.prototype
-
-proto.bind = function() {
-  if(!this.program) {
-    this._relink()
-  }
-
-  // ensuring that we have the right number of enabled vertex attributes
-  var i
-  var newAttribCount = this.gl.getProgramParameter(this.program, this.gl.ACTIVE_ATTRIBUTES) // more robust approach
-  //var newAttribCount = Object.keys(this.attributes).length // avoids the probably immaterial introspection slowdown
-  var oldAttribCount = this.gl.lastAttribCount
-  if(newAttribCount > oldAttribCount) {
-    for(i = oldAttribCount; i < newAttribCount; i++) {
-      this.gl.enableVertexAttribArray(i)
-    }
-  } else if(oldAttribCount > newAttribCount) {
-    for(i = newAttribCount; i < oldAttribCount; i++) {
-      this.gl.disableVertexAttribArray(i)
-    }
-  }
-
-  this.gl.lastAttribCount = newAttribCount
-
-  this.gl.useProgram(this.program)
-}
-
-proto.dispose = function() {
-
-  // disabling vertex attributes so new shader starts with zero
-  // and it's also useful if all shaders are disposed but the
-  // gl context is reused for subsequent replotting
-  var oldAttribCount = this.gl.lastAttribCount
-  for (var i = 0; i < oldAttribCount; i++) {
-    this.gl.disableVertexAttribArray(i)
-  }
-  this.gl.lastAttribCount = 0
-
-  if(this._fref) {
-    this._fref.dispose()
-  }
-  if(this._vref) {
-    this._vref.dispose()
-  }
-  this.attributes =
-  this.types      =
-  this.vertShader =
-  this.fragShader =
-  this.program    =
-  this._relink    =
-  this._fref      =
-  this._vref      = null
-}
-
-function compareAttributes(a, b) {
-  if(a.name < b.name) {
-    return -1
-  }
-  return 1
-}
-
-//Update export hook for glslify-live
-proto.update = function(
-    vertSource
-  , fragSource
-  , uniforms
-  , attributes) {
-
-  //If only one object passed, assume glslify style output
-  if(!fragSource || arguments.length === 1) {
-    var obj = vertSource
-    vertSource = obj.vertex
-    fragSource = obj.fragment
-    uniforms   = obj.uniforms
-    attributes = obj.attributes
-  }
-
-  var wrapper = this
-  var gl      = wrapper.gl
-
-  //Compile vertex and fragment shaders
-  var pvref = wrapper._vref
-  wrapper._vref = shaderCache.shader(gl, gl.VERTEX_SHADER, vertSource)
-  if(pvref) {
-    pvref.dispose()
-  }
-  wrapper.vertShader = wrapper._vref.shader
-  var pfref = this._fref
-  wrapper._fref = shaderCache.shader(gl, gl.FRAGMENT_SHADER, fragSource)
-  if(pfref) {
-    pfref.dispose()
-  }
-  wrapper.fragShader = wrapper._fref.shader
-
-  //If uniforms/attributes is not specified, use RT reflection
-  if(!uniforms || !attributes) {
-
-    //Create initial test program
-    var testProgram = gl.createProgram()
-    gl.attachShader(testProgram, wrapper.fragShader)
-    gl.attachShader(testProgram, wrapper.vertShader)
-    gl.linkProgram(testProgram)
-    if(!gl.getProgramParameter(testProgram, gl.LINK_STATUS)) {
-      var errLog = gl.getProgramInfoLog(testProgram)
-      throw new GLError(errLog, 'Error linking program:' + errLog)
-    }
-
-    //Load data from runtime
-    uniforms   = uniforms   || runtime.uniforms(gl, testProgram)
-    attributes = attributes || runtime.attributes(gl, testProgram)
-
-    //Release test program
-    gl.deleteProgram(testProgram)
-  }
-
-  //Sort attributes lexicographically
-  // overrides undefined WebGL behavior for attribute locations
-  attributes = attributes.slice()
-  attributes.sort(compareAttributes)
-
-  //Convert attribute types, read out locations
-  var attributeUnpacked  = []
-  var attributeNames     = []
-  var attributeLocations = []
-  var i
-  for(i=0; i<attributes.length; ++i) {
-    var attr = attributes[i]
-    if(attr.type.indexOf('mat') >= 0) {
-      var size = attr.type.charAt(attr.type.length-1)|0
-      var locVector = new Array(size)
-      for(var j=0; j<size; ++j) {
-        locVector[j] = attributeLocations.length
-        attributeNames.push(attr.name + '[' + j + ']')
-        if(typeof attr.location === 'number') {
-          attributeLocations.push(attr.location + j)
-        } else if(Array.isArray(attr.location) &&
-                  attr.location.length === size &&
-                  typeof attr.location[j] === 'number') {
-          attributeLocations.push(attr.location[j]|0)
-        } else {
-          attributeLocations.push(-1)
-        }
-      }
-      attributeUnpacked.push({
-        name: attr.name,
-        type: attr.type,
-        locations: locVector
-      })
-    } else {
-      attributeUnpacked.push({
-        name: attr.name,
-        type: attr.type,
-        locations: [ attributeLocations.length ]
-      })
-      attributeNames.push(attr.name)
-      if(typeof attr.location === 'number') {
-        attributeLocations.push(attr.location|0)
-      } else {
-        attributeLocations.push(-1)
-      }
-    }
-  }
-
-  //For all unspecified attributes, assign them lexicographically min attribute
-  var curLocation = 0
-  for(i=0; i<attributeLocations.length; ++i) {
-    if(attributeLocations[i] < 0) {
-      while(attributeLocations.indexOf(curLocation) >= 0) {
-        curLocation += 1
-      }
-      attributeLocations[i] = curLocation
-    }
-  }
-
-  //Rebuild program and recompute all uniform locations
-  var uniformLocations = new Array(uniforms.length)
-  function relink() {
-    wrapper.program = shaderCache.program(
-        gl
-      , wrapper._vref
-      , wrapper._fref
-      , attributeNames
-      , attributeLocations)
-
-    for(var i=0; i<uniforms.length; ++i) {
-      uniformLocations[i] = gl.getUniformLocation(
-          wrapper.program
-        , uniforms[i].name)
-    }
-  }
-
-  //Perform initial linking, reuse program used for reflection
-  relink()
-
-  //Save relinking procedure, defer until runtime
-  wrapper._relink = relink
-
-  //Generate type info
-  wrapper.types = {
-    uniforms:   makeReflect(uniforms),
-    attributes: makeReflect(attributes)
-  }
-
-  //Generate attribute wrappers
-  wrapper.attributes = createAttributeWrapper(
-      gl
-    , wrapper
-    , attributeUnpacked
-    , attributeLocations)
-
-  //Generate uniform wrappers
-  Object.defineProperty(wrapper, 'uniforms', createUniformWrapper(
-      gl
-    , wrapper
-    , uniforms
-    , uniformLocations))
-}
-
-//Compiles and links a shader program with the given attribute and vertex list
-function createShader(
-    gl
-  , vertSource
-  , fragSource
-  , uniforms
-  , attributes) {
-
-  var shader = new Shader(gl)
-
-  shader.update(
-      vertSource
-    , fragSource
-    , uniforms
-    , attributes)
-
-  return shader
-}
-
-module.exports = createShader
-
-
-/***/ }),
-/* 50 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var coallesceUniforms = __webpack_require__(11)
+var coallesceUniforms = __webpack_require__(13)
 var GLError = __webpack_require__(2)
 
 module.exports = createUniformWrapper
@@ -13038,7 +13110,7 @@ function createUniformWrapper(gl, wrapper, uniforms, locations) {
 
 
 /***/ }),
-/* 51 */
+/* 52 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13308,7 +13380,7 @@ function createAttributeWrapper(
 
 
 /***/ }),
-/* 52 */
+/* 53 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13318,9 +13390,9 @@ exports.shader   = getShaderReference
 exports.program  = createProgram
 
 var GLError = __webpack_require__(2)
-var formatCompilerError = __webpack_require__(53);
+var formatCompilerError = __webpack_require__(54);
 
-var weakMap = typeof WeakMap === 'undefined' ? __webpack_require__(67) : WeakMap
+var weakMap = typeof WeakMap === 'undefined' ? __webpack_require__(68) : WeakMap
 var CACHE = new weakMap()
 
 var SHADER_COUNTER = 0
@@ -13451,14 +13523,14 @@ function createProgram(gl, vref, fref, attribs, locations) {
 
 
 /***/ }),
-/* 53 */
+/* 54 */
 /***/ (function(module, exports, __webpack_require__) {
 
 
-var sprintf = __webpack_require__(54).sprintf;
-var glConstants = __webpack_require__(55);
-var shaderName = __webpack_require__(57);
-var addLineNumbers = __webpack_require__(64);
+var sprintf = __webpack_require__(55).sprintf;
+var glConstants = __webpack_require__(56);
+var shaderName = __webpack_require__(58);
+var addLineNumbers = __webpack_require__(65);
 
 module.exports = formatCompilerError;
 
@@ -13510,7 +13582,7 @@ function formatCompilerError(errLog, src, type) {
 
 
 /***/ }),
-/* 54 */
+/* 55 */
 /***/ (function(module, exports, __webpack_require__) {
 
 (function(window) {
@@ -13724,10 +13796,10 @@ function formatCompilerError(errLog, src, type) {
 
 
 /***/ }),
-/* 55 */
+/* 56 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var gl10 = __webpack_require__(56)
+var gl10 = __webpack_require__(57)
 
 module.exports = function lookupConstant (number) {
   return gl10[number]
@@ -13735,7 +13807,7 @@ module.exports = function lookupConstant (number) {
 
 
 /***/ }),
-/* 56 */
+/* 57 */
 /***/ (function(module, exports) {
 
 module.exports = {
@@ -14039,11 +14111,11 @@ module.exports = {
 
 
 /***/ }),
-/* 57 */
+/* 58 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var tokenize = __webpack_require__(58)
-var atob     = __webpack_require__(63)
+var tokenize = __webpack_require__(59)
+var atob     = __webpack_require__(64)
 
 module.exports = getName
 
@@ -14068,10 +14140,10 @@ function getName(src) {
 
 
 /***/ }),
-/* 58 */
+/* 59 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var tokenize = __webpack_require__(59)
+var tokenize = __webpack_require__(60)
 
 module.exports = tokenizeString
 
@@ -14087,16 +14159,16 @@ function tokenizeString(str, opt) {
 
 
 /***/ }),
-/* 59 */
+/* 60 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = tokenize
 
-var literals100 = __webpack_require__(12)
-  , operators = __webpack_require__(60)
-  , builtins100 = __webpack_require__(13)
-  , literals300es = __webpack_require__(61)
-  , builtins300es = __webpack_require__(62)
+var literals100 = __webpack_require__(14)
+  , operators = __webpack_require__(61)
+  , builtins100 = __webpack_require__(15)
+  , literals300es = __webpack_require__(62)
+  , builtins300es = __webpack_require__(63)
 
 var NORMAL = 999          // <-- never emitted
   , TOKEN = 9999          // <-- never emitted
@@ -14455,7 +14527,7 @@ function tokenize(opt) {
 
 
 /***/ }),
-/* 60 */
+/* 61 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -14508,10 +14580,10 @@ module.exports = [
 
 
 /***/ }),
-/* 61 */
+/* 62 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var v100 = __webpack_require__(12)
+var v100 = __webpack_require__(14)
 
 module.exports = v100.slice().concat([
    'layout'
@@ -14602,11 +14674,11 @@ module.exports = v100.slice().concat([
 
 
 /***/ }),
-/* 62 */
+/* 63 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // 300es builtins/reserved words that were previously valid in v100
-var v100 = __webpack_require__(13)
+var v100 = __webpack_require__(15)
 
 // The texture2D|Cube functions have been removed
 // And the gl_ features are updated
@@ -14677,7 +14749,7 @@ module.exports = v100.concat([
 
 
 /***/ }),
-/* 63 */
+/* 64 */
 /***/ (function(module, exports) {
 
 module.exports = function _atob(str) {
@@ -14686,10 +14758,10 @@ module.exports = function _atob(str) {
 
 
 /***/ }),
-/* 64 */
+/* 65 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var padLeft = __webpack_require__(65)
+var padLeft = __webpack_require__(66)
 
 module.exports = addLineNumbers
 function addLineNumbers (string, start, delim) {
@@ -14708,7 +14780,7 @@ function addLineNumbers (string, start, delim) {
 
 
 /***/ }),
-/* 65 */
+/* 66 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14721,7 +14793,7 @@ function addLineNumbers (string, start, delim) {
 
 
 
-var repeat = __webpack_require__(66);
+var repeat = __webpack_require__(67);
 
 module.exports = function padLeft(str, num, ch) {
   ch = typeof ch !== 'undefined' ? (ch + '') : ' ';
@@ -14729,7 +14801,7 @@ module.exports = function padLeft(str, num, ch) {
 };
 
 /***/ }),
-/* 66 */
+/* 67 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14806,14 +14878,14 @@ function repeat(str, num) {
 
 
 /***/ }),
-/* 67 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // Original - @Gozola.
 // https://gist.github.com/Gozala/1269991
 // This is a reimplemented version (with a few bug fixes).
 
-var createStore = __webpack_require__(68);
+var createStore = __webpack_require__(69);
 
 module.exports = weakMap;
 
@@ -14841,10 +14913,10 @@ function weakMap() {
 
 
 /***/ }),
-/* 68 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var hiddenStore = __webpack_require__(69);
+var hiddenStore = __webpack_require__(70);
 
 module.exports = createStore;
 
@@ -14866,7 +14938,7 @@ function createStore() {
 
 
 /***/ }),
-/* 69 */
+/* 70 */
 /***/ (function(module, exports) {
 
 module.exports = hiddenStore;
@@ -14888,7 +14960,7 @@ function hiddenStore(obj, key) {
 
 
 /***/ }),
-/* 70 */
+/* 71 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14973,14 +15045,14 @@ function runtimeAttributes(gl, program) {
 
 
 /***/ }),
-/* 71 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var createVAONative = __webpack_require__(72)
-var createVAOEmulated = __webpack_require__(73)
+var createVAONative = __webpack_require__(73)
+var createVAOEmulated = __webpack_require__(74)
 
 function ExtensionShim (gl) {
   this.bindVertexArrayOES = gl.bindVertexArray.bind(gl)
@@ -15007,13 +15079,13 @@ module.exports = createVAO
 
 
 /***/ }),
-/* 72 */
+/* 73 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bindAttribs = __webpack_require__(14)
+var bindAttribs = __webpack_require__(16)
 
 function VertexAttribute(location, dimension, a, b, c, d) {
   this.location = location
@@ -15100,13 +15172,13 @@ function createVAONative(gl, ext) {
 module.exports = createVAONative
 
 /***/ }),
-/* 73 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bindAttribs = __webpack_require__(14)
+var bindAttribs = __webpack_require__(16)
 
 function VAOEmulated(gl) {
   this.gl = gl
@@ -15145,24 +15217,46 @@ function createVAOEmulated(gl) {
 module.exports = createVAOEmulated
 
 /***/ }),
-/* 74 */
-/***/ (function(module, exports) {
+/* 75 */
+/***/ (function(module, exports, __webpack_require__) {
 
-module.exports = class Color {
-  constructor() {
-    this.alpha = 0;
-    this.red = 0;
-    this.green = 0;
-    this.blue = 0;
-  }
+const createShader = __webpack_require__(12);
 
-  toCSS() {
-    return `rgba(${this.red * 255}, ${this.green * 255}, ${this.blue * 255}, ${this.alpha})`;
-  }
+module.exports = function (gl) {
+  return {
+    path: function () {
+      const shader = createShader(gl, `
+precision mediump float;
 
-  toVec4() {
-    return [this.red, this.green, this.blue, this.alpha];
-  }
+attribute vec2 position;
+attribute vec2 normal;
+attribute float miter;
+attribute float thickness;
+uniform mat4 transform;
+
+void main() {
+  vec2 pos = position + vec2(normal * thickness / 2.0 * miter);
+  gl_Position = transform * vec4(pos, 0.0, 1.0);
+}
+          `, `
+precision highp float;
+
+uniform vec4 color;
+
+void main() {
+  gl_FragColor = color;
+}
+        `);
+
+      shader.bind();
+      shader.attributes.position.location = 0;
+      shader.attributes.normal.location = 1;
+      shader.attributes.miter.location = 2;
+      shader.attributes.thickness.location = 3;
+
+      return shader;
+    }()
+  };
 };
 
 /***/ })

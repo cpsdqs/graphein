@@ -10,16 +10,22 @@ module.exports = class Layer {
 
   serialize () {
     return {
-      type: this.type,
-      transform: this.transform.serialize(),
-      children: this.children.map(child => child.serialize())
+      t: this.type,
+      a: this.transform.serialize(),
+      c: this.children.map(child => child.serialize())
     }
   }
 
-  render (gl, transform) {
+  render (gl, transform, context) {
     let subTransform = mat4.create()
     mat4.multiply(subTransform, transform, this.transform.toMat4())
-    this.children.forEach(child => child.render(gl, subTransform))
+    this.renderChildren(gl, subTransform, context)
+  }
+
+  renderChildren (gl, transform, context) {
+    for (let i = this.children.length - 1; i >= 0; i--) {
+      this.children[i].render(gl, transform, context)
+    }
   }
 
   static types = {

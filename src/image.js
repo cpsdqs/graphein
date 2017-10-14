@@ -9,6 +9,7 @@ module.exports = class Image extends Layer {
     this.version = 0
     this.width = 100
     this.height = 100
+    this.depth = 100
   }
 
   serialize () {
@@ -20,21 +21,43 @@ module.exports = class Image extends Layer {
     }
   }
 
-  render (gl) {
+  render (gl, context) {
     let near = 0.1
     let far = 1000
     let fov = Math.PI
-    let width = this.width
-    let height = this.height
-    let aspect = width / height
 
     let projection = mat4.create()
-    // TODO: projection
+
+    // copied from three.js
+    let top = near * Math.tan(fov / 2)
+    let height = 2 * top
+    let width = (this.width / this.height) * height
+    let left = -width / 2
+    let right = left + width
+    let bottom = top - height
+
+    let x = 2 * near / (right - left)
+    let y = 2 * near / (top - bottom)
+    let a = (right + left) / (right - left)
+    let b = (top + bottom) / (top - bottom)
+    let c = -(far + near) / (far - near)
+    let d = -2 * far * near / (far - near)
+
+    // doesn't work for some reason
+    // TODO: look into how this actually works
+    /* projection[0] = x
+    projection[5] = y
+    projection[8] = a
+    projection[9] = b
+    projection[10] = c
+    projection[11] = -1
+    projection[14] = d
+    projection[15] = 0 */
 
     let result = mat4.create()
-    mat4.scale(result, projection, [2 / width, -2 / height, 1])
-    mat4.translate(result, result, [-width / 2, -height / 2, 0])
+    mat4.scale(result, projection, [2 / this.width, -2 / this.height, 1])
+    mat4.translate(result, result, [-this.width / 2, -this.height / 2, 0])
 
-    this.children.forEach(child => child.render(gl, result))
+    this.renderChildren(gl, result, context)
   }
 }

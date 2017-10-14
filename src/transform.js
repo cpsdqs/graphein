@@ -27,12 +27,12 @@ module.exports = class Transform {
       mat[4] = this.data[3]
       mat[5] = this.data[4]
       mat[6] = this.data[5]
-      mat[8] = this.data[3]
-      mat[9] = this.data[4]
-      mat[10] = this.data[5]
-      mat[12] = this.data[6]
-      mat[13] = this.data[7]
-      mat[14] = this.data[8]
+      mat[8] = this.data[6]
+      mat[9] = this.data[7]
+      mat[10] = this.data[8]
+      mat[12] = this.data[9]
+      mat[13] = this.data[10]
+      mat[14] = this.data[11]
     }
 
     return mat

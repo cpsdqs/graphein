@@ -1,5 +1,6 @@
 const EventEmitter = require('events')
 const Path = require('./path')
+const Color = require('./color')
 
 // TODO: pen tilt
 
@@ -46,7 +47,9 @@ module.exports = class Brush extends EventEmitter {
   }
 
   stroke () {
+    // TODO: curve smoothing
 
+    this.emit('stroke', this.previewStroke)
   }
 
   getCurrentLength () {
@@ -75,8 +78,7 @@ module.exports = class Brush extends EventEmitter {
     this.onPointerMove({
       offsetX: e.offsetX,
       offsetY: e.offsetY,
-      pressure: 0.5,
-      getCoalescedEvents: () => []
+      pressure: 0.5
     })
   }
 
@@ -94,10 +96,11 @@ module.exports = class Brush extends EventEmitter {
     this.points.push({
       x: e.offsetX,
       y: e.offsetY,
-      pressure: e.pressure
+      pressure: e.pressure,
+      isStart: true
     })
     this.previewStroke = new Path()
-    this.previewStroke.stroke.alpha = 1
+    this.previewStroke.stroke = new Color(Math.random(), Math.random(), Math.random(), Math.random())
     this.previewStroke.data.push(new Path.Command(0x10, e.offsetX, e.offsetY))
     this.previewStroke.data.push(new Path.Command(0x60, 0, e.pressure * this.size / 2, e.pressure * this.size / 2))
     if (this.previewLayer) this.previewLayer.children.push(this.previewStroke)
@@ -118,10 +121,8 @@ module.exports = class Brush extends EventEmitter {
         pressure: event.pressure
       }
 
-      console.log(point.pressure)
-
       let lastPoint = this.points[this.points.length - 1]
-      if (point.x === lastPoint.x && point.y === lastPoint.y) {
+      if (!lastPoint.isStart && point.x === lastPoint.x && point.y === lastPoint.y) {
         this.points.pop()
         this.previewStroke.data.pop()
         this.previewStroke.data.pop()
@@ -139,17 +140,16 @@ module.exports = class Brush extends EventEmitter {
     this.points.push({
       x: e.offsetX,
       y: e.offsetY,
-      pressure: e.pressure
+      pressure: e.pressure,
+      isEnd: true
     })
 
     this.previewStroke.data.push(new Path.Command(0x20, e.offsetX, e.offsetY))
     this.previewStroke.data.push(new Path.Command(0x60, this.getCurrentLength(), e.pressure * this.size / 2, e.pressure * this.size / 2))
 
     if (this.previewLayer) {
-      // this.previewLayer.children.splice(this.previewLayer.children.indexOf(this.previewStroke), 1)
+      this.previewLayer.children.splice(this.previewLayer.children.indexOf(this.previewStroke), 1)
     }
-
-    console.log(this.previewStroke)
 
     this.stroke()
 
