@@ -198,7 +198,7 @@ class StrokeRenderer {
 
       if (Number.isFinite(left) && Number.isFinite(right)) {
         let mix = (x - left) / (right - left)
-        return rightPoint * mix + leftPoint
+        return (rightPoint - leftPoint) * mix + leftPoint
       } else if (Number.isFinite(left)) return leftPoint
       else if (Number.isFinite(right)) return rightPoint
       else return 0

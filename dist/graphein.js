@@ -2941,7 +2941,7 @@ class StrokeRenderer {
 
       if (Number.isFinite(left) && Number.isFinite(right)) {
         let mix = (x - left) / (right - left);
-        return rightPoint * mix + leftPoint;
+        return (rightPoint - leftPoint) * mix + leftPoint;
       } else if (Number.isFinite(left)) return leftPoint;else if (Number.isFinite(right)) return rightPoint;else return 0;
     };
   }
@@ -15642,7 +15642,7 @@ attribute float thickness;
 uniform mat4 transform;
 
 void main() {
-  vec2 pos = position + vec2(normal * thickness / 2.0 * miter);
+  vec2 pos = position + vec2(normal * thickness / 2.0 * sign(miter));
   gl_Position = transform * vec4(pos, 0.0, 1.0);
 }
           `, `
