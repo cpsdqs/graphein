@@ -3,7 +3,7 @@ canvas.canvas.style.background = '#fff9da'
 document.body.appendChild(canvas)
 
 const image = new (window.graphein.Image)()
-image.width = image.height = 300
+image.width = image.height = 500
 const layer = new (window.graphein.Layer)()
 image.children.push(layer)
 

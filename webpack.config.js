@@ -17,7 +17,8 @@ module.exports = {
             options: {
               plugins: [
                 'transform-class-properties',
-                'transform-do-expressions'
+                'transform-do-expressions',
+                'transform-function-bind'
               ]
             }
           }

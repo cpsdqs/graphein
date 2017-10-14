@@ -1,4 +1,5 @@
 const EventEmitter = require('events')
+const PathFitter = require('./lib/path-fitter')
 const Path = require('./path')
 const Color = require('./color')
 
@@ -47,9 +48,39 @@ module.exports = class Brush extends EventEmitter {
   }
 
   stroke () {
-    // TODO: curve smoothing
+    let pathFitter = new PathFitter(this.points.map(x => [x.x, x.y]))
+    let segments = pathFitter.fit(2) // TODO: weighted by time?
 
-    this.emit('stroke', this.previewStroke)
+    let path = new Path()
+    path.stroke = new Color(0, 0, 0, 1)
+
+    let lastSegment = null
+    for (let segment of segments) {
+      if ((!lastSegment || !lastSegment.handleOutLength()) && !segment.handleInLength()) {
+        // line from last segment to this one is straight
+        path.data.push(new Path.Command(0x20, ...segment.point))
+      } else if (lastSegment) {
+        // cubic bezier curve
+
+        // get absolute handle out & in
+        let handleOut = lastSegment.handleOut.map((x, i) => x + lastSegment.point[i])
+        let handleIn = segment.handleIn.map((x, i) => x + segment.point[i])
+
+        path.data.push(new Path.Command(0x30, ...handleOut, ...handleIn, ...segment.point))
+      } else {
+        path.data.push(new Path.Command(0x10, ...segment.point))
+      }
+
+      lastSegment = segment
+    }
+
+    // TODO: don't do the following
+    // copy width data to simplified path
+    for (let command of this.previewStroke.data) {
+      if (command.type === 0x60) path.data.push(command)
+    }
+
+    this.emit('stroke', path)
   }
 
   getCurrentLength () {
@@ -100,7 +131,7 @@ module.exports = class Brush extends EventEmitter {
       isStart: true
     })
     this.previewStroke = new Path()
-    this.previewStroke.stroke = new Color(Math.random(), Math.random(), Math.random(), Math.random())
+    this.previewStroke.stroke = new Color(1, 0, 0, 0.5)
     this.previewStroke.data.push(new Path.Command(0x10, e.offsetX, e.offsetY))
     this.previewStroke.data.push(new Path.Command(0x60, 0, e.pressure * this.size / 2, e.pressure * this.size / 2))
     if (this.previewLayer) this.previewLayer.children.push(this.previewStroke)
