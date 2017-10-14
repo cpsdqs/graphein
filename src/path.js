@@ -4,11 +4,12 @@ const getNormals = require('polyline-normals')
 const createBuffer = require('gl-buffer')
 const createShader = require('gl-shader')
 const createVAO = require('gl-vao')
+const triangulate = require('cdt2d')
 const Layer = require('./layer')
 const Color = require('./color')
 
 class StrokeRenderer {
-  constructor (gl, transform, context, color) {
+  constructor (gl, transform, context, stroke, fill) {
     this.currentPath = []
     this.paths = [this.currentPath]
     this.widthL = [[0, 0]]
@@ -19,8 +20,10 @@ class StrokeRenderer {
 
     this.gl = gl
     this.transform = transform
-    this.color = color
+    this.stroke = stroke
+    this.fill = fill
     this.shader = context.shaders.path
+    this.fillShader = context.shaders.pathFill
   }
 
   add (type, ...args) {
@@ -162,11 +165,40 @@ class StrokeRenderer {
     ])
 
     this.shader.bind()
-    this.shader.uniforms.color = this.color
+    this.shader.uniforms.color = this.stroke
     this.shader.uniforms.transform = this.transform
 
     vao.bind()
     vao.draw(gl.TRIANGLE_STRIP, positions.length / 2)
+    vao.unbind()
+  }
+
+  renderFill () {
+    const gl = this.gl
+
+    let path = this.currentPath.slice()
+
+    let cells = triangulate(path)
+
+    let positions = []
+    for (let cell of cells) {
+      for (let pos of cell.map(x => path[x])) positions.push(...pos)
+    }
+
+    const vao = createVAO(gl, [
+      {
+        buffer: createBuffer(gl, positions),
+        type: gl.FLOAT,
+        size: 2
+      }
+    ])
+
+    this.fillShader.bind()
+    this.fillShader.uniforms.color = this.fill
+    this.fillShader.uniforms.transform = this.transform
+
+    vao.bind()
+    vao.draw(gl.TRIANGLES, positions.length / 2)
     vao.unbind()
   }
 
@@ -260,16 +292,16 @@ module.exports = class Path extends Layer {
     let subTransform = mat4.create()
     mat4.multiply(subTransform, transform, this.transform.toMat4())
 
-    let renderer = new StrokeRenderer(gl, subTransform, context, this.stroke.toVec4())
+    let renderer = new StrokeRenderer(gl, subTransform, context,
+      this.stroke ? this.stroke.toVec4() : [0, 0, 0, 0],
+      this.fill ? this.fill.toVec4() : [0, 0, 0, 0])
     this.data.forEach(command => command.render(renderer))
 
-    if (this.fill && this.fill.alpha) {
-      // ctx.fillStyle = this.fill.toCSS()
-      // ctx.fill(new window.Path2D(renderer.getPath()))
-    }
     if (this.stroke && this.stroke.alpha) {
-      // ctx.strokeStyle = this.stroke.toCSS()
       renderer.render()
+    }
+    if (this.fill && this.fill.alpha) {
+      renderer.renderFill()
     }
   }
 

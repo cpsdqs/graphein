@@ -143,7 +143,7 @@ module.exports = class Brush extends EventEmitter {
 
     let events = [e]
     // coalesced events currently break everything
-    // if (e.getCoalescedEvents) events.unshift(...e.getCoalescedEvents())
+    if (e.getCoalescedEvents) events.unshift(...e.getCoalescedEvents())
 
     for (let event of events) {
       let point = {

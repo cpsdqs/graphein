@@ -50,8 +50,6 @@ class Canvas extends window.HTMLElement {
   }
 
   render () {
-    let start = window.performance.now()
-
     this.gl.clearColor(0, 0, 0, 0)
     this.gl.viewport(0, 0, this.canvas.width, this.canvas.height)
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
@@ -60,9 +58,6 @@ class Canvas extends window.HTMLElement {
     this.image.render(this.gl, {
       shaders: this.shaders
     })
-
-    let end = window.performance.now()
-    console.log(`Rendered in ${end - start}ms`)
   }
 }
 
