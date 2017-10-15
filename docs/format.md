@@ -59,24 +59,24 @@ Every instruction is an array. The first entry is always the type as a uint8:
 - `0x11` Move relative (m)
 - `0x20` Line (L)
 - `0x21` Line relative (l)
-- `0x30` Cubic Beziér curve (C)
-- `0x31` Cubic Beziér curve relative (c)
-- `0x32` Cubic Beziér shortcut (S)
-- `0x33` Cubic Beziér shortcut relative (s)
-- `0x40` Quadratic Beziér curve (Q)
-- `0x41` Quadratic Beziér curve relative (q)
-- `0x42` Quadratic Beziér shortcut (T)
-- `0x43` Quadratic Beziér shortcut relative (t)
+- `0x30` Cubic Bézier curve (C)
+- `0x31` Cubic Bézier curve relative (c)
+- `0x32` Cubic Bézier shortcut (S)
+- `0x33` Cubic Bézier shortcut relative (s)
+- `0x40` Quadratic Bézier curve (Q)
+- `0x41` Quadratic Bézier curve relative (q)
+- `0x42` Quadratic Bézier shortcut (T)
+- `0x43` Quadratic Bézier shortcut relative (t)
 - `0x50` Arc (A)
 - `0x51` Arc relative (a)
 - `0x60` Stroke width: Line (pos, value left, value right)
 - `0x61` Stroke width: Line relative (relative pos, relative value left, relative value right)
-- `0x62` Stroke width: Cubic Beziér (pos, left c1x, c1y, c2x, c2y, value, right c1x, c1y, c2x, c2y, value)
-- `0x63` Stroke width relative: Cubic Beziér (pos, left c1x, c1y, c2x, c2y, value, right c1x, c1y, c2x, c2y, value)
+- `0x62` Stroke width: Cubic Bézier (pos, left c1x, c1y, c2x, c2y, value, right c1x, c1y, c2x, c2y, value)
+- `0x63` Stroke width relative: Cubic Bézier (pos, left c1x, c1y, c2x, c2y, value, right c1x, c1y, c2x, c2y, value)
 
 The rest of the entries are float32s of the arguments in the order as used in SVG paths.
 
-A stroke width instruction should appear at least once in the beginning before any line is drawn, though if not, no stroke should be drawn until one does appear. The stroke width is a one-dimensional beziér or linear curve and should be interpreted as a function that maps a position on the stroke to its width.
+A stroke width instruction should appear at least once in the beginning before any line is drawn, though if not, no stroke should be drawn until one does appear. The stroke width is a one-dimensional bézier or linear curve and should be interpreted as a function that maps a position on the stroke to its width.
 
 ##### Clipping Mask `c`
 A clipping mask adds the following properties:
