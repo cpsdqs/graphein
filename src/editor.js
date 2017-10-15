@@ -173,4 +173,32 @@ module.exports = class Editor {
     this.renderCursor(-1, -1, 0, 0, 0)
     this.onPointerUp(e)
   }
+
+  onMouseDown = e => {
+    this.onPointerDown({
+      offsetX: e.offsetX,
+      offsetY: e.offsetY,
+      pressure: 0, // taper ends
+      tiltX: 0,
+      tiltY: 0
+    })
+  }
+  onMouseMove = e => {
+    this.onPointerMove({
+      offsetX: e.offsetX,
+      offsetY: e.offsetY,
+      pressure: 1,
+      tiltX: 0,
+      tiltY: 0
+    })
+  }
+  onMouseUp = e => {
+    this.onPointerUp({
+      offsetX: e.offsetX,
+      offsetY: e.offsetY,
+      pressure: 0, // taper ends
+      tiltX: 0,
+      tiltY: 0
+    })
+  }
 }

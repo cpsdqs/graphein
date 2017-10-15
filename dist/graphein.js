@@ -16708,6 +16708,36 @@ module.exports = class Editor {
       this.onPointerUp(e);
     };
 
+    this.onMouseDown = e => {
+      this.onPointerDown({
+        offsetX: e.offsetX,
+        offsetY: e.offsetY,
+        pressure: 0, // taper ends
+        tiltX: 0,
+        tiltY: 0
+      });
+    };
+
+    this.onMouseMove = e => {
+      this.onPointerMove({
+        offsetX: e.offsetX,
+        offsetY: e.offsetY,
+        pressure: 1,
+        tiltX: 0,
+        tiltY: 0
+      });
+    };
+
+    this.onMouseUp = e => {
+      this.onPointerUp({
+        offsetX: e.offsetX,
+        offsetY: e.offsetY,
+        pressure: 0, // taper ends
+        tiltX: 0,
+        tiltY: 0
+      });
+    };
+
     this.canvas = canvas;
 
     this.down = false;
