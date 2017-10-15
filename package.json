@@ -11,13 +11,13 @@
     "babel-plugin-transform-class-properties": "^6.24.1",
     "babel-plugin-transform-do-expressions": "^6.22.0",
     "babel-plugin-transform-function-bind": "^6.22.0",
-    "cdt2d": "^1.0.0",
     "standard": "^10.0.3",
     "webpack": "^3.7.1"
   },
   "dependencies": {
     "adaptive-bezier-curve": "^1.0.3",
     "arc-to": "^1.0.1",
+    "cdt2d": "^1.0.0",
     "gl-buffer": "^2.1.2",
     "gl-matrix": "^2.4.0",
     "gl-shader": "^4.2.1",
