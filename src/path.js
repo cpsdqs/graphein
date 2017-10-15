@@ -316,6 +316,10 @@ class PathCommand {
     return [this.type, ...this.data]
   }
 
+  static deserialize (data) {
+    return new PathCommand(...data)
+  }
+
   static types = {
     CLOSE_PATH: 0,
     MOVE: 0x10,
@@ -351,18 +355,26 @@ module.exports = class Path extends Layer {
     this.stroke = null
     this.fill = null
     this.cap = Path.cap.BUTT
-    this.join = Path.join.MITER
+    this.join = Path.join.BEVEL
     this.miter = 0
 
     this.dataIsDirty = false
     const self = this
-    this.data = new Proxy([], {
+    this._data = new Proxy([], {
       set (target, key, value) {
         target[key] = value
         self.dataIsDirty = true
         return true
       }
     })
+  }
+
+  get data () {
+    return this._data
+  }
+  set data (v) {
+    this._data.splice(0)
+    this._data.push(...v)
   }
 
   render (gl, transform, context) {
@@ -384,6 +396,7 @@ module.exports = class Path extends Layer {
       // not in cache, create one
       renderer = new StrokeRenderer(gl, subTransform, context, strokeColor, fillColor)
       this.data.forEach(command => command.render(renderer))
+      this.dataIsDirty = false
 
       if (!strokeRendererContexts.has(gl)) strokeRendererContexts.set(gl, new WeakMap())
       strokeRendererContexts.get(gl).set(this, renderer)
@@ -440,6 +453,20 @@ module.exports = class Path extends Layer {
     })
   }
 
+  static deserialize (data) {
+    let path = new Path()
+    Layer.deserializeLayerData(path, data)
+
+    path.cap = data.e || 0
+    path.join = data.j || 0
+    path.miter = data.m || 0
+    path.stroke = Color.deserialize(data.s)
+    path.fill = Color.deserialize(data.f)
+    path.data = (data.d || []).map(x => PathCommand.deserialize(x))
+
+    return path
+  }
+
   static cap = {
     BUTT: 0,
     ROUND: 1,
@@ -454,3 +481,5 @@ module.exports = class Path extends Layer {
 
   static Command = PathCommand
 }
+
+Layer.registry.define('p', module.exports)

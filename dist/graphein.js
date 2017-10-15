@@ -253,6 +253,7 @@ module.exports = class Color {
   }
 
   static deserialize(color) {
+    if (color === null || color === undefined) return null;
     return new Color((color >> 8 & 0xFF) / 255, (color >> 16 & 0xFF) / 255, (color >> 24) / 255, 1 - (color & 0xFF) / 255);
   }
 };
@@ -325,7 +326,18 @@ var _class, _temp;
 const Transform = __webpack_require__(12);
 const { mat4 } = __webpack_require__(1);
 
-module.exports = (_temp = _class = class Layer {
+const registry = {
+  types: {},
+  define(type, typeClass) {
+    if (this.types[type]) {
+      throw new Error(`Layer type registry: ${type} already exists`);
+    }
+    this.types[type] = typeClass;
+    return typeClass;
+  }
+};
+
+module.exports = registry.types.g = (_temp = _class = class Layer {
   constructor() {
     this.type = Layer.types.GROUP;
     this.transform = new Transform();
@@ -369,7 +381,40 @@ module.exports = (_temp = _class = class Layer {
     }
   }
 
-}, _class.types = {
+  static deserializeLayerData(layer, data) {
+    layer.transform = Transform.deserialize(data.a);
+    layer.children = Layer.deserializeChildren(data.c, layer);
+  }
+
+  static deserialize(data) {
+    let group = new Layer();
+    if (data.t !== Layer.types.GROUP) {
+      throw new Error(`Tried to deserialize layer of type ${data.t} as g`);
+    }
+    group.transform = Transform.deserialize(data.a);
+    group.children = Layer.deserializeChildren(data.c, group);
+
+    return group;
+  }
+
+  static deserializeChildren(data, parentNode) {
+    if (!data) return [];
+    let children = [];
+
+    for (let item of data) {
+      if (registry.types[item.t]) {
+        let child = registry.types[item.t].deserialize(item);
+        child.parentNode = parentNode;
+        children.push(child);
+      } else {
+        throw new Error(`Unknown layer type: ${item.t}`);
+      }
+    }
+
+    return children;
+  }
+
+}, _class.registry = registry, _class.types = {
   GROUP: 'g',
   PATH: 'p',
   CLIPPING_MASK: 'c',
@@ -694,6 +739,10 @@ class PathCommand {
     return [this.type, ...this.data];
   }
 
+  static deserialize(data) {
+    return new PathCommand(...data);
+  }
+
 }
 
 // WeakMap<WebGLRenderingContext, WeakMap<Path, StrokeRenderer>>
@@ -729,18 +778,26 @@ module.exports = (_temp = _class = class Path extends Layer {
     this.stroke = null;
     this.fill = null;
     this.cap = Path.cap.BUTT;
-    this.join = Path.join.MITER;
+    this.join = Path.join.BEVEL;
     this.miter = 0;
 
     this.dataIsDirty = false;
     const self = this;
-    this.data = new Proxy([], {
+    this._data = new Proxy([], {
       set(target, key, value) {
         target[key] = value;
         self.dataIsDirty = true;
         return true;
       }
     });
+  }
+
+  get data() {
+    return this._data;
+  }
+  set data(v) {
+    this._data.splice(0);
+    this._data.push(...v);
   }
 
   render(gl, transform, context) {
@@ -762,6 +819,7 @@ module.exports = (_temp = _class = class Path extends Layer {
       // not in cache, create one
       renderer = new StrokeRenderer(gl, subTransform, context, strokeColor, fillColor);
       this.data.forEach(command => command.render(renderer));
+      this.dataIsDirty = false;
 
       if (!strokeRendererContexts.has(gl)) strokeRendererContexts.set(gl, new WeakMap());
       strokeRendererContexts.get(gl).set(this, renderer);
@@ -818,6 +876,20 @@ module.exports = (_temp = _class = class Path extends Layer {
     });
   }
 
+  static deserialize(data) {
+    let path = new Path();
+    Layer.deserializeLayerData(path, data);
+
+    path.cap = data.e || 0;
+    path.join = data.j || 0;
+    path.miter = data.m || 0;
+    path.stroke = Color.deserialize(data.s);
+    path.fill = Color.deserialize(data.f);
+    path.data = (data.d || []).map(x => PathCommand.deserialize(x));
+
+    return path;
+  }
+
 }, _class.cap = {
   BUTT: 0,
   ROUND: 1,
@@ -827,6 +899,8 @@ module.exports = (_temp = _class = class Path extends Layer {
   ROUND: 1,
   MITER: 2
 }, _class.Command = PathCommand, _temp);
+
+Layer.registry.define('p', module.exports);
 
 /***/ }),
 /* 7 */
@@ -874,12 +948,14 @@ function twoProduct(a, b, result) {
 const { mat4 } = __webpack_require__(1);
 const Layer = __webpack_require__(5);
 
+const version = '0.0.0';
+
 module.exports = class Image extends Layer {
   constructor() {
     super();
 
     // TODO: don't hardcode
-    this.version = 0;
+    this.version = version;
     this.width = 100;
     this.height = 100;
     this.depth = 100;
@@ -890,6 +966,7 @@ module.exports = class Image extends Layer {
       version: this.version,
       w: this.width,
       h: this.height,
+      d: this.depth,
       c: this.children.map(child => child.serialize())
     };
   }
@@ -932,6 +1009,18 @@ module.exports = class Image extends Layer {
     mat4.translate(result, result, [-this.width / 2, -this.height / 2, 0]);
 
     this.renderChildren(gl, result, context);
+  }
+
+  static deserialize(data) {
+    if (data.version !== version) throw new Error('Version does not match: ' + data.version);
+
+    let image = new Image();
+    image.width = data.w;
+    image.height = data.h;
+    image.depth = data.d;
+    image.children = Layer.deserializeChildren(data.c, image);
+
+    return image;
   }
 };
 
@@ -3293,8 +3382,10 @@ module.exports = (_temp = _class = class Transform {
 
   static deserialize(data) {
     let transform = new Transform();
-    transform.type = data.length === 12 ? Transform.types.MAT4 : data.length === 6 ? Transform.types.MAT3 : Transform.types.NONE;
-    transform.data = new Float32Array(data.slice());
+    if (data) {
+      transform.type = data.length === 12 ? Transform.types.MAT4 : data.length === 6 ? Transform.types.MAT3 : Transform.types.NONE;
+      transform.data = new Float32Array(data.slice());
+    }
     return transform;
   }
 

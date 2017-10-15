@@ -3,12 +3,13 @@
 ### Structure
 The root Object must always be an Object with the following properties:
 
-| Name    | Type   | Description |
-| ------- | ------ | ----------- |
-| version | str    | The semantic versioning number this image was generated with
-| w       | uint16 | Width of the image
-| h       | uint16 | Height of the image
-| c       | arr    | Content. An array of layers, see below
+| Name    | Type    | Description |
+| ------- | ------- | ----------- |
+| version | str     | The semantic versioning number this image was generated with
+| w       | uint16  | Width of the image
+| h       | uint16  | Height of the image
+| d       | float32 | Perspective Depth
+| c       | arr     | Content. An array of layers, see below
 
 #### Layer
 A layer may contain other layers or even draw content itself. Every layer must have the following properties:

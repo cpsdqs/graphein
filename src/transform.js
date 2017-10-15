@@ -40,12 +40,14 @@ module.exports = class Transform {
 
   static deserialize (data) {
     let transform = new Transform()
-    transform.type = data.length === 12
-      ? Transform.types.MAT4
-      : data.length === 6
-      ? Transform.types.MAT3
-      : Transform.types.NONE
-    transform.data = new Float32Array(data.slice())
+    if (data) {
+      transform.type = data.length === 12
+        ? Transform.types.MAT4
+        : data.length === 6
+        ? Transform.types.MAT3
+        : Transform.types.NONE
+      transform.data = new Float32Array(data.slice())
+    }
     return transform
   }
 

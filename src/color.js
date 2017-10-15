@@ -23,6 +23,7 @@ module.exports = class Color {
   }
 
   static deserialize (color) {
+    if (color === null || color === undefined) return null
     return new Color(
       ((color >> 8) & 0xFF) / 255,
       ((color >> 16) & 0xFF) / 255,
