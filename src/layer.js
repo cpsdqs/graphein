@@ -6,6 +6,7 @@ module.exports = class Layer {
     this.type = Layer.types.GROUP
     this.transform = new Transform()
     this.children = []
+    this.parentNode = null
   }
 
   serialize () {
@@ -25,6 +26,22 @@ module.exports = class Layer {
   renderChildren (gl, transform, context) {
     for (let i = this.children.length - 1; i >= 0; i--) {
       this.children[i].render(gl, transform, context)
+    }
+  }
+
+  appendChild (child) {
+    if (!child.parentNode) {
+      this.children.push(child)
+      child.parentNode = this
+    } else {
+      throw new Error('Cannot add child to multiple parents')
+    }
+  }
+
+  removeChild (child) {
+    if (child.parentNode === this) {
+      this.children.splice(this.children.indexOf(child, 1))
+      child.parentNode = null
     }
   }
 

@@ -4,6 +4,7 @@ const Image = require('./image')
 const Layer = require('./layer')
 const Transform = require('./transform')
 const Path = require('./path')
+const Editor = require('./editor')
 
 const graphein = {
   Canvas,
@@ -11,7 +12,8 @@ const graphein = {
   Image,
   Layer,
   Transform,
-  Path
+  Path,
+  Editor
 }
 
 module.exports = window.graphein = graphein

@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 17);
+/******/ 	return __webpack_require__(__webpack_require__.s = 22);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -148,14 +148,14 @@ function equals(a, b) {
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__ = __webpack_require__(19);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__ = __webpack_require__(20);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__ = __webpack_require__(6);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__ = __webpack_require__(21);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__ = __webpack_require__(22);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__ = __webpack_require__(23);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__ = __webpack_require__(7);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__ = __webpack_require__(8);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__ = __webpack_require__(24);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__ = __webpack_require__(25);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__ = __webpack_require__(9);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__ = __webpack_require__(26);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__ = __webpack_require__(27);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__ = __webpack_require__(28);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__ = __webpack_require__(10);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__ = __webpack_require__(11);
 /* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "glMatrix", function() { return __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__; });
 /* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat2", function() { return __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__; });
 /* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat2d", function() { return __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__; });
@@ -228,47 +228,60 @@ module.exports = GLError
 /* 3 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _class, _temp;
+"use strict";
 
-const Transform = __webpack_require__(9);
-const { mat4 } = __webpack_require__(1);
 
-module.exports = (_temp = _class = class Layer {
-  constructor() {
-    this.type = Layer.types.GROUP;
-    this.transform = new Transform();
-    this.children = [];
-  }
-
-  serialize() {
-    return {
-      t: this.type,
-      a: this.transform.serialize(),
-      c: this.children.map(child => child.serialize())
-    };
-  }
-
-  render(gl, transform, context) {
-    let subTransform = mat4.create();
-    mat4.multiply(subTransform, transform, this.transform.toMat4());
-    this.renderChildren(gl, subTransform, context);
-  }
-
-  renderChildren(gl, transform, context) {
-    for (let i = this.children.length - 1; i >= 0; i--) {
-      this.children[i].render(gl, transform, context);
+function compileSearch(funcName, predicate, reversed, extraArgs, earlyOut) {
+  var code = [
+    "function ", funcName, "(a,l,h,", extraArgs.join(","),  "){",
+earlyOut ? "" : "var i=", (reversed ? "l-1" : "h+1"),
+";while(l<=h){\
+var m=(l+h)>>>1,x=a[m]"]
+  if(earlyOut) {
+    if(predicate.indexOf("c") < 0) {
+      code.push(";if(x===y){return m}else if(x<=y){")
+    } else {
+      code.push(";var p=c(x,y);if(p===0){return m}else if(p<=0){")
     }
+  } else {
+    code.push(";if(", predicate, "){i=m;")
   }
+  if(reversed) {
+    code.push("l=m+1}else{h=m-1}")
+  } else {
+    code.push("h=m-1}else{l=m+1}")
+  }
+  code.push("}")
+  if(earlyOut) {
+    code.push("return -1};")
+  } else {
+    code.push("return i};")
+  }
+  return code.join("")
+}
 
-}, _class.types = {
-  GROUP: 'g',
-  PATH: 'p',
-  CLIPPING_MASK: 'c',
-  RECTANGLE: 'sr',
-  CIRCLE: 'sc',
-  TEXT: 't',
-  RASTER_IMAGE: 'b'
-}, _temp);
+function compileBoundsSearch(predicate, reversed, suffix, earlyOut) {
+  var result = new Function([
+  compileSearch("A", "x" + predicate + "y", reversed, ["y"], earlyOut),
+  compileSearch("P", "c(x,y)" + predicate + "0", reversed, ["y", "c"], earlyOut),
+"function dispatchBsearch", suffix, "(a,y,c,l,h){\
+if(typeof(c)==='function'){\
+return P(a,(l===void 0)?0:l|0,(h===void 0)?a.length-1:h|0,y,c)\
+}else{\
+return A(a,(c===void 0)?0:c|0,(l===void 0)?a.length-1:l|0,y)\
+}}\
+return dispatchBsearch", suffix].join(""))
+  return result()
+}
+
+module.exports = {
+  ge: compileBoundsSearch(">=", false, "GE"),
+  gt: compileBoundsSearch(">", false, "GT"),
+  lt: compileBoundsSearch("<", true, "LT"),
+  le: compileBoundsSearch("<=", true, "LE"),
+  eq: compileBoundsSearch("-", true, "EQ", true)
+}
+
 
 /***/ }),
 /* 4 */
@@ -307,8 +320,457 @@ module.exports = class Color {
 /* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
+var _class, _temp;
+
+const Transform = __webpack_require__(12);
 const { mat4 } = __webpack_require__(1);
-const Layer = __webpack_require__(3);
+
+module.exports = (_temp = _class = class Layer {
+  constructor() {
+    this.type = Layer.types.GROUP;
+    this.transform = new Transform();
+    this.children = [];
+    this.parentNode = null;
+  }
+
+  serialize() {
+    return {
+      t: this.type,
+      a: this.transform.serialize(),
+      c: this.children.map(child => child.serialize())
+    };
+  }
+
+  render(gl, transform, context) {
+    let subTransform = mat4.create();
+    mat4.multiply(subTransform, transform, this.transform.toMat4());
+    this.renderChildren(gl, subTransform, context);
+  }
+
+  renderChildren(gl, transform, context) {
+    for (let i = this.children.length - 1; i >= 0; i--) {
+      this.children[i].render(gl, transform, context);
+    }
+  }
+
+  appendChild(child) {
+    if (!child.parentNode) {
+      this.children.push(child);
+      child.parentNode = this;
+    } else {
+      throw new Error('Cannot add child to multiple parents');
+    }
+  }
+
+  removeChild(child) {
+    if (child.parentNode === this) {
+      this.children.splice(this.children.indexOf(child, 1));
+      child.parentNode = null;
+    }
+  }
+
+}, _class.types = {
+  GROUP: 'g',
+  PATH: 'p',
+  CLIPPING_MASK: 'c',
+  RECTANGLE: 'sr',
+  CIRCLE: 'sc',
+  TEXT: 't',
+  RASTER_IMAGE: 'b'
+}, _temp);
+
+/***/ }),
+/* 6 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var _class, _temp;
+
+const { mat4 } = __webpack_require__(1);
+const bezier = __webpack_require__(32);
+const getNormals = __webpack_require__(34);
+const createBuffer = __webpack_require__(41);
+const createShader = __webpack_require__(14);
+const createVAO = __webpack_require__(78);
+const triangulate = __webpack_require__(81);
+const Layer = __webpack_require__(5);
+const Color = __webpack_require__(4);
+
+class StrokeRenderer {
+  constructor(gl, transform, context, stroke, fill) {
+    this.currentPath = [];
+    this.paths = [this.currentPath];
+    this.widthL = [[0, 0]];
+    this.widthR = [[0, 0]];
+    this.cursor = [0, 0];
+    this.cursorL = [0, 0];
+    this.cursorR = [0, 0];
+
+    this.gl = gl;
+    this.transform = transform;
+    this.stroke = stroke;
+    this.fill = fill;
+    this.shader = context.shaders.path;
+    this.fillShader = context.shaders.pathFill;
+  }
+
+  add(type, ...args) {
+    let lastCursor = this.cursor.slice();
+
+    if (type === 0x10) {
+      // moveto
+      this.cursor = args;
+      this.paths.push(this.currentPath = [this.cursor]);
+    } else if (type === 0x11) {
+      // moveto relative
+      this.cursor = this.cursor.map((x, i) => x + args[i]);
+      this.paths.push(this.currentPath = [this.cursor]);
+    } else if (type === 0x20) {
+      // lineto
+      this.currentPath.push(this.cursor = args);
+    } else if (type === 0x21) {
+      // lineto relative
+      this.cursor = this.cursor.map((x, i) => x + args[i]);
+      this.currentPath.push(this.cursor);
+    } else if (type === 0x30 || type === 0x31) {
+      // curveto / relative
+      let c1 = args.slice(0, 2);
+      let c2 = args.slice(2, 4);
+      this.cursor = args.slice(4);
+
+      if (type === 0x31) {
+        c1 = c1.map((x, i) => x + lastCursor[i]);
+        c2 = c2.map((x, i) => x + lastCursor[i]);
+        this.cursor = this.cursor.map((x, i) => x + lastCursor[i]);
+      }
+
+      this.currentPath.push(...bezier(lastCursor, c1, c2, this.cursor).slice(1));
+      // TODO: quadratic curves
+    } else if (type === 0x50 || type === 0x51) {
+      // TODO
+    } else if (type === 0x60) {
+      // stroke width to
+      this.widthL.push(args);
+      this.cursorL = args;
+      this.widthR.push(args);
+      this.cursorR = args;
+    } else if (type === 0x61) {
+      // stroke width relative
+      this.widthL.push(args);
+      this.cursorL = this.cursorL.map((x, i) => x + args[i]);
+      this.widthR.push(args);
+      this.cursorR = this.cursorR.map((x, i) => x + args[i]);
+    } else if (type === 0x62) {
+      // stroke width bezier
+      let c1L = args.slice(1, 3);
+      let c2L = args.slice(3, 5);
+      let lastCursorL = this.cursorL.slice();
+      this.cursorL = [args[0], args[5]];
+      bezier(lastCursorL, c1L, c2L, this.cursorL, 1, this.widthL);
+
+      let c1R = args.slice(6, 8);
+      let c2R = args.slice(8, 10);
+      let lastCursorR = this.cursorR.slice();
+      this.cursorR = [args[0], args[10]];
+      bezier(lastCursorR, c1R, c2R, this.cursorR, 1, this.widthR);
+    } else {
+      // TODO: stroke width bezier relative
+    }
+  }
+
+  render() {
+    const gl = this.gl;
+
+    // TODO: render all paths instead of only one
+    let path = this.currentPath.slice();
+    let normals = getNormals(path);
+
+    let getWidthL = StrokeRenderer.curveToFunction(this.widthL);
+    let getWidthR = StrokeRenderer.curveToFunction(this.widthR);
+
+    // TODO: include stroke width in resolution
+
+    if (path.length === 1) {
+      // can't draw triangles with only one point, so here's a dummy
+      path.push(path[0]);
+
+      // can't compute normals for only one point, so here's a dummy
+      normals = [[[1, 0], 1], [[1, 0], 1]];
+    }
+
+    let positions = [];
+    let vnormals = [];
+    let miters = [];
+    let thicknesses = [];
+
+    let length = 0;
+    let lastPoint = null;
+    for (let i = 0; i < path.length; i++) {
+      let point = path[i];
+
+      if (lastPoint) {
+        length += Math.hypot(...point.map((x, i) => x - lastPoint[i]));
+      }
+      lastPoint = point;
+
+      let left = getWidthL(length);
+      let right = getWidthR(length);
+
+      thicknesses.push(right);
+
+      positions.push(...point);
+      vnormals.push(...normals[i][0]);
+      miters.push(normals[i][1]);
+
+      thicknesses.push(left);
+
+      positions.push(...point);
+      vnormals.push(...normals[i][0]);
+      miters.push(-normals[i][1]);
+    }
+
+    const vao = createVAO(gl, [{
+      buffer: createBuffer(gl, positions),
+      type: gl.FLOAT,
+      size: 2
+    }, {
+      buffer: createBuffer(gl, vnormals),
+      type: gl.FLOAT,
+      size: 2
+    }, {
+      buffer: createBuffer(gl, miters),
+      type: gl.FLOAT,
+      size: 1
+    }, {
+      buffer: createBuffer(gl, thicknesses),
+      type: gl.FLOAT,
+      size: 1
+    }]);
+
+    this.shader.bind();
+    this.shader.uniforms.color = this.stroke;
+    this.shader.uniforms.transform = this.transform;
+
+    vao.bind();
+    vao.draw(gl.TRIANGLE_STRIP, positions.length / 2);
+    vao.unbind();
+  }
+
+  renderFill() {
+    const gl = this.gl;
+
+    let path = this.currentPath.slice();
+
+    let cells = triangulate(path);
+
+    let positions = [];
+    for (let cell of cells) {
+      for (let pos of cell.map(x => path[x])) positions.push(...pos);
+    }
+
+    const vao = createVAO(gl, [{
+      buffer: createBuffer(gl, positions),
+      type: gl.FLOAT,
+      size: 2
+    }]);
+
+    this.fillShader.bind();
+    this.fillShader.uniforms.color = this.fill;
+    this.fillShader.uniforms.transform = this.transform;
+
+    vao.bind();
+    vao.draw(gl.TRIANGLES, positions.length / 2);
+    vao.unbind();
+  }
+
+  static curveToFunction(points) {
+    let path = new Map();
+    let x = 0;
+
+    for (let i = 0; i < points.length; i++) {
+      let pointX = Math.max(points[i][0], x); // prevent overlap
+      path.set(pointX, points[i][1]);
+    }
+
+    return x => {
+      let left = -Infinity;
+      let right = Infinity;
+      let leftPoint = null;
+      let rightPoint = null;
+
+      for (let pointX of path.keys()) {
+        if (pointX <= x && pointX > left) {
+          left = pointX;
+          leftPoint = path.get(pointX);
+        }
+        if (pointX > x && pointX < right) {
+          right = pointX;
+          rightPoint = path.get(pointX);
+        }
+      }
+
+      if (Number.isFinite(left) && Number.isFinite(right)) {
+        let mix = (x - left) / (right - left);
+        return (rightPoint - leftPoint) * mix + leftPoint;
+      } else if (Number.isFinite(left)) return leftPoint;else if (Number.isFinite(right)) return rightPoint;else return 0;
+    };
+  }
+}
+class PathCommand {
+  constructor(type, ...data) {
+    this.type = type | 0;
+    this.data = data || [];
+  }
+
+  render(renderer) {
+    renderer.add(this.type, ...this.data);
+  }
+
+  serialize() {
+    return [this.type, ...this.data];
+  }
+
+}
+
+PathCommand.types = {
+  CLOSE_PATH: 0,
+  MOVE: 0x10,
+  MOVE_R: 0x11,
+  LINE: 0x20,
+  LINE_R: 0x21,
+  CUBIC_BEZIER: 0x30,
+  CUBIC_BEZIER_R: 0x31,
+  CUBIC_BEZIER_SHORT: 0x32,
+  CUBIC_BEZIER_SHORT_R: 0x33,
+  QUAD_BEZIER: 0x40,
+  QUAD_BEZIER_R: 0x41,
+  QUAD_BEZIER_SHORT: 0x42,
+  QUAD_BEZIER_SHORT_R: 0x43,
+  ARC: 0x50,
+  ARC_R: 0x51,
+  STROKE_WIDTH: 0x60,
+  STROKE_WIDTH_R: 0x61,
+  STROKE_WIDTH_BEZIER: 0x62,
+  STROKE_WIDTH_BEZIER_R: 0x63
+};
+module.exports = (_temp = _class = class Path extends Layer {
+  constructor() {
+    super();
+
+    this.type = 'p';
+
+    this.stroke = null;
+    this.fill = null;
+    this.cap = Path.cap.BUTT;
+    this.join = Path.join.MITER;
+    this.miter = 0;
+    this.data = [];
+  }
+
+  render(gl, transform, context) {
+    let subTransform = mat4.create();
+    mat4.multiply(subTransform, transform, this.transform.toMat4());
+
+    let renderer = new StrokeRenderer(gl, subTransform, context, this.stroke ? this.stroke.toVec4() : [0, 0, 0, 0], this.fill ? this.fill.toVec4() : [0, 0, 0, 0]);
+    this.data.forEach(command => command.render(renderer));
+
+    if (this.stroke && this.stroke.alpha) {
+      renderer.render();
+    }
+    if (this.fill && this.fill.alpha) {
+      renderer.renderFill();
+    }
+  }
+
+  get roughLength() {
+    let length = 0;
+
+    let lastPoint = null;
+    for (let command of this.data) {
+      if (command.type === 0x10) {
+        lastPoint = command.data;
+      } else if (command.type === 0x20) {
+        length += Math.hypot(...command.data.map((x, i) => x - lastPoint[i]));
+        lastPoint = command.data;
+      } else if (command.type !== 0x60) {
+        console.warn('Cannot get rough length of command type 0x' + command.type.toString(16));
+      }
+    }
+
+    return length;
+  }
+  set roughLength(v) {}
+
+  addRoughPoint(x, y, left, right, first = false) {
+    this.data.push(new PathCommand(first ? 0x10 : 0x20, x, y));
+    this.data.push(new PathCommand(0x60, this.roughLength, left, right));
+  }
+
+  serialize() {
+    return Object.assign(super.serialize(), {
+      d: this.data.map(x => x.serialize()),
+      e: this.cap,
+      j: this.join,
+      m: this.miter,
+      s: this.stroke ? this.stroke.serialize() : null,
+      f: this.fill ? this.fill.serialize() : null
+    });
+  }
+
+}, _class.cap = {
+  BUTT: 0,
+  ROUND: 1,
+  PROJECTING: 2
+}, _class.join = {
+  BEVEL: 0,
+  ROUND: 1,
+  MITER: 2
+}, _class.Command = PathCommand, _temp);
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+module.exports = twoProduct
+
+var SPLITTER = +(Math.pow(2, 27) + 1.0)
+
+function twoProduct(a, b, result) {
+  var x = a * b
+
+  var c = SPLITTER * a
+  var abig = c - a
+  var ahi = c - abig
+  var alo = a - ahi
+
+  var d = SPLITTER * b
+  var bbig = d - b
+  var bhi = d - bbig
+  var blo = b - bhi
+
+  var err1 = x - (ahi * bhi)
+  var err2 = err1 - (alo * bhi)
+  var err3 = err2 - (ahi * blo)
+
+  var y = alo * blo - err3
+
+  if(result) {
+    result[0] = y
+    result[1] = x
+    return result
+  }
+
+  return [ y, x ]
+}
+
+/***/ }),
+/* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+const { mat4 } = __webpack_require__(1);
+const Layer = __webpack_require__(5);
 
 module.exports = class Image extends Layer {
   constructor() {
@@ -372,7 +834,7 @@ module.exports = class Image extends Layer {
 };
 
 /***/ }),
-/* 6 */
+/* 9 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1180,7 +1642,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 7 */
+/* 10 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -2020,7 +2482,7 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 8 */
+/* 11 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -2682,7 +3144,7 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 9 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var _class, _temp;
@@ -2741,330 +3203,7 @@ module.exports = (_temp = _class = class Transform {
 }, _temp);
 
 /***/ }),
-/* 10 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var _class, _temp;
-
-const { mat4 } = __webpack_require__(1);
-const bezier = __webpack_require__(27);
-const getNormals = __webpack_require__(29);
-const createBuffer = __webpack_require__(36);
-const createShader = __webpack_require__(12);
-const createVAO = __webpack_require__(73);
-const triangulate = __webpack_require__(82);
-const Layer = __webpack_require__(3);
-const Color = __webpack_require__(4);
-
-class StrokeRenderer {
-  constructor(gl, transform, context, stroke, fill) {
-    this.currentPath = [];
-    this.paths = [this.currentPath];
-    this.widthL = [[0, 0]];
-    this.widthR = [[0, 0]];
-    this.cursor = [0, 0];
-    this.cursorL = [0, 0];
-    this.cursorR = [0, 0];
-
-    this.gl = gl;
-    this.transform = transform;
-    this.stroke = stroke;
-    this.fill = fill;
-    this.shader = context.shaders.path;
-    this.fillShader = context.shaders.pathFill;
-  }
-
-  add(type, ...args) {
-    let lastCursor = this.cursor.slice();
-
-    if (type === 0x10) {
-      // moveto
-      this.cursor = args;
-      this.paths.push(this.currentPath = [this.cursor]);
-    } else if (type === 0x11) {
-      // moveto relative
-      this.cursor = this.cursor.map((x, i) => x + args[i]);
-      this.paths.push(this.currentPath = [this.cursor]);
-    } else if (type === 0x20) {
-      // lineto
-      this.currentPath.push(this.cursor = args);
-    } else if (type === 0x21) {
-      // lineto relative
-      this.cursor = this.cursor.map((x, i) => x + args[i]);
-      this.currentPath.push(this.cursor);
-    } else if (type === 0x30 || type === 0x31) {
-      // curveto / relative
-      let c1 = args.slice(0, 2);
-      let c2 = args.slice(2, 4);
-      this.cursor = args.slice(4);
-
-      if (type === 0x31) {
-        c1 = c1.map((x, i) => x + lastCursor[i]);
-        c2 = c2.map((x, i) => x + lastCursor[i]);
-        this.cursor = this.cursor.map((x, i) => x + lastCursor[i]);
-      }
-
-      this.currentPath.push(...bezier(lastCursor, c1, c2, this.cursor).slice(1));
-      // TODO: quadratic curves
-    } else if (type === 0x50 || type === 0x51) {
-      // TODO
-    } else if (type === 0x60) {
-      // stroke width to
-      this.widthL.push(args);
-      this.cursorL = args;
-      this.widthR.push(args);
-      this.cursorR = args;
-    } else if (type === 0x61) {
-      // stroke width relative
-      this.widthL.push(args);
-      this.cursorL = this.cursorL.map((x, i) => x + args[i]);
-      this.widthR.push(args);
-      this.cursorR = this.cursorR.map((x, i) => x + args[i]);
-    } else if (type === 0x62) {
-      // stroke width bezier
-      let c1L = args.slice(1, 3);
-      let c2L = args.slice(3, 5);
-      let lastCursorL = this.cursorL.slice();
-      this.cursorL = [args[0], args[5]];
-      bezier(lastCursorL, c1L, c2L, this.cursorL, 1, this.widthL);
-
-      let c1R = args.slice(6, 8);
-      let c2R = args.slice(8, 10);
-      let lastCursorR = this.cursorR.slice();
-      this.cursorR = [args[0], args[10]];
-      bezier(lastCursorR, c1R, c2R, this.cursorR, 1, this.widthR);
-    } else {
-      // TODO: stroke width bezier relative
-    }
-  }
-
-  render() {
-    const gl = this.gl;
-
-    // TODO: render all paths instead of only one
-    let path = this.currentPath.slice();
-    let normals = getNormals(path);
-
-    let getWidthL = StrokeRenderer.curveToFunction(this.widthL);
-    let getWidthR = StrokeRenderer.curveToFunction(this.widthR);
-
-    // TODO: include stroke width in resolution
-
-    if (path.length === 1) {
-      // can't draw triangles with only one point, so here's a dummy
-      path.push(path[0]);
-
-      // can't compute normals for only one point, so here's a dummy
-      normals = [[[1, 0], 1], [[1, 0], 1]];
-    }
-
-    let positions = [];
-    let vnormals = [];
-    let miters = [];
-    let thicknesses = [];
-
-    let length = 0;
-    let lastPoint = null;
-    for (let i = 0; i < path.length; i++) {
-      let point = path[i];
-
-      if (lastPoint) {
-        length += Math.hypot(...point.map((x, i) => x - lastPoint[i]));
-      }
-      lastPoint = point;
-
-      let left = getWidthL(length);
-      let right = getWidthR(length);
-
-      thicknesses.push(right);
-
-      positions.push(...point);
-      vnormals.push(...normals[i][0]);
-      miters.push(normals[i][1]);
-
-      thicknesses.push(left);
-
-      positions.push(...point);
-      vnormals.push(...normals[i][0]);
-      miters.push(-normals[i][1]);
-    }
-
-    const vao = createVAO(gl, [{
-      buffer: createBuffer(gl, positions),
-      type: gl.FLOAT,
-      size: 2
-    }, {
-      buffer: createBuffer(gl, vnormals),
-      type: gl.FLOAT,
-      size: 2
-    }, {
-      buffer: createBuffer(gl, miters),
-      type: gl.FLOAT,
-      size: 1
-    }, {
-      buffer: createBuffer(gl, thicknesses),
-      type: gl.FLOAT,
-      size: 1
-    }]);
-
-    this.shader.bind();
-    this.shader.uniforms.color = this.stroke;
-    this.shader.uniforms.transform = this.transform;
-
-    vao.bind();
-    vao.draw(gl.TRIANGLE_STRIP, positions.length / 2);
-    vao.unbind();
-  }
-
-  renderFill() {
-    const gl = this.gl;
-
-    let path = this.currentPath.slice();
-
-    let cells = triangulate(path);
-
-    let positions = [];
-    for (let cell of cells) {
-      for (let pos of cell.map(x => path[x])) positions.push(...pos);
-    }
-
-    const vao = createVAO(gl, [{
-      buffer: createBuffer(gl, positions),
-      type: gl.FLOAT,
-      size: 2
-    }]);
-
-    this.fillShader.bind();
-    this.fillShader.uniforms.color = this.fill;
-    this.fillShader.uniforms.transform = this.transform;
-
-    vao.bind();
-    vao.draw(gl.TRIANGLES, positions.length / 2);
-    vao.unbind();
-  }
-
-  static curveToFunction(points) {
-    let path = new Map();
-    let x = 0;
-
-    for (let i = 0; i < points.length; i++) {
-      let pointX = Math.max(points[i][0], x); // prevent overlap
-      path.set(pointX, points[i][1]);
-    }
-
-    return x => {
-      let left = -Infinity;
-      let right = Infinity;
-      let leftPoint = null;
-      let rightPoint = null;
-
-      for (let pointX of path.keys()) {
-        if (pointX <= x && pointX > left) {
-          left = pointX;
-          leftPoint = path.get(pointX);
-        }
-        if (pointX > x && pointX < right) {
-          right = pointX;
-          rightPoint = path.get(pointX);
-        }
-      }
-
-      if (Number.isFinite(left) && Number.isFinite(right)) {
-        let mix = (x - left) / (right - left);
-        return (rightPoint - leftPoint) * mix + leftPoint;
-      } else if (Number.isFinite(left)) return leftPoint;else if (Number.isFinite(right)) return rightPoint;else return 0;
-    };
-  }
-}
-class PathCommand {
-  constructor(type, ...data) {
-    this.type = type | 0;
-    this.data = data || [];
-  }
-
-  render(renderer) {
-    renderer.add(this.type, ...this.data);
-  }
-
-  serialize() {
-    return [this.type, ...this.data];
-  }
-
-}
-
-PathCommand.types = {
-  CLOSE_PATH: 0,
-  MOVE: 0x10,
-  MOVE_R: 0x11,
-  LINE: 0x20,
-  LINE_R: 0x21,
-  CUBIC_BEZIER: 0x30,
-  CUBIC_BEZIER_R: 0x31,
-  CUBIC_BEZIER_SHORT: 0x32,
-  CUBIC_BEZIER_SHORT_R: 0x33,
-  QUAD_BEZIER: 0x40,
-  QUAD_BEZIER_R: 0x41,
-  QUAD_BEZIER_SHORT: 0x42,
-  QUAD_BEZIER_SHORT_R: 0x43,
-  ARC: 0x50,
-  ARC_R: 0x51,
-  STROKE_WIDTH: 0x60,
-  STROKE_WIDTH_R: 0x61,
-  STROKE_WIDTH_BEZIER: 0x62,
-  STROKE_WIDTH_BEZIER_R: 0x63
-};
-module.exports = (_temp = _class = class Path extends Layer {
-  constructor() {
-    super();
-
-    this.type = 'p';
-
-    this.stroke = null;
-    this.fill = null;
-    this.cap = Path.cap.BUTT;
-    this.join = Path.join.MITER;
-    this.miter = 0;
-    this.data = [];
-  }
-
-  render(gl, transform, context) {
-    let subTransform = mat4.create();
-    mat4.multiply(subTransform, transform, this.transform.toMat4());
-
-    let renderer = new StrokeRenderer(gl, subTransform, context, this.stroke ? this.stroke.toVec4() : [0, 0, 0, 0], this.fill ? this.fill.toVec4() : [0, 0, 0, 0]);
-    this.data.forEach(command => command.render(renderer));
-
-    if (this.stroke && this.stroke.alpha) {
-      renderer.render();
-    }
-    if (this.fill && this.fill.alpha) {
-      renderer.renderFill();
-    }
-  }
-
-  serialize() {
-    return Object.assign(super.serialize(), {
-      d: this.data.map(x => x.serialize()),
-      e: this.cap,
-      j: this.join,
-      m: this.miter,
-      s: this.stroke ? this.stroke.serialize() : null,
-      f: this.fill ? this.fill.serialize() : null
-    });
-  }
-
-}, _class.cap = {
-  BUTT: 0,
-  ROUND: 1,
-  PROJECTING: 2
-}, _class.join = {
-  BEVEL: 0,
-  ROUND: 1,
-  MITER: 2
-}, _class.Command = PathCommand, _temp);
-
-/***/ }),
-/* 11 */
+/* 13 */
 /***/ (function(module, exports) {
 
 var g;
@@ -3091,17 +3230,17 @@ module.exports = g;
 
 
 /***/ }),
-/* 12 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var createUniformWrapper   = __webpack_require__(52)
-var createAttributeWrapper = __webpack_require__(53)
-var makeReflect            = __webpack_require__(13)
-var shaderCache            = __webpack_require__(54)
-var runtime                = __webpack_require__(72)
+var createUniformWrapper   = __webpack_require__(57)
+var createAttributeWrapper = __webpack_require__(58)
+var makeReflect            = __webpack_require__(15)
+var shaderCache            = __webpack_require__(59)
+var runtime                = __webpack_require__(77)
 var GLError                = __webpack_require__(2)
 
 //Shader object
@@ -3362,7 +3501,7 @@ module.exports = createShader
 
 
 /***/ }),
-/* 13 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3425,7 +3564,7 @@ function makeReflectTypes(uniforms, useIndex) {
 }
 
 /***/ }),
-/* 14 */
+/* 16 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -3524,7 +3663,7 @@ module.exports = [
 
 
 /***/ }),
-/* 15 */
+/* 17 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -3680,7 +3819,7 @@ module.exports = [
 
 
 /***/ }),
-/* 16 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3740,15 +3879,396 @@ function doBind(gl, elements, attributes) {
 module.exports = doBind
 
 /***/ }),
-/* 17 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Canvas = __webpack_require__(18);
+"use strict";
+
+
+module.exports = linearExpansionSum
+
+//Easy case: Add two scalars
+function scalarScalar(a, b) {
+  var x = a + b
+  var bv = x - a
+  var av = x - bv
+  var br = b - bv
+  var ar = a - av
+  var y = ar + br
+  if(y) {
+    return [y, x]
+  }
+  return [x]
+}
+
+function linearExpansionSum(e, f) {
+  var ne = e.length|0
+  var nf = f.length|0
+  if(ne === 1 && nf === 1) {
+    return scalarScalar(e[0], f[0])
+  }
+  var n = ne + nf
+  var g = new Array(n)
+  var count = 0
+  var eptr = 0
+  var fptr = 0
+  var abs = Math.abs
+  var ei = e[eptr]
+  var ea = abs(ei)
+  var fi = f[fptr]
+  var fa = abs(fi)
+  var a, b
+  if(ea < fa) {
+    b = ei
+    eptr += 1
+    if(eptr < ne) {
+      ei = e[eptr]
+      ea = abs(ei)
+    }
+  } else {
+    b = fi
+    fptr += 1
+    if(fptr < nf) {
+      fi = f[fptr]
+      fa = abs(fi)
+    }
+  }
+  if((eptr < ne && ea < fa) || (fptr >= nf)) {
+    a = ei
+    eptr += 1
+    if(eptr < ne) {
+      ei = e[eptr]
+      ea = abs(ei)
+    }
+  } else {
+    a = fi
+    fptr += 1
+    if(fptr < nf) {
+      fi = f[fptr]
+      fa = abs(fi)
+    }
+  }
+  var x = a + b
+  var bv = x - a
+  var y = b - bv
+  var q0 = y
+  var q1 = x
+  var _x, _bv, _av, _br, _ar
+  while(eptr < ne && fptr < nf) {
+    if(ea < fa) {
+      a = ei
+      eptr += 1
+      if(eptr < ne) {
+        ei = e[eptr]
+        ea = abs(ei)
+      }
+    } else {
+      a = fi
+      fptr += 1
+      if(fptr < nf) {
+        fi = f[fptr]
+        fa = abs(fi)
+      }
+    }
+    b = q0
+    x = a + b
+    bv = x - a
+    y = b - bv
+    if(y) {
+      g[count++] = y
+    }
+    _x = q1 + x
+    _bv = _x - q1
+    _av = _x - _bv
+    _br = x - _bv
+    _ar = q1 - _av
+    q0 = _ar + _br
+    q1 = _x
+  }
+  while(eptr < ne) {
+    a = ei
+    b = q0
+    x = a + b
+    bv = x - a
+    y = b - bv
+    if(y) {
+      g[count++] = y
+    }
+    _x = q1 + x
+    _bv = _x - q1
+    _av = _x - _bv
+    _br = x - _bv
+    _ar = q1 - _av
+    q0 = _ar + _br
+    q1 = _x
+    eptr += 1
+    if(eptr < ne) {
+      ei = e[eptr]
+    }
+  }
+  while(fptr < nf) {
+    a = fi
+    b = q0
+    x = a + b
+    bv = x - a
+    y = b - bv
+    if(y) {
+      g[count++] = y
+    } 
+    _x = q1 + x
+    _bv = _x - q1
+    _av = _x - _bv
+    _br = x - _bv
+    _ar = q1 - _av
+    q0 = _ar + _br
+    q1 = _x
+    fptr += 1
+    if(fptr < nf) {
+      fi = f[fptr]
+    }
+  }
+  if(q0) {
+    g[count++] = q0
+  }
+  if(q1) {
+    g[count++] = q1
+  }
+  if(!count) {
+    g[count++] = 0.0  
+  }
+  g.length = count
+  return g
+}
+
+/***/ }),
+/* 20 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var twoProduct = __webpack_require__(7)
+var twoSum = __webpack_require__(84)
+
+module.exports = scaleLinearExpansion
+
+function scaleLinearExpansion(e, scale) {
+  var n = e.length
+  if(n === 1) {
+    var ts = twoProduct(e[0], scale)
+    if(ts[0]) {
+      return ts
+    }
+    return [ ts[1] ]
+  }
+  var g = new Array(2 * n)
+  var q = [0.1, 0.1]
+  var t = [0.1, 0.1]
+  var count = 0
+  twoProduct(e[0], scale, q)
+  if(q[0]) {
+    g[count++] = q[0]
+  }
+  for(var i=1; i<n; ++i) {
+    twoProduct(e[i], scale, t)
+    var pq = q[1]
+    twoSum(pq, t[0], q)
+    if(q[0]) {
+      g[count++] = q[0]
+    }
+    var a = t[1]
+    var b = q[1]
+    var x = a + b
+    var bv = x - a
+    var y = b - bv
+    q[1] = x
+    if(y) {
+      g[count++] = y
+    }
+  }
+  if(q[1]) {
+    g[count++] = q[1]
+  }
+  if(count === 0) {
+    g[count++] = 0.0
+  }
+  g.length = count
+  return g
+}
+
+/***/ }),
+/* 21 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+module.exports = robustSubtract
+
+//Easy case: Add two scalars
+function scalarScalar(a, b) {
+  var x = a + b
+  var bv = x - a
+  var av = x - bv
+  var br = b - bv
+  var ar = a - av
+  var y = ar + br
+  if(y) {
+    return [y, x]
+  }
+  return [x]
+}
+
+function robustSubtract(e, f) {
+  var ne = e.length|0
+  var nf = f.length|0
+  if(ne === 1 && nf === 1) {
+    return scalarScalar(e[0], -f[0])
+  }
+  var n = ne + nf
+  var g = new Array(n)
+  var count = 0
+  var eptr = 0
+  var fptr = 0
+  var abs = Math.abs
+  var ei = e[eptr]
+  var ea = abs(ei)
+  var fi = -f[fptr]
+  var fa = abs(fi)
+  var a, b
+  if(ea < fa) {
+    b = ei
+    eptr += 1
+    if(eptr < ne) {
+      ei = e[eptr]
+      ea = abs(ei)
+    }
+  } else {
+    b = fi
+    fptr += 1
+    if(fptr < nf) {
+      fi = -f[fptr]
+      fa = abs(fi)
+    }
+  }
+  if((eptr < ne && ea < fa) || (fptr >= nf)) {
+    a = ei
+    eptr += 1
+    if(eptr < ne) {
+      ei = e[eptr]
+      ea = abs(ei)
+    }
+  } else {
+    a = fi
+    fptr += 1
+    if(fptr < nf) {
+      fi = -f[fptr]
+      fa = abs(fi)
+    }
+  }
+  var x = a + b
+  var bv = x - a
+  var y = b - bv
+  var q0 = y
+  var q1 = x
+  var _x, _bv, _av, _br, _ar
+  while(eptr < ne && fptr < nf) {
+    if(ea < fa) {
+      a = ei
+      eptr += 1
+      if(eptr < ne) {
+        ei = e[eptr]
+        ea = abs(ei)
+      }
+    } else {
+      a = fi
+      fptr += 1
+      if(fptr < nf) {
+        fi = -f[fptr]
+        fa = abs(fi)
+      }
+    }
+    b = q0
+    x = a + b
+    bv = x - a
+    y = b - bv
+    if(y) {
+      g[count++] = y
+    }
+    _x = q1 + x
+    _bv = _x - q1
+    _av = _x - _bv
+    _br = x - _bv
+    _ar = q1 - _av
+    q0 = _ar + _br
+    q1 = _x
+  }
+  while(eptr < ne) {
+    a = ei
+    b = q0
+    x = a + b
+    bv = x - a
+    y = b - bv
+    if(y) {
+      g[count++] = y
+    }
+    _x = q1 + x
+    _bv = _x - q1
+    _av = _x - _bv
+    _br = x - _bv
+    _ar = q1 - _av
+    q0 = _ar + _br
+    q1 = _x
+    eptr += 1
+    if(eptr < ne) {
+      ei = e[eptr]
+    }
+  }
+  while(fptr < nf) {
+    a = fi
+    b = q0
+    x = a + b
+    bv = x - a
+    y = b - bv
+    if(y) {
+      g[count++] = y
+    } 
+    _x = q1 + x
+    _bv = _x - q1
+    _av = _x - _bv
+    _br = x - _bv
+    _ar = q1 - _av
+    q0 = _ar + _br
+    q1 = _x
+    fptr += 1
+    if(fptr < nf) {
+      fi = -f[fptr]
+    }
+  }
+  if(q0) {
+    g[count++] = q0
+  }
+  if(q1) {
+    g[count++] = q1
+  }
+  if(!count) {
+    g[count++] = 0.0  
+  }
+  g.length = count
+  return g
+}
+
+/***/ }),
+/* 22 */
+/***/ (function(module, exports, __webpack_require__) {
+
+const Canvas = __webpack_require__(23);
 const Color = __webpack_require__(4);
-const Image = __webpack_require__(5);
-const Layer = __webpack_require__(3);
-const Transform = __webpack_require__(9);
-const Path = __webpack_require__(10);
+const Image = __webpack_require__(8);
+const Layer = __webpack_require__(5);
+const Transform = __webpack_require__(12);
+const Path = __webpack_require__(6);
+const Editor = __webpack_require__(90);
 
 const graphein = {
   Canvas,
@@ -3756,18 +4276,19 @@ const graphein = {
   Image,
   Layer,
   Transform,
-  Path
+  Path,
+  Editor
 };
 
 module.exports = window.graphein = graphein;
 
 /***/ }),
-/* 18 */
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Image = __webpack_require__(5);
-const Brush = __webpack_require__(24);
-const shaders = __webpack_require__(76);
+const Image = __webpack_require__(8);
+const Brush = __webpack_require__(29);
+const shaders = __webpack_require__(89);
 
 class Canvas extends window.HTMLElement {
   constructor() {
@@ -3775,6 +4296,9 @@ class Canvas extends window.HTMLElement {
 
     this.canvas = document.createElement('canvas');
     this.gl = this.canvas.getContext('webgl');
+
+    this.overlay = document.createElement('canvas');
+    this.overlayCtx = this.overlay.getContext('2d');
 
     this.shaders = shaders(this.gl);
 
@@ -3795,6 +4319,7 @@ class Canvas extends window.HTMLElement {
     if (!this._didInit) {
       this._didInit = true;
       this.appendChild(this.canvas);
+      this.appendChild(this.overlay);
     }
   }
 
@@ -3803,6 +4328,11 @@ class Canvas extends window.HTMLElement {
     this.canvas.height = this.image.height * window.devicePixelRatio;
     this.canvas.style.width = `${this.image.width}px`;
     this.canvas.style.height = `${this.image.height}px`;
+
+    this.overlay.width = this.canvas.width;
+    this.overlay.height = this.canvas.height;
+    this.overlay.style.width = this.canvas.style.width;
+    this.overlay.style.height = this.canvas.style.height;
   }
 
   get image() {
@@ -3832,7 +4362,7 @@ window.customElements.define('graphein-canvas', Canvas);
 module.exports = Canvas;
 
 /***/ }),
-/* 19 */
+/* 24 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -4302,7 +4832,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 20 */
+/* 25 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -4804,7 +5334,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 21 */
+/* 26 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -6542,7 +7072,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 22 */
+/* 27 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -6563,9 +7093,9 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony export (immutable) */ __webpack_exports__["fromEuler"] = fromEuler;
 /* harmony export (immutable) */ __webpack_exports__["str"] = str;
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__mat3__ = __webpack_require__(6);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__vec3__ = __webpack_require__(7);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__vec4__ = __webpack_require__(8);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__mat3__ = __webpack_require__(9);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__vec3__ = __webpack_require__(10);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__vec4__ = __webpack_require__(11);
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -7233,7 +7763,7 @@ const setAxes = (function() {
 
 
 /***/ }),
-/* 23 */
+/* 28 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -7876,12 +8406,12 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 24 */
+/* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const EventEmitter = __webpack_require__(25);
-const PathFitter = __webpack_require__(26);
-const Path = __webpack_require__(10);
+const EventEmitter = __webpack_require__(30);
+const PathFitter = __webpack_require__(31);
+const Path = __webpack_require__(6);
 const Color = __webpack_require__(4);
 
 // TODO: pen tilt
@@ -8071,7 +8601,7 @@ module.exports = class Brush extends EventEmitter {
 };
 
 /***/ }),
-/* 25 */
+/* 30 */
 /***/ (function(module, exports) {
 
 // Copyright Joyent, Inc. and other Node contributors.
@@ -8379,7 +8909,7 @@ function isUndefined(arg) {
 
 
 /***/ }),
-/* 26 */
+/* 31 */
 /***/ (function(module, exports) {
 
 /*
@@ -8756,13 +9286,13 @@ module.exports = class PathFitter {
 };
 
 /***/ }),
-/* 27 */
+/* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__(28)()
+module.exports = __webpack_require__(33)()
 
 /***/ }),
-/* 28 */
+/* 33 */
 /***/ (function(module, exports) {
 
 function clone(point) { //TODO: use gl-vec2 for this
@@ -8965,10 +9495,10 @@ module.exports = function createBezierBuilder(opt) {
 
 
 /***/ }),
-/* 29 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var util = __webpack_require__(30)
+var util = __webpack_require__(35)
 
 var lineA = [0, 0]
 var lineB = [0, 0]
@@ -9037,14 +9567,14 @@ function addNext(out, normal, length) {
 }
 
 /***/ }),
-/* 30 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var add = __webpack_require__(31)
-var set = __webpack_require__(32)
-var normalize = __webpack_require__(33)
-var subtract = __webpack_require__(34)
-var dot = __webpack_require__(35)
+var add = __webpack_require__(36)
+var set = __webpack_require__(37)
+var normalize = __webpack_require__(38)
+var subtract = __webpack_require__(39)
+var dot = __webpack_require__(40)
 
 var tmp = [0, 0]
 
@@ -9075,7 +9605,7 @@ module.exports.direction = function direction(out, a, b) {
 }
 
 /***/ }),
-/* 31 */
+/* 36 */
 /***/ (function(module, exports) {
 
 module.exports = add
@@ -9095,7 +9625,7 @@ function add(out, a, b) {
 }
 
 /***/ }),
-/* 32 */
+/* 37 */
 /***/ (function(module, exports) {
 
 module.exports = set
@@ -9115,7 +9645,7 @@ function set(out, x, y) {
 }
 
 /***/ }),
-/* 33 */
+/* 38 */
 /***/ (function(module, exports) {
 
 module.exports = normalize
@@ -9141,7 +9671,7 @@ function normalize(out, a) {
 }
 
 /***/ }),
-/* 34 */
+/* 39 */
 /***/ (function(module, exports) {
 
 module.exports = subtract
@@ -9161,7 +9691,7 @@ function subtract(out, a, b) {
 }
 
 /***/ }),
-/* 35 */
+/* 40 */
 /***/ (function(module, exports) {
 
 module.exports = dot
@@ -9178,15 +9708,15 @@ function dot(a, b) {
 }
 
 /***/ }),
-/* 36 */
+/* 41 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var pool = __webpack_require__(37)
-var ops = __webpack_require__(44)
-var ndarray = __webpack_require__(49)
+var pool = __webpack_require__(42)
+var ops = __webpack_require__(49)
+var ndarray = __webpack_require__(54)
 
 var SUPPORTED_TYPES = [
   "uint8",
@@ -9337,14 +9867,14 @@ module.exports = createBuffer
 
 
 /***/ }),
-/* 37 */
+/* 42 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 /* WEBPACK VAR INJECTION */(function(global, Buffer) {
 
-var bits = __webpack_require__(42)
-var dup = __webpack_require__(43)
+var bits = __webpack_require__(47)
+var dup = __webpack_require__(48)
 
 //Legacy pool support
 if(!global.__TYPEDARRAY_POOL) {
@@ -9555,10 +10085,10 @@ exports.clearCache = function clearCache() {
     BUFFER[i].length = 0
   }
 }
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(11), __webpack_require__(38).Buffer))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(13), __webpack_require__(43).Buffer))
 
 /***/ }),
-/* 38 */
+/* 43 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9572,9 +10102,9 @@ exports.clearCache = function clearCache() {
 
 
 
-var base64 = __webpack_require__(39)
-var ieee754 = __webpack_require__(40)
-var isArray = __webpack_require__(41)
+var base64 = __webpack_require__(44)
+var ieee754 = __webpack_require__(45)
+var isArray = __webpack_require__(46)
 
 exports.Buffer = Buffer
 exports.SlowBuffer = SlowBuffer
@@ -11352,10 +11882,10 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(11)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(13)))
 
 /***/ }),
-/* 39 */
+/* 44 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11476,7 +12006,7 @@ function fromByteArray (uint8) {
 
 
 /***/ }),
-/* 40 */
+/* 45 */
 /***/ (function(module, exports) {
 
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
@@ -11566,7 +12096,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
 
 /***/ }),
-/* 41 */
+/* 46 */
 /***/ (function(module, exports) {
 
 var toString = {}.toString;
@@ -11577,7 +12107,7 @@ module.exports = Array.isArray || function (arr) {
 
 
 /***/ }),
-/* 42 */
+/* 47 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11788,7 +12318,7 @@ exports.nextCombination = function(v) {
 
 
 /***/ }),
-/* 43 */
+/* 48 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11843,13 +12373,13 @@ function dupe(count, value) {
 module.exports = dupe
 
 /***/ }),
-/* 44 */
+/* 49 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var compile = __webpack_require__(45)
+var compile = __webpack_require__(50)
 
 var EmptyProc = {
   body: "",
@@ -12311,13 +12841,13 @@ exports.equals = compile({
 
 
 /***/ }),
-/* 45 */
+/* 50 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var createThunk = __webpack_require__(46)
+var createThunk = __webpack_require__(51)
 
 function Procedure() {
   this.argTypes = []
@@ -12427,7 +12957,7 @@ module.exports = compileCwise
 
 
 /***/ }),
-/* 46 */
+/* 51 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12456,7 +12986,7 @@ module.exports = compileCwise
 //   return thunk(compile.bind1(proc))
 // }
 
-var compile = __webpack_require__(47)
+var compile = __webpack_require__(52)
 
 function createThunk(proc) {
   var code = ["'use strict'", "var CACHED={}"]
@@ -12520,13 +13050,13 @@ module.exports = createThunk
 
 
 /***/ }),
-/* 47 */
+/* 52 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var uniq = __webpack_require__(48)
+var uniq = __webpack_require__(53)
 
 // This function generates very simple loops analogous to how you typically traverse arrays (the outermost loop corresponds to the slowest changing index, the innermost loop to the fastest changing index)
 // TODO: If two arrays have the same strides (and offsets) there is potential for decreasing the number of "pointers" and related variables. The drawback is that the type signature would become more specific and that there would thus be less potential for caching, but it might still be worth it, especially when dealing with large numbers of arguments.
@@ -12885,7 +13415,7 @@ module.exports = generateCWiseOp
 
 
 /***/ }),
-/* 48 */
+/* 53 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12949,11 +13479,11 @@ module.exports = unique
 
 
 /***/ }),
-/* 49 */
+/* 54 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var iota = __webpack_require__(50)
-var isBuffer = __webpack_require__(51)
+var iota = __webpack_require__(55)
+var isBuffer = __webpack_require__(56)
 
 var hasTypedArrays  = ((typeof Float64Array) !== "undefined")
 
@@ -13298,7 +13828,7 @@ module.exports = wrappedNDArrayCtor
 
 
 /***/ }),
-/* 50 */
+/* 55 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13315,7 +13845,7 @@ function iota(n) {
 module.exports = iota
 
 /***/ }),
-/* 51 */
+/* 56 */
 /***/ (function(module, exports) {
 
 /*!
@@ -13342,13 +13872,13 @@ function isSlowBuffer (obj) {
 
 
 /***/ }),
-/* 52 */
+/* 57 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var coallesceUniforms = __webpack_require__(13)
+var coallesceUniforms = __webpack_require__(15)
 var GLError = __webpack_require__(2)
 
 module.exports = createUniformWrapper
@@ -13540,7 +14070,7 @@ function createUniformWrapper(gl, wrapper, uniforms, locations) {
 
 
 /***/ }),
-/* 53 */
+/* 58 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13810,7 +14340,7 @@ function createAttributeWrapper(
 
 
 /***/ }),
-/* 54 */
+/* 59 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13820,9 +14350,9 @@ exports.shader   = getShaderReference
 exports.program  = createProgram
 
 var GLError = __webpack_require__(2)
-var formatCompilerError = __webpack_require__(55);
+var formatCompilerError = __webpack_require__(60);
 
-var weakMap = typeof WeakMap === 'undefined' ? __webpack_require__(69) : WeakMap
+var weakMap = typeof WeakMap === 'undefined' ? __webpack_require__(74) : WeakMap
 var CACHE = new weakMap()
 
 var SHADER_COUNTER = 0
@@ -13953,14 +14483,14 @@ function createProgram(gl, vref, fref, attribs, locations) {
 
 
 /***/ }),
-/* 55 */
+/* 60 */
 /***/ (function(module, exports, __webpack_require__) {
 
 
-var sprintf = __webpack_require__(56).sprintf;
-var glConstants = __webpack_require__(57);
-var shaderName = __webpack_require__(59);
-var addLineNumbers = __webpack_require__(66);
+var sprintf = __webpack_require__(61).sprintf;
+var glConstants = __webpack_require__(62);
+var shaderName = __webpack_require__(64);
+var addLineNumbers = __webpack_require__(71);
 
 module.exports = formatCompilerError;
 
@@ -14012,7 +14542,7 @@ function formatCompilerError(errLog, src, type) {
 
 
 /***/ }),
-/* 56 */
+/* 61 */
 /***/ (function(module, exports, __webpack_require__) {
 
 (function(window) {
@@ -14226,10 +14756,10 @@ function formatCompilerError(errLog, src, type) {
 
 
 /***/ }),
-/* 57 */
+/* 62 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var gl10 = __webpack_require__(58)
+var gl10 = __webpack_require__(63)
 
 module.exports = function lookupConstant (number) {
   return gl10[number]
@@ -14237,7 +14767,7 @@ module.exports = function lookupConstant (number) {
 
 
 /***/ }),
-/* 58 */
+/* 63 */
 /***/ (function(module, exports) {
 
 module.exports = {
@@ -14541,11 +15071,11 @@ module.exports = {
 
 
 /***/ }),
-/* 59 */
+/* 64 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var tokenize = __webpack_require__(60)
-var atob     = __webpack_require__(65)
+var tokenize = __webpack_require__(65)
+var atob     = __webpack_require__(70)
 
 module.exports = getName
 
@@ -14570,10 +15100,10 @@ function getName(src) {
 
 
 /***/ }),
-/* 60 */
+/* 65 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var tokenize = __webpack_require__(61)
+var tokenize = __webpack_require__(66)
 
 module.exports = tokenizeString
 
@@ -14589,16 +15119,16 @@ function tokenizeString(str, opt) {
 
 
 /***/ }),
-/* 61 */
+/* 66 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = tokenize
 
-var literals100 = __webpack_require__(14)
-  , operators = __webpack_require__(62)
-  , builtins100 = __webpack_require__(15)
-  , literals300es = __webpack_require__(63)
-  , builtins300es = __webpack_require__(64)
+var literals100 = __webpack_require__(16)
+  , operators = __webpack_require__(67)
+  , builtins100 = __webpack_require__(17)
+  , literals300es = __webpack_require__(68)
+  , builtins300es = __webpack_require__(69)
 
 var NORMAL = 999          // <-- never emitted
   , TOKEN = 9999          // <-- never emitted
@@ -14957,7 +15487,7 @@ function tokenize(opt) {
 
 
 /***/ }),
-/* 62 */
+/* 67 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -15010,10 +15540,10 @@ module.exports = [
 
 
 /***/ }),
-/* 63 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var v100 = __webpack_require__(14)
+var v100 = __webpack_require__(16)
 
 module.exports = v100.slice().concat([
    'layout'
@@ -15104,11 +15634,11 @@ module.exports = v100.slice().concat([
 
 
 /***/ }),
-/* 64 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // 300es builtins/reserved words that were previously valid in v100
-var v100 = __webpack_require__(15)
+var v100 = __webpack_require__(17)
 
 // The texture2D|Cube functions have been removed
 // And the gl_ features are updated
@@ -15179,7 +15709,7 @@ module.exports = v100.concat([
 
 
 /***/ }),
-/* 65 */
+/* 70 */
 /***/ (function(module, exports) {
 
 module.exports = function _atob(str) {
@@ -15188,10 +15718,10 @@ module.exports = function _atob(str) {
 
 
 /***/ }),
-/* 66 */
+/* 71 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var padLeft = __webpack_require__(67)
+var padLeft = __webpack_require__(72)
 
 module.exports = addLineNumbers
 function addLineNumbers (string, start, delim) {
@@ -15210,7 +15740,7 @@ function addLineNumbers (string, start, delim) {
 
 
 /***/ }),
-/* 67 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15223,7 +15753,7 @@ function addLineNumbers (string, start, delim) {
 
 
 
-var repeat = __webpack_require__(68);
+var repeat = __webpack_require__(73);
 
 module.exports = function padLeft(str, num, ch) {
   ch = typeof ch !== 'undefined' ? (ch + '') : ' ';
@@ -15231,7 +15761,7 @@ module.exports = function padLeft(str, num, ch) {
 };
 
 /***/ }),
-/* 68 */
+/* 73 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15308,14 +15838,14 @@ function repeat(str, num) {
 
 
 /***/ }),
-/* 69 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // Original - @Gozola.
 // https://gist.github.com/Gozala/1269991
 // This is a reimplemented version (with a few bug fixes).
 
-var createStore = __webpack_require__(70);
+var createStore = __webpack_require__(75);
 
 module.exports = weakMap;
 
@@ -15343,10 +15873,10 @@ function weakMap() {
 
 
 /***/ }),
-/* 70 */
+/* 75 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var hiddenStore = __webpack_require__(71);
+var hiddenStore = __webpack_require__(76);
 
 module.exports = createStore;
 
@@ -15368,7 +15898,7 @@ function createStore() {
 
 
 /***/ }),
-/* 71 */
+/* 76 */
 /***/ (function(module, exports) {
 
 module.exports = hiddenStore;
@@ -15390,7 +15920,7 @@ function hiddenStore(obj, key) {
 
 
 /***/ }),
-/* 72 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15475,14 +16005,14 @@ function runtimeAttributes(gl, program) {
 
 
 /***/ }),
-/* 73 */
+/* 78 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var createVAONative = __webpack_require__(74)
-var createVAOEmulated = __webpack_require__(75)
+var createVAONative = __webpack_require__(79)
+var createVAOEmulated = __webpack_require__(80)
 
 function ExtensionShim (gl) {
   this.bindVertexArrayOES = gl.bindVertexArray.bind(gl)
@@ -15509,13 +16039,13 @@ module.exports = createVAO
 
 
 /***/ }),
-/* 74 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bindAttribs = __webpack_require__(16)
+var bindAttribs = __webpack_require__(18)
 
 function VertexAttribute(location, dimension, a, b, c, d) {
   this.location = location
@@ -15602,13 +16132,13 @@ function createVAONative(gl, ext) {
 module.exports = createVAONative
 
 /***/ }),
-/* 75 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bindAttribs = __webpack_require__(16)
+var bindAttribs = __webpack_require__(18)
 
 function VAOEmulated(gl) {
   this.gl = gl
@@ -15647,562 +16177,16 @@ function createVAOEmulated(gl) {
 module.exports = createVAOEmulated
 
 /***/ }),
-/* 76 */
-/***/ (function(module, exports, __webpack_require__) {
-
-const createShader = __webpack_require__(12);
-
-module.exports = function (gl) {
-  return {
-    path: function () {
-      const shader = createShader(gl, `
-precision mediump float;
-
-attribute vec2 position;
-attribute vec2 normal;
-attribute float miter;
-attribute float thickness;
-uniform mat4 transform;
-
-void main() {
-  vec2 pos = position + vec2(normal * thickness / 2.0 * sign(miter));
-  gl_Position = transform * vec4(pos, 0.0, 1.0);
-}
-        `, `
-precision highp float;
-
-uniform vec4 color;
-
-void main() {
-  gl_FragColor = color;
-}
-        `);
-
-      shader.bind();
-      shader.attributes.position.location = 0;
-      shader.attributes.normal.location = 1;
-      shader.attributes.miter.location = 2;
-      shader.attributes.thickness.location = 3;
-
-      return shader;
-    }(),
-    pathFill: function () {
-      const shader = createShader(gl, `
-precision mediump float;
-
-attribute vec2 position;
-uniform mat4 transform;
-
-void main() {
-  gl_Position = transform * vec4(position, 0.0, 1.0);
-}
-      `, `
-precision highp float;
-
-uniform vec4 color;
-
-void main() {
-  gl_FragColor = color;
-}
-      `);
-
-      shader.bind();
-      shader.attributes.position.location = 0;
-
-      return shader;
-    }()
-  };
-};
-
-/***/ }),
-/* 77 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-function compileSearch(funcName, predicate, reversed, extraArgs, earlyOut) {
-  var code = [
-    "function ", funcName, "(a,l,h,", extraArgs.join(","),  "){",
-earlyOut ? "" : "var i=", (reversed ? "l-1" : "h+1"),
-";while(l<=h){\
-var m=(l+h)>>>1,x=a[m]"]
-  if(earlyOut) {
-    if(predicate.indexOf("c") < 0) {
-      code.push(";if(x===y){return m}else if(x<=y){")
-    } else {
-      code.push(";var p=c(x,y);if(p===0){return m}else if(p<=0){")
-    }
-  } else {
-    code.push(";if(", predicate, "){i=m;")
-  }
-  if(reversed) {
-    code.push("l=m+1}else{h=m-1}")
-  } else {
-    code.push("h=m-1}else{l=m+1}")
-  }
-  code.push("}")
-  if(earlyOut) {
-    code.push("return -1};")
-  } else {
-    code.push("return i};")
-  }
-  return code.join("")
-}
-
-function compileBoundsSearch(predicate, reversed, suffix, earlyOut) {
-  var result = new Function([
-  compileSearch("A", "x" + predicate + "y", reversed, ["y"], earlyOut),
-  compileSearch("P", "c(x,y)" + predicate + "0", reversed, ["y", "c"], earlyOut),
-"function dispatchBsearch", suffix, "(a,y,c,l,h){\
-if(typeof(c)==='function'){\
-return P(a,(l===void 0)?0:l|0,(h===void 0)?a.length-1:h|0,y,c)\
-}else{\
-return A(a,(c===void 0)?0:c|0,(l===void 0)?a.length-1:l|0,y)\
-}}\
-return dispatchBsearch", suffix].join(""))
-  return result()
-}
-
-module.exports = {
-  ge: compileBoundsSearch(">=", false, "GE"),
-  gt: compileBoundsSearch(">", false, "GT"),
-  lt: compileBoundsSearch("<", true, "LT"),
-  le: compileBoundsSearch("<=", true, "LE"),
-  eq: compileBoundsSearch("-", true, "EQ", true)
-}
-
-
-/***/ }),
-/* 78 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = twoProduct
-
-var SPLITTER = +(Math.pow(2, 27) + 1.0)
-
-function twoProduct(a, b, result) {
-  var x = a * b
-
-  var c = SPLITTER * a
-  var abig = c - a
-  var ahi = c - abig
-  var alo = a - ahi
-
-  var d = SPLITTER * b
-  var bbig = d - b
-  var bhi = d - bbig
-  var blo = b - bhi
-
-  var err1 = x - (ahi * bhi)
-  var err2 = err1 - (alo * bhi)
-  var err3 = err2 - (ahi * blo)
-
-  var y = alo * blo - err3
-
-  if(result) {
-    result[0] = y
-    result[1] = x
-    return result
-  }
-
-  return [ y, x ]
-}
-
-/***/ }),
-/* 79 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = linearExpansionSum
-
-//Easy case: Add two scalars
-function scalarScalar(a, b) {
-  var x = a + b
-  var bv = x - a
-  var av = x - bv
-  var br = b - bv
-  var ar = a - av
-  var y = ar + br
-  if(y) {
-    return [y, x]
-  }
-  return [x]
-}
-
-function linearExpansionSum(e, f) {
-  var ne = e.length|0
-  var nf = f.length|0
-  if(ne === 1 && nf === 1) {
-    return scalarScalar(e[0], f[0])
-  }
-  var n = ne + nf
-  var g = new Array(n)
-  var count = 0
-  var eptr = 0
-  var fptr = 0
-  var abs = Math.abs
-  var ei = e[eptr]
-  var ea = abs(ei)
-  var fi = f[fptr]
-  var fa = abs(fi)
-  var a, b
-  if(ea < fa) {
-    b = ei
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-      ea = abs(ei)
-    }
-  } else {
-    b = fi
-    fptr += 1
-    if(fptr < nf) {
-      fi = f[fptr]
-      fa = abs(fi)
-    }
-  }
-  if((eptr < ne && ea < fa) || (fptr >= nf)) {
-    a = ei
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-      ea = abs(ei)
-    }
-  } else {
-    a = fi
-    fptr += 1
-    if(fptr < nf) {
-      fi = f[fptr]
-      fa = abs(fi)
-    }
-  }
-  var x = a + b
-  var bv = x - a
-  var y = b - bv
-  var q0 = y
-  var q1 = x
-  var _x, _bv, _av, _br, _ar
-  while(eptr < ne && fptr < nf) {
-    if(ea < fa) {
-      a = ei
-      eptr += 1
-      if(eptr < ne) {
-        ei = e[eptr]
-        ea = abs(ei)
-      }
-    } else {
-      a = fi
-      fptr += 1
-      if(fptr < nf) {
-        fi = f[fptr]
-        fa = abs(fi)
-      }
-    }
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    }
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-  }
-  while(eptr < ne) {
-    a = ei
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    }
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-    }
-  }
-  while(fptr < nf) {
-    a = fi
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    } 
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-    fptr += 1
-    if(fptr < nf) {
-      fi = f[fptr]
-    }
-  }
-  if(q0) {
-    g[count++] = q0
-  }
-  if(q1) {
-    g[count++] = q1
-  }
-  if(!count) {
-    g[count++] = 0.0  
-  }
-  g.length = count
-  return g
-}
-
-/***/ }),
-/* 80 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var twoProduct = __webpack_require__(78)
-var twoSum = __webpack_require__(85)
-
-module.exports = scaleLinearExpansion
-
-function scaleLinearExpansion(e, scale) {
-  var n = e.length
-  if(n === 1) {
-    var ts = twoProduct(e[0], scale)
-    if(ts[0]) {
-      return ts
-    }
-    return [ ts[1] ]
-  }
-  var g = new Array(2 * n)
-  var q = [0.1, 0.1]
-  var t = [0.1, 0.1]
-  var count = 0
-  twoProduct(e[0], scale, q)
-  if(q[0]) {
-    g[count++] = q[0]
-  }
-  for(var i=1; i<n; ++i) {
-    twoProduct(e[i], scale, t)
-    var pq = q[1]
-    twoSum(pq, t[0], q)
-    if(q[0]) {
-      g[count++] = q[0]
-    }
-    var a = t[1]
-    var b = q[1]
-    var x = a + b
-    var bv = x - a
-    var y = b - bv
-    q[1] = x
-    if(y) {
-      g[count++] = y
-    }
-  }
-  if(q[1]) {
-    g[count++] = q[1]
-  }
-  if(count === 0) {
-    g[count++] = 0.0
-  }
-  g.length = count
-  return g
-}
-
-/***/ }),
 /* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-module.exports = robustSubtract
-
-//Easy case: Add two scalars
-function scalarScalar(a, b) {
-  var x = a + b
-  var bv = x - a
-  var av = x - bv
-  var br = b - bv
-  var ar = a - av
-  var y = ar + br
-  if(y) {
-    return [y, x]
-  }
-  return [x]
-}
-
-function robustSubtract(e, f) {
-  var ne = e.length|0
-  var nf = f.length|0
-  if(ne === 1 && nf === 1) {
-    return scalarScalar(e[0], -f[0])
-  }
-  var n = ne + nf
-  var g = new Array(n)
-  var count = 0
-  var eptr = 0
-  var fptr = 0
-  var abs = Math.abs
-  var ei = e[eptr]
-  var ea = abs(ei)
-  var fi = -f[fptr]
-  var fa = abs(fi)
-  var a, b
-  if(ea < fa) {
-    b = ei
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-      ea = abs(ei)
-    }
-  } else {
-    b = fi
-    fptr += 1
-    if(fptr < nf) {
-      fi = -f[fptr]
-      fa = abs(fi)
-    }
-  }
-  if((eptr < ne && ea < fa) || (fptr >= nf)) {
-    a = ei
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-      ea = abs(ei)
-    }
-  } else {
-    a = fi
-    fptr += 1
-    if(fptr < nf) {
-      fi = -f[fptr]
-      fa = abs(fi)
-    }
-  }
-  var x = a + b
-  var bv = x - a
-  var y = b - bv
-  var q0 = y
-  var q1 = x
-  var _x, _bv, _av, _br, _ar
-  while(eptr < ne && fptr < nf) {
-    if(ea < fa) {
-      a = ei
-      eptr += 1
-      if(eptr < ne) {
-        ei = e[eptr]
-        ea = abs(ei)
-      }
-    } else {
-      a = fi
-      fptr += 1
-      if(fptr < nf) {
-        fi = -f[fptr]
-        fa = abs(fi)
-      }
-    }
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    }
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-  }
-  while(eptr < ne) {
-    a = ei
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    }
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-    }
-  }
-  while(fptr < nf) {
-    a = fi
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    } 
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-    fptr += 1
-    if(fptr < nf) {
-      fi = -f[fptr]
-    }
-  }
-  if(q0) {
-    g[count++] = q0
-  }
-  if(q1) {
-    g[count++] = q1
-  }
-  if(!count) {
-    g[count++] = 0.0  
-  }
-  g.length = count
-  return g
-}
-
-/***/ }),
-/* 82 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var monotoneTriangulate = __webpack_require__(83)
-var makeIndex = __webpack_require__(86)
-var delaunayFlip = __webpack_require__(87)
-var filterTriangulation = __webpack_require__(89)
+var monotoneTriangulate = __webpack_require__(82)
+var makeIndex = __webpack_require__(85)
+var delaunayFlip = __webpack_require__(86)
+var filterTriangulation = __webpack_require__(88)
 
 module.exports = cdt2d
 
@@ -16282,14 +16266,14 @@ function cdt2d(points, edges, options) {
 
 
 /***/ }),
-/* 83 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bsearch = __webpack_require__(77)
-var orient = __webpack_require__(84)[3]
+var bsearch = __webpack_require__(3)
+var orient = __webpack_require__(83)[3]
 
 var EVENT_POINT = 0
 var EVENT_END   = 1
@@ -16476,16 +16460,16 @@ function monotoneTriangulate(points, edges) {
 
 
 /***/ }),
-/* 84 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var twoProduct = __webpack_require__(78)
-var robustSum = __webpack_require__(79)
-var robustScale = __webpack_require__(80)
-var robustSubtract = __webpack_require__(81)
+var twoProduct = __webpack_require__(7)
+var robustSum = __webpack_require__(19)
+var robustScale = __webpack_require__(20)
+var robustSubtract = __webpack_require__(21)
 
 var NUM_EXPAND = 5
 
@@ -16672,7 +16656,7 @@ function generateOrientationProc() {
 generateOrientationProc()
 
 /***/ }),
-/* 85 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16695,13 +16679,13 @@ function fastTwoSum(a, b, result) {
 }
 
 /***/ }),
-/* 86 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bsearch = __webpack_require__(77)
+var bsearch = __webpack_require__(3)
 
 module.exports = createTriangulation
 
@@ -16806,14 +16790,14 @@ function createTriangulation(numVerts, edges) {
 
 
 /***/ }),
-/* 87 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var inCircle = __webpack_require__(88)[4]
-var bsearch = __webpack_require__(77)
+var inCircle = __webpack_require__(87)[4]
+var bsearch = __webpack_require__(3)
 
 module.exports = delaunayRefine
 
@@ -16928,16 +16912,16 @@ function delaunayRefine(points, triangulation) {
 
 
 /***/ }),
-/* 88 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var twoProduct = __webpack_require__(78)
-var robustSum = __webpack_require__(79)
-var robustDiff = __webpack_require__(81)
-var robustScale = __webpack_require__(80)
+var twoProduct = __webpack_require__(7)
+var robustSum = __webpack_require__(19)
+var robustDiff = __webpack_require__(21)
+var robustScale = __webpack_require__(20)
 
 var NUM_EXPAND = 6
 
@@ -17101,13 +17085,13 @@ function generateInSphereTest() {
 generateInSphereTest()
 
 /***/ }),
-/* 89 */
+/* 88 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bsearch = __webpack_require__(77)
+var bsearch = __webpack_require__(3)
 
 module.exports = classifyFaces
 
@@ -17286,6 +17270,280 @@ function classifyFaces(triangulation, target, infinity) {
   return result
 }
 
+
+/***/ }),
+/* 89 */
+/***/ (function(module, exports, __webpack_require__) {
+
+const createShader = __webpack_require__(14);
+
+module.exports = function (gl) {
+  return {
+    path: function () {
+      const shader = createShader(gl, `
+precision mediump float;
+
+attribute vec2 position;
+attribute vec2 normal;
+attribute float miter;
+attribute float thickness;
+uniform mat4 transform;
+
+void main() {
+  vec2 pos = position + vec2(normal * thickness / 2.0 * sign(miter));
+  gl_Position = transform * vec4(pos, 0.0, 1.0);
+}
+        `, `
+precision highp float;
+
+uniform vec4 color;
+
+void main() {
+  gl_FragColor = color;
+}
+        `);
+
+      shader.bind();
+      shader.attributes.position.location = 0;
+      shader.attributes.normal.location = 1;
+      shader.attributes.miter.location = 2;
+      shader.attributes.thickness.location = 3;
+
+      return shader;
+    }(),
+    pathFill: function () {
+      const shader = createShader(gl, `
+precision mediump float;
+
+attribute vec2 position;
+uniform mat4 transform;
+
+void main() {
+  gl_Position = transform * vec4(position, 0.0, 1.0);
+}
+      `, `
+precision highp float;
+
+uniform vec4 color;
+
+void main() {
+  gl_FragColor = color;
+}
+      `);
+
+      shader.bind();
+      shader.attributes.position.location = 0;
+
+      return shader;
+    }()
+  };
+};
+
+/***/ }),
+/* 90 */
+/***/ (function(module, exports, __webpack_require__) {
+
+const arc = __webpack_require__(91);
+const Path = __webpack_require__(6);
+const Color = __webpack_require__(4);
+
+module.exports = class Editor {
+  constructor(canvas) {
+    this.onPointerDown = e => {
+      this.down = 'pointer';
+
+      this.cursorSize = e.pointerType === 'pen' && e.button === 5 ? 30 : 10;
+      this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY);
+
+      this.previewStroke = new Path();
+
+      if (e.pointerType === 'pen' && e.button === 5) {
+        // eraser
+        this.previewStroke.stroke = new Color(0, 1, 0, 0.5);
+        this.previewMaxWidth = 30;
+      } else {
+        this.previewStroke.stroke = new Color(1, 0, 1, 0.5);
+        this.previewMaxWidth = 10;
+      }
+
+      this.canvas.image.appendChild(this.previewStroke);
+      let left = e.pressure * this.previewMaxWidth / 2;
+      let right = e.pressure * this.previewMaxWidth / 2;
+      this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right, true);
+
+      this.lastPoint = [e.offsetX, e.offsetY];
+
+      this.canvas.render();
+    };
+
+    this.onPointerMove = e => {
+      if (!this.down) this.cursorSize = 10;
+      this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY);
+
+      if (this.down !== 'pointer') return;
+
+      let vec = [e.offsetX, e.offsetY].map((x, i) => x - this.lastPoint[i]);
+      let angle = Math.atan2(...vec);
+
+      // angles:
+      //        pi
+      // -pi/2      pi/2
+      //        0
+
+      let tiltAngle = Math.atan2(e.tiltX, -e.tiltY);
+      let tiltLength = Math.hypot(e.tiltX, e.tiltY) / 100;
+
+      // left normal vector
+      let vecLeft = [Math.cos(angle + Math.PI / 2), Math.sin(angle + Math.PI / 2)];
+      // right normal vector
+      let vecRight = [Math.cos(angle - Math.PI / 2), Math.sin(angle - Math.PI / 2)];
+
+      let tiltVector = [Math.cos(tiltAngle), Math.sin(tiltAngle)];
+
+      let left = e.pressure * this.previewMaxWidth / 2;
+      let right = e.pressure * this.previewMaxWidth / 2;
+
+      // dot left normal with tilt vector to get amount
+      left += vecLeft.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength;
+      right += vecRight.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength;
+
+      this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right);
+
+      this.lastPoint = [e.offsetX, e.offsetY];
+
+      this.canvas.render();
+    };
+
+    this.onPointerUp = e => {
+      if (this.down !== 'pointer') return;
+      this.down = null;
+      let left = e.pressure * this.previewMaxWidth / 2;
+      let right = e.pressure * this.previewMaxWidth / 2;
+      this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right);
+      this.previewStroke.parentNode.removeChild(this.previewStroke);
+
+      this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY);
+      this.canvas.render();
+    };
+
+    this.onPointerOut = e => {
+      this.renderCursor(-1, -1, 0, 0, 0);
+      this.onPointerUp(e);
+    };
+
+    this.canvas = canvas;
+
+    this.down = false;
+    this.previewMaxWidth = null;
+    this.previewStroke = null;
+    this.lastPoint = null;
+
+    this.cursorSize = 10;
+
+    this.canvas.style.cursor = 'none';
+
+    if (typeof this.canvas.onpointermove !== 'undefined') {
+      this.canvas.addEventListener('pointerdown', this.onPointerDown);
+      this.canvas.addEventListener('pointermove', this.onPointerMove);
+      this.canvas.addEventListener('pointerup', this.onPointerUp);
+      this.canvas.addEventListener('pointerout', this.onPointerOut);
+    } else {
+      this.canvas.addEventListener('mousedown', this.onMouseDown);
+      this.canvas.addEventListener('mousemove', this.onMouseMove);
+      this.canvas.addEventListener('mouseup', this.onMouseUp);
+      this.canvas.addEventListener('mouseout', this.onMouseUp);
+
+      // TODO: touch
+    }
+  }
+
+  renderCursor(x, y, p, dx, dy) {
+    const ctx = this.canvas.overlayCtx;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, this.canvas.overlay.width, this.canvas.overlay.height);
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+    if (x < 0 || y < 0) return;
+    if (!this.down && p === 0) p = 1;
+
+    ctx.translate(x, y);
+
+    ctx.save();
+    ctx.rotate(-Math.atan2(dx, -dy));
+
+    let scaleY = 1 + Math.hypot(dx, dy) / 10;
+
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    let radius = p * this.cursorSize / 4;
+    let points = arc(0, 0, radius, 0, Math.PI * 2);
+    let first = true;
+    for (let point of points) {
+      let [x, y] = point;
+
+      if (first) ctx.moveTo(x, y * scaleY + (scaleY - 1) * radius);else ctx.lineTo(x, y * scaleY + (scaleY - 1) * radius);
+
+      first = false;
+    }
+
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+};
+
+/***/ }),
+/* 91 */
+/***/ (function(module, exports) {
+
+//if 'steps' is not specified, we'll just approximate it
+module.exports = function arc(x, y, radius, start, end, clockwise, steps, path) {
+    if (!path)
+        path = []
+
+    x = x||0
+    y = y||0
+    radius = radius||0
+    start = start||0
+    end = end||0
+
+    //determine distance between the two angles
+    //...probably a nicer way of writing this
+    var dist = Math.abs(start-end)
+    if (!clockwise && start > end)
+        dist = 2*Math.PI - dist
+    else if (clockwise && end > start)
+        dist = 2*Math.PI - dist
+
+    //approximate the # of steps using the cube root of the radius
+    if (typeof steps !== 'number') 
+        steps = Math.max(6, Math.floor(6 * Math.pow(radius, 1/3) * (dist / (Math.PI))))
+
+    //ensure we have at least 3 steps..
+    steps = Math.max(steps, 3)
+    
+    var f = dist / (steps),
+        t = start
+
+    //modify direction
+    f *= clockwise ? -1 : 1
+
+    for (var i=0; i<steps+1; i++) {
+        var cs = Math.cos(t),
+            sn = Math.sin(t)
+
+        var nx = x + cs*radius,
+            ny = y + sn*radius
+
+        path.push([ nx, ny ])
+
+        t += f
+    }
+    return path
+}
 
 /***/ })
 /******/ ]);

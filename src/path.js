@@ -305,6 +305,30 @@ module.exports = class Path extends Layer {
     }
   }
 
+  get roughLength () {
+    let length = 0
+
+    let lastPoint = null
+    for (let command of this.data) {
+      if (command.type === 0x10) {
+        lastPoint = command.data
+      } else if (command.type === 0x20) {
+        length += Math.hypot(...command.data.map((x, i) => x - lastPoint[i]))
+        lastPoint = command.data
+      } else if (command.type !== 0x60) {
+        console.warn('Cannot get rough length of command type 0x' + command.type.toString(16))
+      }
+    }
+
+    return length
+  }
+  set roughLength (v) {}
+
+  addRoughPoint (x, y, left, right, first = false) {
+    this.data.push(new PathCommand(first ? 0x10 : 0x20, x, y))
+    this.data.push(new PathCommand(0x60, this.roughLength, left, right))
+  }
+
   serialize () {
     return Object.assign(super.serialize(), {
       d: this.data.map(x => x.serialize()),

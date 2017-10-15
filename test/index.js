@@ -1,8 +1,12 @@
 document.body.style.background = '#eee'
 
 const canvas = new (window.graphein.Canvas)()
+canvas.style.position = 'relative'
+canvas.style.display = 'inline-block'
 canvas.canvas.style.background = '#fff'
 canvas.canvas.style.borderRadius = '4px'
+canvas.overlay.style.position = 'absolute'
+canvas.overlay.style.top = canvas.overlay.style.left = 0
 document.body.appendChild(canvas)
 
 const image = new (window.graphein.Image)()
@@ -24,3 +28,5 @@ path.data = [
 ].map(x => new (window.graphein.Path.Command)(...x))
 
 canvas.image = image
+
+const editor = new (window.graphein.Editor)(canvas)

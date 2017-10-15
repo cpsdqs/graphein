@@ -9,6 +9,9 @@ class Canvas extends window.HTMLElement {
     this.canvas = document.createElement('canvas')
     this.gl = this.canvas.getContext('webgl')
 
+    this.overlay = document.createElement('canvas')
+    this.overlayCtx = this.overlay.getContext('2d')
+
     this.shaders = shaders(this.gl)
 
     this.brush = new Brush()
@@ -28,6 +31,7 @@ class Canvas extends window.HTMLElement {
     if (!this._didInit) {
       this._didInit = true
       this.appendChild(this.canvas)
+      this.appendChild(this.overlay)
     }
   }
 
@@ -36,6 +40,11 @@ class Canvas extends window.HTMLElement {
     this.canvas.height = this.image.height * window.devicePixelRatio
     this.canvas.style.width = `${this.image.width}px`
     this.canvas.style.height = `${this.image.height}px`
+
+    this.overlay.width = this.canvas.width
+    this.overlay.height = this.canvas.height
+    this.overlay.style.width = this.canvas.style.width
+    this.overlay.style.height = this.canvas.style.height
   }
 
   get image () {
