@@ -226,6 +226,39 @@ module.exports = GLError
 
 /***/ }),
 /* 3 */
+/***/ (function(module, exports) {
+
+module.exports = class Color {
+  constructor(r = 0, g = 0, b = 0, a = 1) {
+    this.alpha = a;
+    this.red = r;
+    this.green = g;
+    this.blue = b;
+  }
+
+  toCSS() {
+    return `rgba(${this.red * 255}, ${this.green * 255}, ${this.blue * 255}, ${this.alpha})`;
+  }
+
+  toVec4() {
+    return [this.red, this.green, this.blue, this.alpha];
+  }
+
+  serialize() {
+    let color = 255 - this.alpha * 255 | 0;
+    color |= this.red * 255 << 8;
+    color |= this.green * 255 << 8;
+    color |= this.blue * 255 << 8;
+    return color;
+  }
+
+  static deserialize(color) {
+    return new Color((color >> 8 & 0xFF) / 255, (color >> 16 & 0xFF) / 255, (color >> 24) / 255, 1 - (color & 0xFF) / 255);
+  }
+};
+
+/***/ }),
+/* 4 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -282,39 +315,6 @@ module.exports = {
   eq: compileBoundsSearch("-", true, "EQ", true)
 }
 
-
-/***/ }),
-/* 4 */
-/***/ (function(module, exports) {
-
-module.exports = class Color {
-  constructor(r = 0, g = 0, b = 0, a = 1) {
-    this.alpha = a;
-    this.red = r;
-    this.green = g;
-    this.blue = b;
-  }
-
-  toCSS() {
-    return `rgba(${this.red * 255}, ${this.green * 255}, ${this.blue * 255}, ${this.alpha})`;
-  }
-
-  toVec4() {
-    return [this.red, this.green, this.blue, this.alpha];
-  }
-
-  serialize() {
-    let color = 255 - this.alpha * 255 | 0;
-    color |= this.red * 255 << 8;
-    color |= this.green * 255 << 8;
-    color |= this.blue * 255 << 8;
-    return color;
-  }
-
-  static deserialize(color) {
-    return new Color((color >> 8 & 0xFF) / 255, (color >> 16 & 0xFF) / 255, (color >> 24) / 255, 1 - (color & 0xFF) / 255);
-  }
-};
 
 /***/ }),
 /* 5 */
@@ -386,14 +386,14 @@ module.exports = (_temp = _class = class Layer {
 var _class, _temp;
 
 const { mat4 } = __webpack_require__(1);
-const bezier = __webpack_require__(32);
-const getNormals = __webpack_require__(34);
-const createBuffer = __webpack_require__(41);
-const createShader = __webpack_require__(14);
-const createVAO = __webpack_require__(78);
-const triangulate = __webpack_require__(81);
+const bezier = __webpack_require__(51);
+const getNormals = __webpack_require__(53);
+const createBuffer = __webpack_require__(60);
+const createShader = __webpack_require__(13);
+const createVAO = __webpack_require__(76);
+const triangulate = __webpack_require__(79);
 const Layer = __webpack_require__(5);
-const Color = __webpack_require__(4);
+const Color = __webpack_require__(3);
 
 class StrokeRenderer {
   constructor(gl, transform, context, stroke, fill) {
@@ -411,6 +411,24 @@ class StrokeRenderer {
     this.fill = fill;
     this.shader = context.shaders.path;
     this.fillShader = context.shaders.pathFill;
+
+    this.strokeIsDirty = false;
+    this.fillIsDirty = false;
+
+    // cache
+    this.strokeVAO = null;
+    this.strokeAttributeBuffers = null;
+    this.strokeVAOLength = 0;
+    this.fillVAO = null;
+    this.fillAttributeBuffers = null;
+    this.fillVAOLength = 0;
+  }
+
+  clearPaths() {
+    this.currentPath = [];
+    this.paths = [this.currentPath];
+
+    this.strokeIsDirty = this.fillIsDirty = true;
   }
 
   add(type, ...args) {
@@ -475,9 +493,11 @@ class StrokeRenderer {
     } else {
       // TODO: stroke width bezier relative
     }
+
+    this.strokeIsDirty = this.fillIsDirty = true;
   }
 
-  render() {
+  updateStroke() {
     const gl = this.gl;
 
     // TODO: render all paths instead of only one
@@ -528,34 +548,59 @@ class StrokeRenderer {
       miters.push(-normals[i][1]);
     }
 
-    const vao = createVAO(gl, [{
-      buffer: createBuffer(gl, positions),
-      type: gl.FLOAT,
-      size: 2
-    }, {
-      buffer: createBuffer(gl, vnormals),
-      type: gl.FLOAT,
-      size: 2
-    }, {
-      buffer: createBuffer(gl, miters),
-      type: gl.FLOAT,
-      size: 1
-    }, {
-      buffer: createBuffer(gl, thicknesses),
-      type: gl.FLOAT,
-      size: 1
-    }]);
+    if (!this.strokeAttributeBuffers) {
+      this.strokeAttributeBuffers = {
+        positions: createBuffer(gl, positions),
+        normals: createBuffer(gl, vnormals),
+        miters: createBuffer(gl, miters),
+        thicknesses: createBuffer(gl, thicknesses)
+      };
+    } else {
+      this.strokeAttributeBuffers.positions.update(positions);
+      this.strokeAttributeBuffers.normals.update(vnormals);
+      this.strokeAttributeBuffers.miters.update(miters);
+      this.strokeAttributeBuffers.thicknesses.update(thicknesses);
+    }
+
+    if (!this.strokeVAO) {
+      this.strokeVAO = createVAO(gl, [{
+        buffer: this.strokeAttributeBuffers.positions,
+        type: gl.FLOAT,
+        size: 2
+      }, {
+        buffer: this.strokeAttributeBuffers.normals,
+        type: gl.FLOAT,
+        size: 2
+      }, {
+        buffer: this.strokeAttributeBuffers.miters,
+        type: gl.FLOAT,
+        size: 1
+      }, {
+        buffer: this.strokeAttributeBuffers.thicknesses,
+        type: gl.FLOAT,
+        size: 1
+      }]);
+    }
+
+    this.strokeVAOLength = positions.length / 2;
+    this.strokeIsDirty = false;
+  }
+
+  render() {
+    const gl = this.gl;
+
+    if (!this.strokeVAO || this.strokeIsDirty) this.updateStroke();
 
     this.shader.bind();
     this.shader.uniforms.color = this.stroke;
     this.shader.uniforms.transform = this.transform;
 
-    vao.bind();
-    vao.draw(gl.TRIANGLE_STRIP, positions.length / 2);
-    vao.unbind();
+    this.strokeVAO.bind();
+    this.strokeVAO.draw(gl.TRIANGLE_STRIP, this.strokeVAOLength);
+    this.strokeVAO.unbind();
   }
 
-  renderFill() {
+  updateFill() {
     const gl = this.gl;
 
     let path = this.currentPath.slice();
@@ -567,19 +612,38 @@ class StrokeRenderer {
       for (let pos of cell.map(x => path[x])) positions.push(...pos);
     }
 
-    const vao = createVAO(gl, [{
-      buffer: createBuffer(gl, positions),
-      type: gl.FLOAT,
-      size: 2
-    }]);
+    if (!this.fillAttributeBuffers) {
+      this.fillAttributeBuffers = {
+        positions: createBuffer(gl, positions)
+      };
+    } else {
+      this.fillAttributeBuffers.positions.update(positions);
+    }
+
+    if (!this.fillVAO) {
+      this.fillVAO = createVAO(gl, [{
+        buffer: this.fillAttributeBuffers.positions,
+        type: gl.FLOAT,
+        size: 2
+      }]);
+    }
+
+    this.fillVAOLength = positions.length / 2;
+    this.fillIsDirty = false;
+  }
+
+  renderFill() {
+    const gl = this.gl;
+
+    if (!this.fillVAO || this.fillIsDirty) this.updateFill();
 
     this.fillShader.bind();
     this.fillShader.uniforms.color = this.fill;
     this.fillShader.uniforms.transform = this.transform;
 
-    vao.bind();
-    vao.draw(gl.TRIANGLES, positions.length / 2);
-    vao.unbind();
+    this.fillVAO.bind();
+    this.fillVAO.draw(gl.TRIANGLES, this.fillVAOLength);
+    this.fillVAO.unbind();
   }
 
   static curveToFunction(points) {
@@ -615,6 +679,7 @@ class StrokeRenderer {
     };
   }
 }
+
 class PathCommand {
   constructor(type, ...data) {
     this.type = type | 0;
@@ -631,6 +696,7 @@ class PathCommand {
 
 }
 
+// WeakMap<WebGLRenderingContext, WeakMap<Path, StrokeRenderer>>
 PathCommand.types = {
   CLOSE_PATH: 0,
   MOVE: 0x10,
@@ -652,6 +718,8 @@ PathCommand.types = {
   STROKE_WIDTH_BEZIER: 0x62,
   STROKE_WIDTH_BEZIER_R: 0x63
 };
+const strokeRendererContexts = new WeakMap();
+
 module.exports = (_temp = _class = class Path extends Layer {
   constructor() {
     super();
@@ -663,22 +731,56 @@ module.exports = (_temp = _class = class Path extends Layer {
     this.cap = Path.cap.BUTT;
     this.join = Path.join.MITER;
     this.miter = 0;
-    this.data = [];
+
+    this.dataIsDirty = false;
+    const self = this;
+    this.data = new Proxy([], {
+      set(target, key, value) {
+        target[key] = value;
+        self.dataIsDirty = true;
+        return true;
+      }
+    });
   }
 
   render(gl, transform, context) {
     let subTransform = mat4.create();
     mat4.multiply(subTransform, transform, this.transform.toMat4());
 
-    let renderer = new StrokeRenderer(gl, subTransform, context, this.stroke ? this.stroke.toVec4() : [0, 0, 0, 0], this.fill ? this.fill.toVec4() : [0, 0, 0, 0]);
-    this.data.forEach(command => command.render(renderer));
+    let renderer;
 
-    if (this.stroke && this.stroke.alpha) {
-      renderer.render();
+    // get stroke renderer from cache
+    let strokeRenderers = strokeRendererContexts.get(gl);
+    if (strokeRenderers) {
+      renderer = strokeRenderers.get(this);
     }
-    if (this.fill && this.fill.alpha) {
-      renderer.renderFill();
+
+    let strokeColor = this.stroke ? this.stroke.toVec4() : [0, 0, 0, 0];
+    let fillColor = this.fill ? this.fill.toVec4() : [0, 0, 0, 0];
+
+    if (!renderer) {
+      // not in cache, create one
+      renderer = new StrokeRenderer(gl, subTransform, context, strokeColor, fillColor);
+      this.data.forEach(command => command.render(renderer));
+
+      if (!strokeRendererContexts.has(gl)) strokeRendererContexts.set(gl, new WeakMap());
+      strokeRendererContexts.get(gl).set(this, renderer);
+    } else {
+      // update variables
+      renderer.transform = subTransform;
+      renderer.context = context;
+      renderer.stroke = strokeColor;
+      renderer.fill = fillColor;
+
+      if (this.dataIsDirty) {
+        renderer.clearPaths();
+        this.data.forEach(command => command.render(renderer));
+        this.dataIsDirty = false;
+      }
     }
+
+    if (this.stroke && this.stroke.alpha) renderer.render();
+    if (this.fill && this.fill.alpha) renderer.renderFill();
   }
 
   get roughLength() {
@@ -3204,43 +3306,16 @@ module.exports = (_temp = _class = class Transform {
 
 /***/ }),
 /* 13 */
-/***/ (function(module, exports) {
-
-var g;
-
-// This works in non-strict mode
-g = (function() {
-	return this;
-})();
-
-try {
-	// This works if eval is allowed (see CSP)
-	g = g || Function("return this")() || (1,eval)("this");
-} catch(e) {
-	// This works if the window reference is available
-	if(typeof window === "object")
-		g = window;
-}
-
-// g can still be undefined, but nothing to do about it...
-// We return undefined, instead of nothing here, so it's
-// easier to handle this case. if(!global) { ...}
-
-module.exports = g;
-
-
-/***/ }),
-/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var createUniformWrapper   = __webpack_require__(57)
-var createAttributeWrapper = __webpack_require__(58)
-var makeReflect            = __webpack_require__(15)
-var shaderCache            = __webpack_require__(59)
-var runtime                = __webpack_require__(77)
+var createUniformWrapper   = __webpack_require__(30)
+var createAttributeWrapper = __webpack_require__(31)
+var makeReflect            = __webpack_require__(14)
+var shaderCache            = __webpack_require__(32)
+var runtime                = __webpack_require__(50)
 var GLError                = __webpack_require__(2)
 
 //Shader object
@@ -3501,7 +3576,7 @@ module.exports = createShader
 
 
 /***/ }),
-/* 15 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3564,7 +3639,7 @@ function makeReflectTypes(uniforms, useIndex) {
 }
 
 /***/ }),
-/* 16 */
+/* 15 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -3663,7 +3738,7 @@ module.exports = [
 
 
 /***/ }),
-/* 17 */
+/* 16 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -3816,6 +3891,33 @@ module.exports = [
   , 'texture2DProjGradEXT'
   , 'textureCubeGradEXT'
 ]
+
+
+/***/ }),
+/* 17 */
+/***/ (function(module, exports) {
+
+var g;
+
+// This works in non-strict mode
+g = (function() {
+	return this;
+})();
+
+try {
+	// This works if eval is allowed (see CSP)
+	g = g || Function("return this")() || (1,eval)("this");
+} catch(e) {
+	// This works if the window reference is available
+	if(typeof window === "object")
+		g = window;
+}
+
+// g can still be undefined, but nothing to do about it...
+// We return undefined, instead of nothing here, so it's
+// easier to handle this case. if(!global) { ...}
+
+module.exports = g;
 
 
 /***/ }),
@@ -4048,7 +4150,7 @@ function linearExpansionSum(e, f) {
 
 
 var twoProduct = __webpack_require__(7)
-var twoSum = __webpack_require__(84)
+var twoSum = __webpack_require__(82)
 
 module.exports = scaleLinearExpansion
 
@@ -4263,12 +4365,12 @@ function robustSubtract(e, f) {
 /***/ (function(module, exports, __webpack_require__) {
 
 const Canvas = __webpack_require__(23);
-const Color = __webpack_require__(4);
+const Color = __webpack_require__(3);
 const Image = __webpack_require__(8);
 const Layer = __webpack_require__(5);
 const Transform = __webpack_require__(12);
 const Path = __webpack_require__(6);
-const Editor = __webpack_require__(90);
+const Editor = __webpack_require__(87);
 
 const graphein = {
   Canvas,
@@ -4287,7 +4389,7 @@ module.exports = window.graphein = graphein;
 /***/ (function(module, exports, __webpack_require__) {
 
 const Image = __webpack_require__(8);
-const shaders = __webpack_require__(89);
+const shaders = __webpack_require__(29);
 
 class Canvas extends window.HTMLElement {
   constructor() {
@@ -8399,467 +8501,2211 @@ const forEach = (function() {
 /* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Tool = __webpack_require__(92);
-const PathFitter = __webpack_require__(31);
-const Path = __webpack_require__(6);
-const Color = __webpack_require__(4);
+const createShader = __webpack_require__(13);
 
-module.exports = class Brush extends Tool {
-  constructor(...args) {
-    super(...args);
+module.exports = function (gl) {
+  return {
+    path: function () {
+      const shader = createShader(gl, `
+precision mediump float;
 
-    this.size = 10;
+attribute vec2 position;
+attribute vec2 normal;
+attribute float miter;
+attribute float thickness;
+uniform mat4 transform;
 
-    this.points = [];
-  }
+void main() {
+  vec2 pos = position + vec2(normal * thickness / 2.0 * sign(miter));
+  gl_Position = transform * vec4(pos, 0.0, 1.0);
+}
+        `, `
+precision highp float;
 
-  stroke() {
-    let pathFitter = new PathFitter(this.points.map(x => [x.x, x.y]));
-    let segments = pathFitter.fit(2); // TODO: weighted by time?
+uniform vec4 color;
 
-    let path = new Path();
-    path.stroke = new Color(0, 0, 0, 1);
+void main() {
+  gl_FragColor = color;
+}
+        `);
 
-    let lastSegment = null;
-    for (let segment of segments) {
-      if ((!lastSegment || !lastSegment.handleOutLength()) && !segment.handleInLength()) {
-        // line from last segment to this one is straight
-        path.data.push(new Path.Command(0x20, ...segment.point));
-      } else if (lastSegment) {
-        // cubic bezier curve
+      shader.bind();
+      shader.attributes.position.location = 0;
+      shader.attributes.normal.location = 1;
+      shader.attributes.miter.location = 2;
+      shader.attributes.thickness.location = 3;
 
-        // get absolute handle out & in
-        let handleOut = lastSegment.handleOut.map((x, i) => x + lastSegment.point[i]);
-        let handleIn = segment.handleIn.map((x, i) => x + segment.point[i]);
+      return shader;
+    }(),
+    pathFill: function () {
+      const shader = createShader(gl, `
+precision mediump float;
 
-        path.data.push(new Path.Command(0x30, ...handleOut, ...handleIn, ...segment.point));
-      } else {
-        path.data.push(new Path.Command(0x10, ...segment.point));
-      }
+attribute vec2 position;
+uniform mat4 transform;
 
-      lastSegment = segment;
-    }
+void main() {
+  gl_Position = transform * vec4(position, 0.0, 1.0);
+}
+      `, `
+precision highp float;
 
-    // TODO: don't do the following
-    // copy width data to simplified path
-    let length = 0;
-    let lastPoint = null;
-    for (let point of this.points) {
-      if (lastPoint) {
-        length += Math.hypot(point.x - lastPoint.x, point.y - lastPoint.y);
-      }
-      lastPoint = point;
-      path.data.push(new Path.Command(0x60, length, point.left, point.right));
-    }
+uniform vec4 color;
 
-    this.editor.currentLayer.appendChild(path);
-  }
+void main() {
+  gl_FragColor = color;
+}
+      `);
 
-  strokeStart(x, y, left, right) {
-    this.points = [];
-    this.points.push({ x, y, left, right });
-  }
+      shader.bind();
+      shader.attributes.position.location = 0;
 
-  strokeMove(x, y, left, right) {
-    let lastPoint = this.points[this.points.length - 1];
-    if (lastPoint.x === x && lastPoint.y === y) {
-      Object.assign(lastPoint, { left, right });
-    } else this.points.push({ x, y, left, right });
-  }
-
-  strokeEnd(x, y, left, right) {
-    this.strokeMove(x, y, left, right);
-
-    this.stroke();
-  }
+      return shader;
+    }()
+  };
 };
 
 /***/ }),
-/* 30 */,
-/* 31 */
-/***/ (function(module, exports) {
+/* 30 */
+/***/ (function(module, exports, __webpack_require__) {
 
-/*
- * paper.js PathFitter modified for Graphein
- */
+"use strict";
 
-/*
- * Paper.js - The Swiss Army Knife of Vector Graphics Scripting.
- * http://paperjs.org/
- *
- * Copyright (c) 2011 - 2016, Juerg Lehni & Jonathan Puckey
- * http://scratchdisk.com/ & http://jonathanpuckey.com/
- *
- * Distributed under the MIT license. See LICENSE file for details.
- *
- * All rights reserved.
- */
 
-// An Algorithm for Automatically Fitting Digitized Curves
-// by Philip J. Schneider
-// from "Graphics Gems", Academic Press, 1990
-// Modifications and optimizations of original algorithm by Juerg Lehni.
+var coallesceUniforms = __webpack_require__(14)
+var GLError = __webpack_require__(2)
 
-// paperjs shim
+module.exports = createUniformWrapper
 
-// Numerical.EPSILON
-const EPSILON = 1e-12;
+//Binds a function and returns a value
+function identity(x) {
+  var c = new Function('y', 'return function(){return y}')
+  return c(x)
+}
 
-// Numerical.isZero
-const isZero = x => Math.abs(x) <= EPSILON;
+function makeVector(length, fill) {
+  var result = new Array(length)
+  for(var i=0; i<length; ++i) {
+    result[i] = fill
+  }
+  return result
+}
 
-// Point methods
-const add = function (b) {
-  return this.map((x, i) => x + b[i]);
-};
-const subtract = function (b) {
-  return this.map((x, i) => x - b[i]);
-};
-const getDistance = function (b) {
-  return Math.hypot(...subtract.call(this, b));
-};
-const normalize = function (length = 1) {
-  let scale = length / Math.hypot(...this);
-  if (!Number.isFinite(scale)) scale = 0;
-  return this.map(x => x * scale);
-};
-const negate = function () {
-  return this.map(x => -x);
-};
-const multiply = function (b) {
-  return this.map(x => x * b);
-};
-const dot = function (b) {
-  return this.map((x, i) => x * b[i]).reduce((a, b) => a + b, 0);
-};
+//Create shims for uniforms
+function createUniformWrapper(gl, wrapper, uniforms, locations) {
 
-// simple Segment implementation
-class Segment {
-  constructor(point = [0, 0], handleIn = [0, 0], handleOut = [0, 0]) {
-    this.point = point;
-    this.handleIn = handleIn;
-    this.handleOut = handleOut;
+  function makeGetter(index) {
+    var proc = new Function(
+        'gl'
+      , 'wrapper'
+      , 'locations'
+      , 'return function(){return gl.getUniform(wrapper.program,locations[' + index + '])}')
+    return proc(gl, wrapper, locations)
   }
 
-  setHandleOut(point) {
-    this.handleOut = point;
+  function makePropSetter(path, index, type) {
+    switch(type) {
+      case 'bool':
+      case 'int':
+      case 'sampler2D':
+      case 'samplerCube':
+        return 'gl.uniform1i(locations[' + index + '],obj' + path + ')'
+      case 'float':
+        return 'gl.uniform1f(locations[' + index + '],obj' + path + ')'
+      default:
+        var vidx = type.indexOf('vec')
+        if(0 <= vidx && vidx <= 1 && type.length === 4 + vidx) {
+          var d = type.charCodeAt(type.length-1) - 48
+          if(d < 2 || d > 4) {
+            throw new GLError('', 'Invalid data type')
+          }
+          switch(type.charAt(0)) {
+            case 'b':
+            case 'i':
+              return 'gl.uniform' + d + 'iv(locations[' + index + '],obj' + path + ')'
+            case 'v':
+              return 'gl.uniform' + d + 'fv(locations[' + index + '],obj' + path + ')'
+            default:
+              throw new GLError('', 'Unrecognized data type for vector ' + name + ': ' + type)
+          }
+        } else if(type.indexOf('mat') === 0 && type.length === 4) {
+          var d = type.charCodeAt(type.length-1) - 48
+          if(d < 2 || d > 4) {
+            throw new GLError('', 'Invalid uniform dimension type for matrix ' + name + ': ' + type)
+          }
+          return 'gl.uniformMatrix' + d + 'fv(locations[' + index + '],false,obj' + path + ')'
+        } else {
+          throw new GLError('', 'Unknown uniform data type for ' + name + ': ' + type)
+        }
+      break
+    }
   }
 
-  // additional utilities not required by path fitter
-
-  handleInLength() {
-    return Math.hypot(...this.handleIn);
+  function enumerateIndices(prefix, type) {
+    if(typeof type !== 'object') {
+      return [ [prefix, type] ]
+    }
+    var indices = []
+    for(var id in type) {
+      var prop = type[id]
+      var tprefix = prefix
+      if(parseInt(id) + '' === id) {
+        tprefix += '[' + id + ']'
+      } else {
+        tprefix += '.' + id
+      }
+      if(typeof prop === 'object') {
+        indices.push.apply(indices, enumerateIndices(tprefix, prop))
+      } else {
+        indices.push([tprefix, prop])
+      }
+    }
+    return indices
   }
 
-  handleOutLength() {
-    return Math.hypot(...this.handleOut);
+  function makeSetter(type) {
+    var code = [ 'return function updateProperty(obj){' ]
+    var indices = enumerateIndices('', type)
+    for(var i=0; i<indices.length; ++i) {
+      var item = indices[i]
+      var path = item[0]
+      var idx  = item[1]
+      if(locations[idx]) {
+        code.push(makePropSetter(path, idx, uniforms[idx].type))
+      }
+    }
+    code.push('return obj}')
+    var proc = new Function('gl', 'locations', code.join('\n'))
+    return proc(gl, locations)
+  }
+
+  function defaultValue(type) {
+    switch(type) {
+      case 'bool':
+        return false
+      case 'int':
+      case 'sampler2D':
+      case 'samplerCube':
+        return 0
+      case 'float':
+        return 0.0
+      default:
+        var vidx = type.indexOf('vec')
+        if(0 <= vidx && vidx <= 1 && type.length === 4 + vidx) {
+          var d = type.charCodeAt(type.length-1) - 48
+          if(d < 2 || d > 4) {
+            throw new GLError('', 'Invalid data type')
+          }
+          if(type.charAt(0) === 'b') {
+            return makeVector(d, false)
+          }
+          return makeVector(d, 0)
+        } else if(type.indexOf('mat') === 0 && type.length === 4) {
+          var d = type.charCodeAt(type.length-1) - 48
+          if(d < 2 || d > 4) {
+            throw new GLError('', 'Invalid uniform dimension type for matrix ' + name + ': ' + type)
+          }
+          return makeVector(d*d, 0)
+        } else {
+          throw new GLError('', 'Unknown uniform data type for ' + name + ': ' + type)
+        }
+      break
+    }
+  }
+
+  function storeProperty(obj, prop, type) {
+    if(typeof type === 'object') {
+      var child = processObject(type)
+      Object.defineProperty(obj, prop, {
+        get: identity(child),
+        set: makeSetter(type),
+        enumerable: true,
+        configurable: false
+      })
+    } else {
+      if(locations[type]) {
+        Object.defineProperty(obj, prop, {
+          get: makeGetter(type),
+          set: makeSetter(type),
+          enumerable: true,
+          configurable: false
+        })
+      } else {
+        obj[prop] = defaultValue(uniforms[type].type)
+      }
+    }
+  }
+
+  function processObject(obj) {
+    var result
+    if(Array.isArray(obj)) {
+      result = new Array(obj.length)
+      for(var i=0; i<obj.length; ++i) {
+        storeProperty(result, i, obj[i])
+      }
+    } else {
+      result = {}
+      for(var id in obj) {
+        storeProperty(result, id, obj[id])
+      }
+    }
+    return result
+  }
+
+  //Return data
+  var coallesced = coallesceUniforms(uniforms, true)
+  return {
+    get: identity(processObject(coallesced)),
+    set: makeSetter(coallesced),
+    enumerable: true,
+    configurable: true
   }
 }
 
-/**
- * @name PathFitter
- * @class
- * @private
- */
-module.exports = class PathFitter {
-  constructor(pathPoints, closed = false) {
-    let points = this.points = pathPoints;
 
-    // We need to duplicate the first and last segment when simplifying a
-    // closed path.
-    if (closed) {
-      points.unshift(points[points.length - 1]);
-      points.push(points[1]); // The point previously at index 0 is now 1.
+/***/ }),
+/* 31 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+module.exports = createAttributeWrapper
+
+var GLError = __webpack_require__(2)
+
+function ShaderAttribute(
+    gl
+  , wrapper
+  , index
+  , locations
+  , dimension
+  , constFunc) {
+  this._gl        = gl
+  this._wrapper   = wrapper
+  this._index     = index
+  this._locations = locations
+  this._dimension = dimension
+  this._constFunc = constFunc
+}
+
+var proto = ShaderAttribute.prototype
+
+proto.pointer = function setAttribPointer(
+    type
+  , normalized
+  , stride
+  , offset) {
+
+  var self      = this
+  var gl        = self._gl
+  var location  = self._locations[self._index]
+
+  gl.vertexAttribPointer(
+      location
+    , self._dimension
+    , type || gl.FLOAT
+    , !!normalized
+    , stride || 0
+    , offset || 0)
+  gl.enableVertexAttribArray(location)
+}
+
+proto.set = function(x0, x1, x2, x3) {
+  return this._constFunc(this._locations[this._index], x0, x1, x2, x3)
+}
+
+Object.defineProperty(proto, 'location', {
+  get: function() {
+    return this._locations[this._index]
+  }
+  , set: function(v) {
+    if(v !== this._locations[this._index]) {
+      this._locations[this._index] = v|0
+      this._wrapper.program = null
     }
+    return v|0
+  }
+})
 
-    this.closed = closed;
+//Adds a vector attribute to obj
+function addVectorAttribute(
+    gl
+  , wrapper
+  , index
+  , locations
+  , dimension
+  , obj
+  , name) {
+
+  //Construct constant function
+  var constFuncArgs = [ 'gl', 'v' ]
+  var varNames = []
+  for(var i=0; i<dimension; ++i) {
+    constFuncArgs.push('x'+i)
+    varNames.push('x'+i)
+  }
+  constFuncArgs.push(
+    'if(x0.length===void 0){return gl.vertexAttrib' +
+    dimension + 'f(v,' +
+    varNames.join() +
+    ')}else{return gl.vertexAttrib' +
+    dimension +
+    'fv(v,x0)}')
+  var constFunc = Function.apply(null, constFuncArgs)
+
+  //Create attribute wrapper
+  var attr = new ShaderAttribute(
+      gl
+    , wrapper
+    , index
+    , locations
+    , dimension
+    , constFunc)
+
+  //Create accessor
+  Object.defineProperty(obj, name, {
+    set: function(x) {
+      gl.disableVertexAttribArray(locations[index])
+      constFunc(gl, locations[index], x)
+      return x
+    }
+    , get: function() {
+      return attr
+    }
+    , enumerable: true
+  })
+}
+
+function addMatrixAttribute(
+    gl
+  , wrapper
+  , index
+  , locations
+  , dimension
+  , obj
+  , name) {
+
+  var parts = new Array(dimension)
+  var attrs = new Array(dimension)
+  for(var i=0; i<dimension; ++i) {
+    addVectorAttribute(
+        gl
+      , wrapper
+      , index[i]
+      , locations
+      , dimension
+      , parts
+      , i)
+    attrs[i] = parts[i]
   }
 
-  fit(error) {
-    let points = this.points;
-    let length = points.length;
-    let segments = null;
-
-    if (length > 0) {
-      // To support reducing paths with multiple points in the same place
-      // to one segment:
-      segments = [new Segment(points[0])];
-
-      if (length > 1) {
-        var _context;
-
-        this.fitCubic(segments, error, 0, length - 1,
-        // Left Tangent
-        (_context = points[1], subtract).call(_context, points[0]),
-        // Right Tangent
-        (_context = points[length - 2], subtract).call(_context, points[length - 1]));
-
-        // Remove the duplicated segments for closed paths again.
-        if (this.closed) {
-          segments.shift();
-          segments.pop();
+  Object.defineProperty(parts, 'location', {
+    set: function(v) {
+      if(Array.isArray(v)) {
+        for(var i=0; i<dimension; ++i) {
+          attrs[i].location = v[i]
+        }
+      } else {
+        for(var i=0; i<dimension; ++i) {
+          attrs[i].location = v + i
         }
       }
+      return v
     }
-
-    return segments;
-  }
-
-  // Fit a Bezier curve to a (sub)set of digitized points
-  fitCubic(segments, error, first, last, tan1, tan2) {
-    var _context2;
-
-    let points = this.points;
-
-    // Use heuristic if region only has two points in it
-    if (last - first === 1) {
-      let pt1 = points[first];
-      let pt2 = points[last];
-      let dist = getDistance.call(pt1, pt2) / 3;
-
-      this.addCurve(segments, [pt1, add.call(pt1, normalize.call(tan1, dist)), add.call(pt2, normalize.call(tan2, dist)), pt2]);
-      return;
-    }
-
-    // Parameterize points, and attempt to fit curve
-    let uPrime = this.chordLengthParameterize(first, last);
-    let maxError = Math.max(error, error * error);
-    let split;
-    let parametersInOrder = true;
-
-    // Try 4 iterations
-    for (let i = 0; i <= 4; i++) {
-      let curve = this.generateBezier(first, last, uPrime, tan1, tan2);
-
-      // Find max deviation of points to fitted curve
-      let max = this.findMaxError(first, last, curve, uPrime);
-      if (max.error < error && parametersInOrder) {
-        this.addCurve(segments, curve);
-        return;
+    , get: function() {
+      var result = new Array(dimension)
+      for(var i=0; i<dimension; ++i) {
+        result[i] = locations[index[i]]
       }
-      split = max.index;
+      return result
+    }
+    , enumerable: true
+  })
 
-      // If error not too large, try reparameterization and iteration
-      if (max.error >= maxError) {
-        break;
+  parts.pointer = function(type, normalized, stride, offset) {
+    type       = type || gl.FLOAT
+    normalized = !!normalized
+    stride     = stride || (dimension * dimension)
+    offset     = offset || 0
+    for(var i=0; i<dimension; ++i) {
+      var location = locations[index[i]]
+      gl.vertexAttribPointer(
+            location
+          , dimension
+          , type
+          , normalized
+          , stride
+          , offset + i * dimension)
+      gl.enableVertexAttribArray(location)
+    }
+  }
+
+  var scratch = new Array(dimension)
+  var vertexAttrib = gl['vertexAttrib' + dimension + 'fv']
+
+  Object.defineProperty(obj, name, {
+    set: function(x) {
+      for(var i=0; i<dimension; ++i) {
+        var loc = locations[index[i]]
+        gl.disableVertexAttribArray(loc)
+        if(Array.isArray(x[0])) {
+          vertexAttrib.call(gl, loc, x[i])
+        } else {
+          for(var j=0; j<dimension; ++j) {
+            scratch[j] = x[dimension*i + j]
+          }
+          vertexAttrib.call(gl, loc, scratch)
+        }
       }
-      parametersInOrder = this.reparameterize(first, last, uPrime, curve);
-      maxError = max.error;
+      return x
     }
+    , get: function() {
+      return parts
+    }
+    , enumerable: true
+  })
+}
 
-    // Fitting failed -- split at max error point and fit recursively
-    let tanCenter = (_context2 = points[split - 1], subtract).call(_context2, points[split + 1]);
-    this.fitCubic(segments, error, first, split, tan1, tanCenter);
-    this.fitCubic(segments, error, split, last, negate.call(tanCenter), tan2);
+//Create shims for attributes
+function createAttributeWrapper(
+    gl
+  , wrapper
+  , attributes
+  , locations) {
+
+  var obj = {}
+  for(var i=0, n=attributes.length; i<n; ++i) {
+
+    var a = attributes[i]
+    var name = a.name
+    var type = a.type
+    var locs = a.locations
+
+    switch(type) {
+      case 'bool':
+      case 'int':
+      case 'float':
+        addVectorAttribute(
+            gl
+          , wrapper
+          , locs[0]
+          , locations
+          , 1
+          , obj
+          , name)
+      break
+
+      default:
+        if(type.indexOf('vec') >= 0) {
+          var d = type.charCodeAt(type.length-1) - 48
+          if(d < 2 || d > 4) {
+            throw new GLError('', 'Invalid data type for attribute ' + name + ': ' + type)
+          }
+          addVectorAttribute(
+              gl
+            , wrapper
+            , locs[0]
+            , locations
+            , d
+            , obj
+            , name)
+        } else if(type.indexOf('mat') >= 0) {
+          var d = type.charCodeAt(type.length-1) - 48
+          if(d < 2 || d > 4) {
+            throw new GLError('', 'Invalid data type for attribute ' + name + ': ' + type)
+          }
+          addMatrixAttribute(
+              gl
+            , wrapper
+            , locs
+            , locations
+            , d
+            , obj
+            , name)
+        } else {
+          throw new GLError('', 'Unknown data type for attribute ' + name + ': ' + type)
+        }
+      break
+    }
   }
+  return obj
+}
 
-  addCurve(segments, curve) {
-    var _context3;
-
-    let prev = segments[segments.length - 1];
-    prev.setHandleOut((_context3 = curve[1], subtract).call(_context3, curve[0]));
-    segments.push(new Segment(curve[3], (_context3 = curve[2], subtract).call(_context3, curve[3])));
-  }
-
-  // Use least-squares method to find Bezier control points for region.
-  generateBezier(first, last, uPrime, tan1, tan2) {
-    let epsilon = /* #= */EPSILON;
-    let abs = Math.abs;
-    let points = this.points;
-    let pt1 = points[first];
-    let pt2 = points[last];
-
-    // Create the C and X matrices
-    let C = [[0, 0], [0, 0]];
-    let X = [0, 0];
-
-    for (let i = 0, l = last - first + 1; i < l; i++) {
-      var _context4;
-
-      let u = uPrime[i];
-      let t = 1 - u;
-      let b = 3 * u * t;
-      let b0 = t * t * t;
-      let b1 = b * t;
-      let b2 = b * u;
-      let b3 = u * u * u;
-      let a1 = normalize.call(tan1, b1);
-      let a2 = normalize.call(tan2, b2);
-      let tmp = (_context4 = (_context4 = points[first + i], subtract).call(_context4, multiply.call(pt1, b0 + b1)), subtract).call(_context4, multiply.call(pt2, b2 + b3));
-
-      C[0][0] += dot.call(a1, a1);
-      C[0][1] += dot.call(a1, a2);
-      // C[1][0] += a1.dot(a2);
-      C[1][0] = C[0][1];
-      C[1][1] += dot.call(a2, a2);
-      X[0] += dot.call(a1, tmp);
-      X[1] += dot.call(a2, tmp);
-    }
-
-    // Compute the determinants of C and X
-    let detC0C1 = C[0][0] * C[1][1] - C[1][0] * C[0][1];
-    let alpha1;
-    let alpha2;
-
-    if (abs(detC0C1) > epsilon) {
-      // Kramer's rule
-      let detC0X = C[0][0] * X[1] - C[1][0] * X[0];
-      let detXC1 = X[0] * C[1][1] - X[1] * C[0][1];
-
-      // Derive alpha values
-      alpha1 = detXC1 / detC0C1;
-      alpha2 = detC0X / detC0C1;
-    } else {
-      // Matrix is under-determined, try assuming alpha1 == alpha2
-      let c0 = C[0][0] + C[0][1];
-      let c1 = C[1][0] + C[1][1];
-
-      alpha1 = alpha2 = abs(c0) > epsilon ? X[0] / c0 : abs(c1) > epsilon ? X[1] / c1 : 0;
-    }
-
-    // If alpha negative, use the Wu/Barsky heuristic (see text)
-    // (if alpha is 0, you get coincident control points that lead to
-    // divide by zero in any subsequent NewtonRaphsonRootFind() call.
-    let segLength = getDistance.call(pt2, pt1);
-    let eps = epsilon * segLength;
-    let handle1;
-    let handle2;
-
-    if (alpha1 < eps || alpha2 < eps) {
-      // fall back on standard (probably inaccurate) formula,
-      // and subdivide further if needed.
-      alpha1 = alpha2 = segLength / 3;
-    } else {
-      var _context5;
-
-      // Check if the found control points are in the right order when
-      // projected onto the line through pt1 and pt2.
-      let line = subtract.call(pt2, pt1);
-      // Control points 1 and 2 are positioned an alpha distance out
-      // on the tangent vectors, left and right, respectively
-      handle1 = normalize.call(tan1, alpha1);
-      handle2 = normalize.call(tan2, alpha2);
-      if ((_context5 = handle1, dot).call(_context5, line) - (_context5 = handle2, dot).call(_context5, line) > segLength * segLength) {
-        // Fall back to the Wu/Barsky heuristic above.
-        alpha1 = alpha2 = segLength / 3;
-        handle1 = handle2 = null; // Force recalculation
-      }
-    }
-
-    // First and last control points of the Bezier curve are
-    // positioned exactly at the first and last data points
-    return [pt1, add.call(pt1, handle1 || normalize.call(tan1, alpha1)), add.call(pt2, handle2 || normalize.call(tan2, alpha2)), pt2];
-  }
-
-  // Given set of points and their parameterization, try to find
-  // a better parameterization.
-  reparameterize(first, last, u, curve) {
-    for (let i = first; i <= last; i++) {
-      u[i - first] = this.findRoot(curve, this.points[i], u[i - first]);
-    }
-
-    // Detect if the new parameterization has reordered the points.
-    // In that case, we would fit the points of the path in the wrong order.
-    for (let i = 1, l = u.length; i < l; i++) {
-      if (u[i] <= u[i - 1]) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  // Use Newton-Raphson iteration to find better root.
-  findRoot(curve, point, u) {
-    let curve1 = [];
-    let curve2 = [];
-
-    // Generate control vertices for Q'
-    for (let i = 0; i <= 2; i++) {
-      var _context6;
-
-      curve1[i] = (_context6 = (_context6 = curve[i + 1], subtract).call(_context6, curve[i]), multiply).call(_context6, 3);
-    }
-
-    // Generate control vertices for Q''
-    for (let i = 0; i <= 1; i++) {
-      var _context7;
-
-      curve2[i] = (_context7 = (_context7 = curve1[i + 1], subtract).call(_context7, curve1[i]), multiply).call(_context7, 2);
-    }
-
-    // Compute Q(u), Q'(u) and Q''(u)
-    let pt = this.evaluate(3, curve, u);
-    let pt1 = this.evaluate(2, curve1, u);
-    let pt2 = this.evaluate(1, curve2, u);
-    let diff = subtract.call(pt, point);
-    let df = dot.call(pt1, pt1) + dot.call(diff, pt2);
-
-    // u = u - f(u) / f'(u)
-    return isZero(df) ? u : u - dot.call(diff, pt1) / df;
-  }
-
-  // Evaluate a bezier curve at a particular parameter value
-  evaluate(degree, curve, t) {
-    // Copy array
-    let tmp = curve.slice();
-
-    // Triangle computation
-    for (let i = 1; i <= degree; i++) {
-      for (let j = 0; j <= degree - i; j++) {
-        var _context8;
-
-        tmp[j] = (_context8 = (_context8 = tmp[j], multiply).call(_context8, 1 - t), add).call(_context8, (_context8 = tmp[j + 1], multiply).call(_context8, t));
-      }
-    }
-    return tmp[0];
-  }
-
-  // Assign parameter values to digitized points
-  // using relative distances between points.
-  chordLengthParameterize(first, last) {
-    let u = [0];
-    for (let i = first + 1; i <= last; i++) {
-      var _context9;
-
-      u[i - first] = u[i - first - 1] + (_context9 = this.points[i], getDistance).call(_context9, this.points[i - 1]);
-    }
-    for (let i = 1, m = last - first; i <= m; i++) {
-      u[i] /= u[m];
-    }
-    return u;
-  }
-
-  // Find the maximum squared distance of digitized points to fitted curve.
-  findMaxError(first, last, curve, u) {
-    let index = Math.floor((last - first + 1) / 2);
-    let maxDist = 0;
-
-    for (let i = first + 1; i < last; i++) {
-      let P = this.evaluate(3, curve, u[i - first]);
-      let v = subtract.call(P, this.points[i]);
-      // let dist = v.x * v.x + v.y * v.y // squared
-      let dist = v[0] * v[0] + v[1] * v[1];
-      if (dist >= maxDist) {
-        maxDist = dist;
-        index = i;
-      }
-    }
-
-    return {
-      error: maxDist,
-      index: index
-    };
-  }
-};
 
 /***/ }),
 /* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__(33)()
+"use strict";
+
+
+exports.shader   = getShaderReference
+exports.program  = createProgram
+
+var GLError = __webpack_require__(2)
+var formatCompilerError = __webpack_require__(33);
+
+var weakMap = typeof WeakMap === 'undefined' ? __webpack_require__(47) : WeakMap
+var CACHE = new weakMap()
+
+var SHADER_COUNTER = 0
+
+function ShaderReference(id, src, type, shader, programs, count, cache) {
+  this.id       = id
+  this.src      = src
+  this.type     = type
+  this.shader   = shader
+  this.count    = count
+  this.programs = []
+  this.cache    = cache
+}
+
+ShaderReference.prototype.dispose = function() {
+  if(--this.count === 0) {
+    var cache    = this.cache
+    var gl       = cache.gl
+
+    //Remove program references
+    var programs = this.programs
+    for(var i=0, n=programs.length; i<n; ++i) {
+      var p = cache.programs[programs[i]]
+      if(p) {
+        delete cache.programs[i]
+        gl.deleteProgram(p)
+      }
+    }
+
+    //Remove shader reference
+    gl.deleteShader(this.shader)
+    delete cache.shaders[(this.type === gl.FRAGMENT_SHADER)|0][this.src]
+  }
+}
+
+function ContextCache(gl) {
+  this.gl       = gl
+  this.shaders  = [{}, {}]
+  this.programs = {}
+}
+
+var proto = ContextCache.prototype
+
+function compileShader(gl, type, src) {
+  var shader = gl.createShader(type)
+  gl.shaderSource(shader, src)
+  gl.compileShader(shader)
+  if(!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    var errLog = gl.getShaderInfoLog(shader)
+    try {
+        var fmt = formatCompilerError(errLog, src, type);
+    } catch (e){
+        console.warn('Failed to format compiler error: ' + e);
+        throw new GLError(errLog, 'Error compiling shader:\n' + errLog)
+    }
+    throw new GLError(errLog, fmt.short, fmt.long)
+  }
+  return shader
+}
+
+proto.getShaderReference = function(type, src) {
+  var gl      = this.gl
+  var shaders = this.shaders[(type === gl.FRAGMENT_SHADER)|0]
+  var shader  = shaders[src]
+  if(!shader || !gl.isShader(shader.shader)) {
+    var shaderObj = compileShader(gl, type, src)
+    shader = shaders[src] = new ShaderReference(
+      SHADER_COUNTER++,
+      src,
+      type,
+      shaderObj,
+      [],
+      1,
+      this)
+  } else {
+    shader.count += 1
+  }
+  return shader
+}
+
+function linkProgram(gl, vshader, fshader, attribs, locations) {
+  var program = gl.createProgram()
+  gl.attachShader(program, vshader)
+  gl.attachShader(program, fshader)
+  for(var i=0; i<attribs.length; ++i) {
+    gl.bindAttribLocation(program, locations[i], attribs[i])
+  }
+  gl.linkProgram(program)
+  if(!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    var errLog = gl.getProgramInfoLog(program)
+    throw new GLError(errLog, 'Error linking program: ' + errLog)
+  }
+  return program
+}
+
+proto.getProgram = function(vref, fref, attribs, locations) {
+  var token = [vref.id, fref.id, attribs.join(':'), locations.join(':')].join('@')
+  var prog  = this.programs[token]
+  if(!prog || !this.gl.isProgram(prog)) {
+    this.programs[token] = prog = linkProgram(
+      this.gl,
+      vref.shader,
+      fref.shader,
+      attribs,
+      locations)
+    vref.programs.push(token)
+    fref.programs.push(token)
+  }
+  return prog
+}
+
+function getCache(gl) {
+  var ctxCache = CACHE.get(gl)
+  if(!ctxCache) {
+    ctxCache = new ContextCache(gl)
+    CACHE.set(gl, ctxCache)
+  }
+  return ctxCache
+}
+
+function getShaderReference(gl, type, src) {
+  return getCache(gl).getShaderReference(type, src)
+}
+
+function createProgram(gl, vref, fref, attribs, locations) {
+  return getCache(gl).getProgram(vref, fref, attribs, locations)
+}
+
 
 /***/ }),
 /* 33 */
+/***/ (function(module, exports, __webpack_require__) {
+
+
+var sprintf = __webpack_require__(34).sprintf;
+var glConstants = __webpack_require__(35);
+var shaderName = __webpack_require__(37);
+var addLineNumbers = __webpack_require__(44);
+
+module.exports = formatCompilerError;
+
+function formatCompilerError(errLog, src, type) {
+    "use strict";
+
+    var name = shaderName(src) || 'of unknown name (see npm glsl-shader-name)';
+
+    var typeName = 'unknown type';
+    if (type !== undefined) {
+        typeName = type === glConstants.FRAGMENT_SHADER ? 'fragment' : 'vertex'
+    }
+
+    var longForm = sprintf('Error compiling %s shader %s:\n', typeName, name);
+    var shortForm = sprintf("%s%s", longForm, errLog);
+
+    var errorStrings = errLog.split('\n');
+    var errors = {};
+
+    for (var i = 0; i < errorStrings.length; i++) {
+        var errorString = errorStrings[i];
+        if (errorString === '' || errorString === "\0") continue;
+        var lineNo = parseInt(errorString.split(':')[2]);
+        if (isNaN(lineNo)) {
+            throw new Error(sprintf('Could not parse error: %s', errorString));
+        }
+        errors[lineNo] = errorString;
+    }
+
+    var lines = addLineNumbers(src).split('\n');
+
+    for (var i = 0; i < lines.length; i++) {
+        if (!errors[i+3] && !errors[i+2] && !errors[i+1]) continue;
+        var line = lines[i];
+        longForm += line + '\n';
+        if (errors[i+1]) {
+            var e = errors[i+1];
+            e = e.substr(e.split(':', 3).join(':').length + 1).trim();
+            longForm += sprintf('^^^ %s\n\n', e);
+        }
+    }
+
+    return {
+        long: longForm.trim(),
+        short: shortForm.trim()
+    };
+}
+
+
+
+/***/ }),
+/* 34 */
+/***/ (function(module, exports, __webpack_require__) {
+
+(function(window) {
+    var re = {
+        not_string: /[^s]/,
+        number: /[diefg]/,
+        json: /[j]/,
+        not_json: /[^j]/,
+        text: /^[^\x25]+/,
+        modulo: /^\x25{2}/,
+        placeholder: /^\x25(?:([1-9]\d*)\$|\(([^\)]+)\))?(\+)?(0|'[^$])?(-)?(\d+)?(?:\.(\d+))?([b-gijosuxX])/,
+        key: /^([a-z_][a-z_\d]*)/i,
+        key_access: /^\.([a-z_][a-z_\d]*)/i,
+        index_access: /^\[(\d+)\]/,
+        sign: /^[\+\-]/
+    }
+
+    function sprintf() {
+        var key = arguments[0], cache = sprintf.cache
+        if (!(cache[key] && cache.hasOwnProperty(key))) {
+            cache[key] = sprintf.parse(key)
+        }
+        return sprintf.format.call(null, cache[key], arguments)
+    }
+
+    sprintf.format = function(parse_tree, argv) {
+        var cursor = 1, tree_length = parse_tree.length, node_type = "", arg, output = [], i, k, match, pad, pad_character, pad_length, is_positive = true, sign = ""
+        for (i = 0; i < tree_length; i++) {
+            node_type = get_type(parse_tree[i])
+            if (node_type === "string") {
+                output[output.length] = parse_tree[i]
+            }
+            else if (node_type === "array") {
+                match = parse_tree[i] // convenience purposes only
+                if (match[2]) { // keyword argument
+                    arg = argv[cursor]
+                    for (k = 0; k < match[2].length; k++) {
+                        if (!arg.hasOwnProperty(match[2][k])) {
+                            throw new Error(sprintf("[sprintf] property '%s' does not exist", match[2][k]))
+                        }
+                        arg = arg[match[2][k]]
+                    }
+                }
+                else if (match[1]) { // positional argument (explicit)
+                    arg = argv[match[1]]
+                }
+                else { // positional argument (implicit)
+                    arg = argv[cursor++]
+                }
+
+                if (get_type(arg) == "function") {
+                    arg = arg()
+                }
+
+                if (re.not_string.test(match[8]) && re.not_json.test(match[8]) && (get_type(arg) != "number" && isNaN(arg))) {
+                    throw new TypeError(sprintf("[sprintf] expecting number but found %s", get_type(arg)))
+                }
+
+                if (re.number.test(match[8])) {
+                    is_positive = arg >= 0
+                }
+
+                switch (match[8]) {
+                    case "b":
+                        arg = arg.toString(2)
+                    break
+                    case "c":
+                        arg = String.fromCharCode(arg)
+                    break
+                    case "d":
+                    case "i":
+                        arg = parseInt(arg, 10)
+                    break
+                    case "j":
+                        arg = JSON.stringify(arg, null, match[6] ? parseInt(match[6]) : 0)
+                    break
+                    case "e":
+                        arg = match[7] ? arg.toExponential(match[7]) : arg.toExponential()
+                    break
+                    case "f":
+                        arg = match[7] ? parseFloat(arg).toFixed(match[7]) : parseFloat(arg)
+                    break
+                    case "g":
+                        arg = match[7] ? parseFloat(arg).toPrecision(match[7]) : parseFloat(arg)
+                    break
+                    case "o":
+                        arg = arg.toString(8)
+                    break
+                    case "s":
+                        arg = ((arg = String(arg)) && match[7] ? arg.substring(0, match[7]) : arg)
+                    break
+                    case "u":
+                        arg = arg >>> 0
+                    break
+                    case "x":
+                        arg = arg.toString(16)
+                    break
+                    case "X":
+                        arg = arg.toString(16).toUpperCase()
+                    break
+                }
+                if (re.json.test(match[8])) {
+                    output[output.length] = arg
+                }
+                else {
+                    if (re.number.test(match[8]) && (!is_positive || match[3])) {
+                        sign = is_positive ? "+" : "-"
+                        arg = arg.toString().replace(re.sign, "")
+                    }
+                    else {
+                        sign = ""
+                    }
+                    pad_character = match[4] ? match[4] === "0" ? "0" : match[4].charAt(1) : " "
+                    pad_length = match[6] - (sign + arg).length
+                    pad = match[6] ? (pad_length > 0 ? str_repeat(pad_character, pad_length) : "") : ""
+                    output[output.length] = match[5] ? sign + arg + pad : (pad_character === "0" ? sign + pad + arg : pad + sign + arg)
+                }
+            }
+        }
+        return output.join("")
+    }
+
+    sprintf.cache = {}
+
+    sprintf.parse = function(fmt) {
+        var _fmt = fmt, match = [], parse_tree = [], arg_names = 0
+        while (_fmt) {
+            if ((match = re.text.exec(_fmt)) !== null) {
+                parse_tree[parse_tree.length] = match[0]
+            }
+            else if ((match = re.modulo.exec(_fmt)) !== null) {
+                parse_tree[parse_tree.length] = "%"
+            }
+            else if ((match = re.placeholder.exec(_fmt)) !== null) {
+                if (match[2]) {
+                    arg_names |= 1
+                    var field_list = [], replacement_field = match[2], field_match = []
+                    if ((field_match = re.key.exec(replacement_field)) !== null) {
+                        field_list[field_list.length] = field_match[1]
+                        while ((replacement_field = replacement_field.substring(field_match[0].length)) !== "") {
+                            if ((field_match = re.key_access.exec(replacement_field)) !== null) {
+                                field_list[field_list.length] = field_match[1]
+                            }
+                            else if ((field_match = re.index_access.exec(replacement_field)) !== null) {
+                                field_list[field_list.length] = field_match[1]
+                            }
+                            else {
+                                throw new SyntaxError("[sprintf] failed to parse named argument key")
+                            }
+                        }
+                    }
+                    else {
+                        throw new SyntaxError("[sprintf] failed to parse named argument key")
+                    }
+                    match[2] = field_list
+                }
+                else {
+                    arg_names |= 2
+                }
+                if (arg_names === 3) {
+                    throw new Error("[sprintf] mixing positional and named placeholders is not (yet) supported")
+                }
+                parse_tree[parse_tree.length] = match
+            }
+            else {
+                throw new SyntaxError("[sprintf] unexpected placeholder")
+            }
+            _fmt = _fmt.substring(match[0].length)
+        }
+        return parse_tree
+    }
+
+    var vsprintf = function(fmt, argv, _argv) {
+        _argv = (argv || []).slice(0)
+        _argv.splice(0, 0, fmt)
+        return sprintf.apply(null, _argv)
+    }
+
+    /**
+     * helpers
+     */
+    function get_type(variable) {
+        return Object.prototype.toString.call(variable).slice(8, -1).toLowerCase()
+    }
+
+    function str_repeat(input, multiplier) {
+        return Array(multiplier + 1).join(input)
+    }
+
+    /**
+     * export to either browser or node.js
+     */
+    if (true) {
+        exports.sprintf = sprintf
+        exports.vsprintf = vsprintf
+    }
+    else {
+        window.sprintf = sprintf
+        window.vsprintf = vsprintf
+
+        if (typeof define === "function" && define.amd) {
+            define(function() {
+                return {
+                    sprintf: sprintf,
+                    vsprintf: vsprintf
+                }
+            })
+        }
+    }
+})(typeof window === "undefined" ? this : window);
+
+
+/***/ }),
+/* 35 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var gl10 = __webpack_require__(36)
+
+module.exports = function lookupConstant (number) {
+  return gl10[number]
+}
+
+
+/***/ }),
+/* 36 */
+/***/ (function(module, exports) {
+
+module.exports = {
+  0: 'NONE',
+  1: 'ONE',
+  2: 'LINE_LOOP',
+  3: 'LINE_STRIP',
+  4: 'TRIANGLES',
+  5: 'TRIANGLE_STRIP',
+  6: 'TRIANGLE_FAN',
+  256: 'DEPTH_BUFFER_BIT',
+  512: 'NEVER',
+  513: 'LESS',
+  514: 'EQUAL',
+  515: 'LEQUAL',
+  516: 'GREATER',
+  517: 'NOTEQUAL',
+  518: 'GEQUAL',
+  519: 'ALWAYS',
+  768: 'SRC_COLOR',
+  769: 'ONE_MINUS_SRC_COLOR',
+  770: 'SRC_ALPHA',
+  771: 'ONE_MINUS_SRC_ALPHA',
+  772: 'DST_ALPHA',
+  773: 'ONE_MINUS_DST_ALPHA',
+  774: 'DST_COLOR',
+  775: 'ONE_MINUS_DST_COLOR',
+  776: 'SRC_ALPHA_SATURATE',
+  1024: 'STENCIL_BUFFER_BIT',
+  1028: 'FRONT',
+  1029: 'BACK',
+  1032: 'FRONT_AND_BACK',
+  1280: 'INVALID_ENUM',
+  1281: 'INVALID_VALUE',
+  1282: 'INVALID_OPERATION',
+  1285: 'OUT_OF_MEMORY',
+  1286: 'INVALID_FRAMEBUFFER_OPERATION',
+  2304: 'CW',
+  2305: 'CCW',
+  2849: 'LINE_WIDTH',
+  2884: 'CULL_FACE',
+  2885: 'CULL_FACE_MODE',
+  2886: 'FRONT_FACE',
+  2928: 'DEPTH_RANGE',
+  2929: 'DEPTH_TEST',
+  2930: 'DEPTH_WRITEMASK',
+  2931: 'DEPTH_CLEAR_VALUE',
+  2932: 'DEPTH_FUNC',
+  2960: 'STENCIL_TEST',
+  2961: 'STENCIL_CLEAR_VALUE',
+  2962: 'STENCIL_FUNC',
+  2963: 'STENCIL_VALUE_MASK',
+  2964: 'STENCIL_FAIL',
+  2965: 'STENCIL_PASS_DEPTH_FAIL',
+  2966: 'STENCIL_PASS_DEPTH_PASS',
+  2967: 'STENCIL_REF',
+  2968: 'STENCIL_WRITEMASK',
+  2978: 'VIEWPORT',
+  3024: 'DITHER',
+  3042: 'BLEND',
+  3088: 'SCISSOR_BOX',
+  3089: 'SCISSOR_TEST',
+  3106: 'COLOR_CLEAR_VALUE',
+  3107: 'COLOR_WRITEMASK',
+  3317: 'UNPACK_ALIGNMENT',
+  3333: 'PACK_ALIGNMENT',
+  3379: 'MAX_TEXTURE_SIZE',
+  3386: 'MAX_VIEWPORT_DIMS',
+  3408: 'SUBPIXEL_BITS',
+  3410: 'RED_BITS',
+  3411: 'GREEN_BITS',
+  3412: 'BLUE_BITS',
+  3413: 'ALPHA_BITS',
+  3414: 'DEPTH_BITS',
+  3415: 'STENCIL_BITS',
+  3553: 'TEXTURE_2D',
+  4352: 'DONT_CARE',
+  4353: 'FASTEST',
+  4354: 'NICEST',
+  5120: 'BYTE',
+  5121: 'UNSIGNED_BYTE',
+  5122: 'SHORT',
+  5123: 'UNSIGNED_SHORT',
+  5124: 'INT',
+  5125: 'UNSIGNED_INT',
+  5126: 'FLOAT',
+  5386: 'INVERT',
+  5890: 'TEXTURE',
+  6401: 'STENCIL_INDEX',
+  6402: 'DEPTH_COMPONENT',
+  6406: 'ALPHA',
+  6407: 'RGB',
+  6408: 'RGBA',
+  6409: 'LUMINANCE',
+  6410: 'LUMINANCE_ALPHA',
+  7680: 'KEEP',
+  7681: 'REPLACE',
+  7682: 'INCR',
+  7683: 'DECR',
+  7936: 'VENDOR',
+  7937: 'RENDERER',
+  7938: 'VERSION',
+  9728: 'NEAREST',
+  9729: 'LINEAR',
+  9984: 'NEAREST_MIPMAP_NEAREST',
+  9985: 'LINEAR_MIPMAP_NEAREST',
+  9986: 'NEAREST_MIPMAP_LINEAR',
+  9987: 'LINEAR_MIPMAP_LINEAR',
+  10240: 'TEXTURE_MAG_FILTER',
+  10241: 'TEXTURE_MIN_FILTER',
+  10242: 'TEXTURE_WRAP_S',
+  10243: 'TEXTURE_WRAP_T',
+  10497: 'REPEAT',
+  10752: 'POLYGON_OFFSET_UNITS',
+  16384: 'COLOR_BUFFER_BIT',
+  32769: 'CONSTANT_COLOR',
+  32770: 'ONE_MINUS_CONSTANT_COLOR',
+  32771: 'CONSTANT_ALPHA',
+  32772: 'ONE_MINUS_CONSTANT_ALPHA',
+  32773: 'BLEND_COLOR',
+  32774: 'FUNC_ADD',
+  32777: 'BLEND_EQUATION_RGB',
+  32778: 'FUNC_SUBTRACT',
+  32779: 'FUNC_REVERSE_SUBTRACT',
+  32819: 'UNSIGNED_SHORT_4_4_4_4',
+  32820: 'UNSIGNED_SHORT_5_5_5_1',
+  32823: 'POLYGON_OFFSET_FILL',
+  32824: 'POLYGON_OFFSET_FACTOR',
+  32854: 'RGBA4',
+  32855: 'RGB5_A1',
+  32873: 'TEXTURE_BINDING_2D',
+  32926: 'SAMPLE_ALPHA_TO_COVERAGE',
+  32928: 'SAMPLE_COVERAGE',
+  32936: 'SAMPLE_BUFFERS',
+  32937: 'SAMPLES',
+  32938: 'SAMPLE_COVERAGE_VALUE',
+  32939: 'SAMPLE_COVERAGE_INVERT',
+  32968: 'BLEND_DST_RGB',
+  32969: 'BLEND_SRC_RGB',
+  32970: 'BLEND_DST_ALPHA',
+  32971: 'BLEND_SRC_ALPHA',
+  33071: 'CLAMP_TO_EDGE',
+  33170: 'GENERATE_MIPMAP_HINT',
+  33189: 'DEPTH_COMPONENT16',
+  33306: 'DEPTH_STENCIL_ATTACHMENT',
+  33635: 'UNSIGNED_SHORT_5_6_5',
+  33648: 'MIRRORED_REPEAT',
+  33901: 'ALIASED_POINT_SIZE_RANGE',
+  33902: 'ALIASED_LINE_WIDTH_RANGE',
+  33984: 'TEXTURE0',
+  33985: 'TEXTURE1',
+  33986: 'TEXTURE2',
+  33987: 'TEXTURE3',
+  33988: 'TEXTURE4',
+  33989: 'TEXTURE5',
+  33990: 'TEXTURE6',
+  33991: 'TEXTURE7',
+  33992: 'TEXTURE8',
+  33993: 'TEXTURE9',
+  33994: 'TEXTURE10',
+  33995: 'TEXTURE11',
+  33996: 'TEXTURE12',
+  33997: 'TEXTURE13',
+  33998: 'TEXTURE14',
+  33999: 'TEXTURE15',
+  34000: 'TEXTURE16',
+  34001: 'TEXTURE17',
+  34002: 'TEXTURE18',
+  34003: 'TEXTURE19',
+  34004: 'TEXTURE20',
+  34005: 'TEXTURE21',
+  34006: 'TEXTURE22',
+  34007: 'TEXTURE23',
+  34008: 'TEXTURE24',
+  34009: 'TEXTURE25',
+  34010: 'TEXTURE26',
+  34011: 'TEXTURE27',
+  34012: 'TEXTURE28',
+  34013: 'TEXTURE29',
+  34014: 'TEXTURE30',
+  34015: 'TEXTURE31',
+  34016: 'ACTIVE_TEXTURE',
+  34024: 'MAX_RENDERBUFFER_SIZE',
+  34041: 'DEPTH_STENCIL',
+  34055: 'INCR_WRAP',
+  34056: 'DECR_WRAP',
+  34067: 'TEXTURE_CUBE_MAP',
+  34068: 'TEXTURE_BINDING_CUBE_MAP',
+  34069: 'TEXTURE_CUBE_MAP_POSITIVE_X',
+  34070: 'TEXTURE_CUBE_MAP_NEGATIVE_X',
+  34071: 'TEXTURE_CUBE_MAP_POSITIVE_Y',
+  34072: 'TEXTURE_CUBE_MAP_NEGATIVE_Y',
+  34073: 'TEXTURE_CUBE_MAP_POSITIVE_Z',
+  34074: 'TEXTURE_CUBE_MAP_NEGATIVE_Z',
+  34076: 'MAX_CUBE_MAP_TEXTURE_SIZE',
+  34338: 'VERTEX_ATTRIB_ARRAY_ENABLED',
+  34339: 'VERTEX_ATTRIB_ARRAY_SIZE',
+  34340: 'VERTEX_ATTRIB_ARRAY_STRIDE',
+  34341: 'VERTEX_ATTRIB_ARRAY_TYPE',
+  34342: 'CURRENT_VERTEX_ATTRIB',
+  34373: 'VERTEX_ATTRIB_ARRAY_POINTER',
+  34466: 'NUM_COMPRESSED_TEXTURE_FORMATS',
+  34467: 'COMPRESSED_TEXTURE_FORMATS',
+  34660: 'BUFFER_SIZE',
+  34661: 'BUFFER_USAGE',
+  34816: 'STENCIL_BACK_FUNC',
+  34817: 'STENCIL_BACK_FAIL',
+  34818: 'STENCIL_BACK_PASS_DEPTH_FAIL',
+  34819: 'STENCIL_BACK_PASS_DEPTH_PASS',
+  34877: 'BLEND_EQUATION_ALPHA',
+  34921: 'MAX_VERTEX_ATTRIBS',
+  34922: 'VERTEX_ATTRIB_ARRAY_NORMALIZED',
+  34930: 'MAX_TEXTURE_IMAGE_UNITS',
+  34962: 'ARRAY_BUFFER',
+  34963: 'ELEMENT_ARRAY_BUFFER',
+  34964: 'ARRAY_BUFFER_BINDING',
+  34965: 'ELEMENT_ARRAY_BUFFER_BINDING',
+  34975: 'VERTEX_ATTRIB_ARRAY_BUFFER_BINDING',
+  35040: 'STREAM_DRAW',
+  35044: 'STATIC_DRAW',
+  35048: 'DYNAMIC_DRAW',
+  35632: 'FRAGMENT_SHADER',
+  35633: 'VERTEX_SHADER',
+  35660: 'MAX_VERTEX_TEXTURE_IMAGE_UNITS',
+  35661: 'MAX_COMBINED_TEXTURE_IMAGE_UNITS',
+  35663: 'SHADER_TYPE',
+  35664: 'FLOAT_VEC2',
+  35665: 'FLOAT_VEC3',
+  35666: 'FLOAT_VEC4',
+  35667: 'INT_VEC2',
+  35668: 'INT_VEC3',
+  35669: 'INT_VEC4',
+  35670: 'BOOL',
+  35671: 'BOOL_VEC2',
+  35672: 'BOOL_VEC3',
+  35673: 'BOOL_VEC4',
+  35674: 'FLOAT_MAT2',
+  35675: 'FLOAT_MAT3',
+  35676: 'FLOAT_MAT4',
+  35678: 'SAMPLER_2D',
+  35680: 'SAMPLER_CUBE',
+  35712: 'DELETE_STATUS',
+  35713: 'COMPILE_STATUS',
+  35714: 'LINK_STATUS',
+  35715: 'VALIDATE_STATUS',
+  35716: 'INFO_LOG_LENGTH',
+  35717: 'ATTACHED_SHADERS',
+  35718: 'ACTIVE_UNIFORMS',
+  35719: 'ACTIVE_UNIFORM_MAX_LENGTH',
+  35720: 'SHADER_SOURCE_LENGTH',
+  35721: 'ACTIVE_ATTRIBUTES',
+  35722: 'ACTIVE_ATTRIBUTE_MAX_LENGTH',
+  35724: 'SHADING_LANGUAGE_VERSION',
+  35725: 'CURRENT_PROGRAM',
+  36003: 'STENCIL_BACK_REF',
+  36004: 'STENCIL_BACK_VALUE_MASK',
+  36005: 'STENCIL_BACK_WRITEMASK',
+  36006: 'FRAMEBUFFER_BINDING',
+  36007: 'RENDERBUFFER_BINDING',
+  36048: 'FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE',
+  36049: 'FRAMEBUFFER_ATTACHMENT_OBJECT_NAME',
+  36050: 'FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL',
+  36051: 'FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE',
+  36053: 'FRAMEBUFFER_COMPLETE',
+  36054: 'FRAMEBUFFER_INCOMPLETE_ATTACHMENT',
+  36055: 'FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT',
+  36057: 'FRAMEBUFFER_INCOMPLETE_DIMENSIONS',
+  36061: 'FRAMEBUFFER_UNSUPPORTED',
+  36064: 'COLOR_ATTACHMENT0',
+  36096: 'DEPTH_ATTACHMENT',
+  36128: 'STENCIL_ATTACHMENT',
+  36160: 'FRAMEBUFFER',
+  36161: 'RENDERBUFFER',
+  36162: 'RENDERBUFFER_WIDTH',
+  36163: 'RENDERBUFFER_HEIGHT',
+  36164: 'RENDERBUFFER_INTERNAL_FORMAT',
+  36168: 'STENCIL_INDEX8',
+  36176: 'RENDERBUFFER_RED_SIZE',
+  36177: 'RENDERBUFFER_GREEN_SIZE',
+  36178: 'RENDERBUFFER_BLUE_SIZE',
+  36179: 'RENDERBUFFER_ALPHA_SIZE',
+  36180: 'RENDERBUFFER_DEPTH_SIZE',
+  36181: 'RENDERBUFFER_STENCIL_SIZE',
+  36194: 'RGB565',
+  36336: 'LOW_FLOAT',
+  36337: 'MEDIUM_FLOAT',
+  36338: 'HIGH_FLOAT',
+  36339: 'LOW_INT',
+  36340: 'MEDIUM_INT',
+  36341: 'HIGH_INT',
+  36346: 'SHADER_COMPILER',
+  36347: 'MAX_VERTEX_UNIFORM_VECTORS',
+  36348: 'MAX_VARYING_VECTORS',
+  36349: 'MAX_FRAGMENT_UNIFORM_VECTORS',
+  37440: 'UNPACK_FLIP_Y_WEBGL',
+  37441: 'UNPACK_PREMULTIPLY_ALPHA_WEBGL',
+  37442: 'CONTEXT_LOST_WEBGL',
+  37443: 'UNPACK_COLORSPACE_CONVERSION_WEBGL',
+  37444: 'BROWSER_DEFAULT_WEBGL'
+}
+
+
+/***/ }),
+/* 37 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var tokenize = __webpack_require__(38)
+var atob     = __webpack_require__(43)
+
+module.exports = getName
+
+function getName(src) {
+  var tokens = Array.isArray(src)
+    ? src
+    : tokenize(src)
+
+  for (var i = 0; i < tokens.length; i++) {
+    var token = tokens[i]
+    if (token.type !== 'preprocessor') continue
+    var match = token.data.match(/\#define\s+SHADER_NAME(_B64)?\s+(.+)$/)
+    if (!match) continue
+    if (!match[2]) continue
+
+    var b64  = match[1]
+    var name = match[2]
+
+    return (b64 ? atob(name) : name).trim()
+  }
+}
+
+
+/***/ }),
+/* 38 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var tokenize = __webpack_require__(39)
+
+module.exports = tokenizeString
+
+function tokenizeString(str, opt) {
+  var generator = tokenize(opt)
+  var tokens = []
+
+  tokens = tokens.concat(generator(str))
+  tokens = tokens.concat(generator(null))
+
+  return tokens
+}
+
+
+/***/ }),
+/* 39 */
+/***/ (function(module, exports, __webpack_require__) {
+
+module.exports = tokenize
+
+var literals100 = __webpack_require__(15)
+  , operators = __webpack_require__(40)
+  , builtins100 = __webpack_require__(16)
+  , literals300es = __webpack_require__(41)
+  , builtins300es = __webpack_require__(42)
+
+var NORMAL = 999          // <-- never emitted
+  , TOKEN = 9999          // <-- never emitted
+  , BLOCK_COMMENT = 0
+  , LINE_COMMENT = 1
+  , PREPROCESSOR = 2
+  , OPERATOR = 3
+  , INTEGER = 4
+  , FLOAT = 5
+  , IDENT = 6
+  , BUILTIN = 7
+  , KEYWORD = 8
+  , WHITESPACE = 9
+  , EOF = 10
+  , HEX = 11
+
+var map = [
+    'block-comment'
+  , 'line-comment'
+  , 'preprocessor'
+  , 'operator'
+  , 'integer'
+  , 'float'
+  , 'ident'
+  , 'builtin'
+  , 'keyword'
+  , 'whitespace'
+  , 'eof'
+  , 'integer'
+]
+
+function tokenize(opt) {
+  var i = 0
+    , total = 0
+    , mode = NORMAL
+    , c
+    , last
+    , content = []
+    , tokens = []
+    , token_idx = 0
+    , token_offs = 0
+    , line = 1
+    , col = 0
+    , start = 0
+    , isnum = false
+    , isoperator = false
+    , input = ''
+    , len
+
+  opt = opt || {}
+  var allBuiltins = builtins100
+  var allLiterals = literals100
+  if (opt.version === '300 es') {
+    allBuiltins = builtins300es
+    allLiterals = literals300es
+  }
+
+  return function(data) {
+    tokens = []
+    if (data !== null) return write(data.replace ? data.replace(/\r\n/g, '\n') : data)
+    return end()
+  }
+
+  function token(data) {
+    if (data.length) {
+      tokens.push({
+        type: map[mode]
+      , data: data
+      , position: start
+      , line: line
+      , column: col
+      })
+    }
+  }
+
+  function write(chunk) {
+    i = 0
+    input += chunk
+    len = input.length
+
+    var last
+
+    while(c = input[i], i < len) {
+      last = i
+
+      switch(mode) {
+        case BLOCK_COMMENT: i = block_comment(); break
+        case LINE_COMMENT: i = line_comment(); break
+        case PREPROCESSOR: i = preprocessor(); break
+        case OPERATOR: i = operator(); break
+        case INTEGER: i = integer(); break
+        case HEX: i = hex(); break
+        case FLOAT: i = decimal(); break
+        case TOKEN: i = readtoken(); break
+        case WHITESPACE: i = whitespace(); break
+        case NORMAL: i = normal(); break
+      }
+
+      if(last !== i) {
+        switch(input[last]) {
+          case '\n': col = 0; ++line; break
+          default: ++col; break
+        }
+      }
+    }
+
+    total += i
+    input = input.slice(i)
+    return tokens
+  }
+
+  function end(chunk) {
+    if(content.length) {
+      token(content.join(''))
+    }
+
+    mode = EOF
+    token('(eof)')
+    return tokens
+  }
+
+  function normal() {
+    content = content.length ? [] : content
+
+    if(last === '/' && c === '*') {
+      start = total + i - 1
+      mode = BLOCK_COMMENT
+      last = c
+      return i + 1
+    }
+
+    if(last === '/' && c === '/') {
+      start = total + i - 1
+      mode = LINE_COMMENT
+      last = c
+      return i + 1
+    }
+
+    if(c === '#') {
+      mode = PREPROCESSOR
+      start = total + i
+      return i
+    }
+
+    if(/\s/.test(c)) {
+      mode = WHITESPACE
+      start = total + i
+      return i
+    }
+
+    isnum = /\d/.test(c)
+    isoperator = /[^\w_]/.test(c)
+
+    start = total + i
+    mode = isnum ? INTEGER : isoperator ? OPERATOR : TOKEN
+    return i
+  }
+
+  function whitespace() {
+    if(/[^\s]/g.test(c)) {
+      token(content.join(''))
+      mode = NORMAL
+      return i
+    }
+    content.push(c)
+    last = c
+    return i + 1
+  }
+
+  function preprocessor() {
+    if((c === '\r' || c === '\n') && last !== '\\') {
+      token(content.join(''))
+      mode = NORMAL
+      return i
+    }
+    content.push(c)
+    last = c
+    return i + 1
+  }
+
+  function line_comment() {
+    return preprocessor()
+  }
+
+  function block_comment() {
+    if(c === '/' && last === '*') {
+      content.push(c)
+      token(content.join(''))
+      mode = NORMAL
+      return i + 1
+    }
+
+    content.push(c)
+    last = c
+    return i + 1
+  }
+
+  function operator() {
+    if(last === '.' && /\d/.test(c)) {
+      mode = FLOAT
+      return i
+    }
+
+    if(last === '/' && c === '*') {
+      mode = BLOCK_COMMENT
+      return i
+    }
+
+    if(last === '/' && c === '/') {
+      mode = LINE_COMMENT
+      return i
+    }
+
+    if(c === '.' && content.length) {
+      while(determine_operator(content));
+
+      mode = FLOAT
+      return i
+    }
+
+    if(c === ';' || c === ')' || c === '(') {
+      if(content.length) while(determine_operator(content));
+      token(c)
+      mode = NORMAL
+      return i + 1
+    }
+
+    var is_composite_operator = content.length === 2 && c !== '='
+    if(/[\w_\d\s]/.test(c) || is_composite_operator) {
+      while(determine_operator(content));
+      mode = NORMAL
+      return i
+    }
+
+    content.push(c)
+    last = c
+    return i + 1
+  }
+
+  function determine_operator(buf) {
+    var j = 0
+      , idx
+      , res
+
+    do {
+      idx = operators.indexOf(buf.slice(0, buf.length + j).join(''))
+      res = operators[idx]
+
+      if(idx === -1) {
+        if(j-- + buf.length > 0) continue
+        res = buf.slice(0, 1).join('')
+      }
+
+      token(res)
+
+      start += res.length
+      content = content.slice(res.length)
+      return content.length
+    } while(1)
+  }
+
+  function hex() {
+    if(/[^a-fA-F0-9]/.test(c)) {
+      token(content.join(''))
+      mode = NORMAL
+      return i
+    }
+
+    content.push(c)
+    last = c
+    return i + 1
+  }
+
+  function integer() {
+    if(c === '.') {
+      content.push(c)
+      mode = FLOAT
+      last = c
+      return i + 1
+    }
+
+    if(/[eE]/.test(c)) {
+      content.push(c)
+      mode = FLOAT
+      last = c
+      return i + 1
+    }
+
+    if(c === 'x' && content.length === 1 && content[0] === '0') {
+      mode = HEX
+      content.push(c)
+      last = c
+      return i + 1
+    }
+
+    if(/[^\d]/.test(c)) {
+      token(content.join(''))
+      mode = NORMAL
+      return i
+    }
+
+    content.push(c)
+    last = c
+    return i + 1
+  }
+
+  function decimal() {
+    if(c === 'f') {
+      content.push(c)
+      last = c
+      i += 1
+    }
+
+    if(/[eE]/.test(c)) {
+      content.push(c)
+      last = c
+      return i + 1
+    }
+
+    if (c === '-' && /[eE]/.test(last)) {
+      content.push(c)
+      last = c
+      return i + 1
+    }
+
+    if(/[^\d]/.test(c)) {
+      token(content.join(''))
+      mode = NORMAL
+      return i
+    }
+
+    content.push(c)
+    last = c
+    return i + 1
+  }
+
+  function readtoken() {
+    if(/[^\d\w_]/.test(c)) {
+      var contentstr = content.join('')
+      if(allLiterals.indexOf(contentstr) > -1) {
+        mode = KEYWORD
+      } else if(allBuiltins.indexOf(contentstr) > -1) {
+        mode = BUILTIN
+      } else {
+        mode = IDENT
+      }
+      token(content.join(''))
+      mode = NORMAL
+      return i
+    }
+    content.push(c)
+    last = c
+    return i + 1
+  }
+}
+
+
+/***/ }),
+/* 40 */
+/***/ (function(module, exports) {
+
+module.exports = [
+    '<<='
+  , '>>='
+  , '++'
+  , '--'
+  , '<<'
+  , '>>'
+  , '<='
+  , '>='
+  , '=='
+  , '!='
+  , '&&'
+  , '||'
+  , '+='
+  , '-='
+  , '*='
+  , '/='
+  , '%='
+  , '&='
+  , '^^'
+  , '^='
+  , '|='
+  , '('
+  , ')'
+  , '['
+  , ']'
+  , '.'
+  , '!'
+  , '~'
+  , '*'
+  , '/'
+  , '%'
+  , '+'
+  , '-'
+  , '<'
+  , '>'
+  , '&'
+  , '^'
+  , '|'
+  , '?'
+  , ':'
+  , '='
+  , ','
+  , ';'
+  , '{'
+  , '}'
+]
+
+
+/***/ }),
+/* 41 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var v100 = __webpack_require__(15)
+
+module.exports = v100.slice().concat([
+   'layout'
+  , 'centroid'
+  , 'smooth'
+  , 'case'
+  , 'mat2x2'
+  , 'mat2x3'
+  , 'mat2x4'
+  , 'mat3x2'
+  , 'mat3x3'
+  , 'mat3x4'
+  , 'mat4x2'
+  , 'mat4x3'
+  , 'mat4x4'
+  , 'uint'
+  , 'uvec2'
+  , 'uvec3'
+  , 'uvec4'
+  , 'samplerCubeShadow'
+  , 'sampler2DArray'
+  , 'sampler2DArrayShadow'
+  , 'isampler2D'
+  , 'isampler3D'
+  , 'isamplerCube'
+  , 'isampler2DArray'
+  , 'usampler2D'
+  , 'usampler3D'
+  , 'usamplerCube'
+  , 'usampler2DArray'
+  , 'coherent'
+  , 'restrict'
+  , 'readonly'
+  , 'writeonly'
+  , 'resource'
+  , 'atomic_uint'
+  , 'noperspective'
+  , 'patch'
+  , 'sample'
+  , 'subroutine'
+  , 'common'
+  , 'partition'
+  , 'active'
+  , 'filter'
+  , 'image1D'
+  , 'image2D'
+  , 'image3D'
+  , 'imageCube'
+  , 'iimage1D'
+  , 'iimage2D'
+  , 'iimage3D'
+  , 'iimageCube'
+  , 'uimage1D'
+  , 'uimage2D'
+  , 'uimage3D'
+  , 'uimageCube'
+  , 'image1DArray'
+  , 'image2DArray'
+  , 'iimage1DArray'
+  , 'iimage2DArray'
+  , 'uimage1DArray'
+  , 'uimage2DArray'
+  , 'image1DShadow'
+  , 'image2DShadow'
+  , 'image1DArrayShadow'
+  , 'image2DArrayShadow'
+  , 'imageBuffer'
+  , 'iimageBuffer'
+  , 'uimageBuffer'
+  , 'sampler1DArray'
+  , 'sampler1DArrayShadow'
+  , 'isampler1D'
+  , 'isampler1DArray'
+  , 'usampler1D'
+  , 'usampler1DArray'
+  , 'isampler2DRect'
+  , 'usampler2DRect'
+  , 'samplerBuffer'
+  , 'isamplerBuffer'
+  , 'usamplerBuffer'
+  , 'sampler2DMS'
+  , 'isampler2DMS'
+  , 'usampler2DMS'
+  , 'sampler2DMSArray'
+  , 'isampler2DMSArray'
+  , 'usampler2DMSArray'
+])
+
+
+/***/ }),
+/* 42 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// 300es builtins/reserved words that were previously valid in v100
+var v100 = __webpack_require__(16)
+
+// The texture2D|Cube functions have been removed
+// And the gl_ features are updated
+v100 = v100.slice().filter(function (b) {
+  return !/^(gl\_|texture)/.test(b)
+})
+
+module.exports = v100.concat([
+  // the updated gl_ constants
+    'gl_VertexID'
+  , 'gl_InstanceID'
+  , 'gl_Position'
+  , 'gl_PointSize'
+  , 'gl_FragCoord'
+  , 'gl_FrontFacing'
+  , 'gl_FragDepth'
+  , 'gl_PointCoord'
+  , 'gl_MaxVertexAttribs'
+  , 'gl_MaxVertexUniformVectors'
+  , 'gl_MaxVertexOutputVectors'
+  , 'gl_MaxFragmentInputVectors'
+  , 'gl_MaxVertexTextureImageUnits'
+  , 'gl_MaxCombinedTextureImageUnits'
+  , 'gl_MaxTextureImageUnits'
+  , 'gl_MaxFragmentUniformVectors'
+  , 'gl_MaxDrawBuffers'
+  , 'gl_MinProgramTexelOffset'
+  , 'gl_MaxProgramTexelOffset'
+  , 'gl_DepthRangeParameters'
+  , 'gl_DepthRange'
+
+  // other builtins
+  , 'trunc'
+  , 'round'
+  , 'roundEven'
+  , 'isnan'
+  , 'isinf'
+  , 'floatBitsToInt'
+  , 'floatBitsToUint'
+  , 'intBitsToFloat'
+  , 'uintBitsToFloat'
+  , 'packSnorm2x16'
+  , 'unpackSnorm2x16'
+  , 'packUnorm2x16'
+  , 'unpackUnorm2x16'
+  , 'packHalf2x16'
+  , 'unpackHalf2x16'
+  , 'outerProduct'
+  , 'transpose'
+  , 'determinant'
+  , 'inverse'
+  , 'texture'
+  , 'textureSize'
+  , 'textureProj'
+  , 'textureLod'
+  , 'textureOffset'
+  , 'texelFetch'
+  , 'texelFetchOffset'
+  , 'textureProjOffset'
+  , 'textureLodOffset'
+  , 'textureProjLod'
+  , 'textureProjLodOffset'
+  , 'textureGrad'
+  , 'textureGradOffset'
+  , 'textureProjGrad'
+  , 'textureProjGradOffset'
+])
+
+
+/***/ }),
+/* 43 */
+/***/ (function(module, exports) {
+
+module.exports = function _atob(str) {
+  return atob(str)
+}
+
+
+/***/ }),
+/* 44 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var padLeft = __webpack_require__(45)
+
+module.exports = addLineNumbers
+function addLineNumbers (string, start, delim) {
+  start = typeof start === 'number' ? start : 1
+  delim = delim || ': '
+
+  var lines = string.split(/\r?\n/)
+  var totalDigits = String(lines.length + start - 1).length
+  return lines.map(function (line, i) {
+    var c = i + start
+    var digits = String(c).length
+    var prefix = padLeft(c, totalDigits - digits)
+    return prefix + delim + line
+  }).join('\n')
+}
+
+
+/***/ }),
+/* 45 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+/*!
+ * pad-left <https://github.com/jonschlinkert/pad-left>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT license.
+ */
+
+
+
+var repeat = __webpack_require__(46);
+
+module.exports = function padLeft(str, num, ch) {
+  ch = typeof ch !== 'undefined' ? (ch + '') : ' ';
+  return repeat(ch, num) + str;
+};
+
+/***/ }),
+/* 46 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+/*!
+ * repeat-string <https://github.com/jonschlinkert/repeat-string>
+ *
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT License.
+ */
+
+
+
+/**
+ * Results cache
+ */
+
+var res = '';
+var cache;
+
+/**
+ * Expose `repeat`
+ */
+
+module.exports = repeat;
+
+/**
+ * Repeat the given `string` the specified `number`
+ * of times.
+ *
+ * **Example:**
+ *
+ * ```js
+ * var repeat = require('repeat-string');
+ * repeat('A', 5);
+ * //=> AAAAA
+ * ```
+ *
+ * @param {String} `string` The string to repeat
+ * @param {Number} `number` The number of times to repeat the string
+ * @return {String} Repeated string
+ * @api public
+ */
+
+function repeat(str, num) {
+  if (typeof str !== 'string') {
+    throw new TypeError('expected a string');
+  }
+
+  // cover common, quick use cases
+  if (num === 1) return str;
+  if (num === 2) return str + str;
+
+  var max = str.length * num;
+  if (cache !== str || typeof cache === 'undefined') {
+    cache = str;
+    res = '';
+  } else if (res.length >= max) {
+    return res.substr(0, max);
+  }
+
+  while (max > res.length && num > 1) {
+    if (num & 1) {
+      res += str;
+    }
+
+    num >>= 1;
+    str += str;
+  }
+
+  res += str;
+  res = res.substr(0, max);
+  return res;
+}
+
+
+/***/ }),
+/* 47 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// Original - @Gozola.
+// https://gist.github.com/Gozala/1269991
+// This is a reimplemented version (with a few bug fixes).
+
+var createStore = __webpack_require__(48);
+
+module.exports = weakMap;
+
+function weakMap() {
+    var privates = createStore();
+
+    return {
+        'get': function (key, fallback) {
+            var store = privates(key)
+            return store.hasOwnProperty('value') ?
+                store.value : fallback
+        },
+        'set': function (key, value) {
+            privates(key).value = value;
+            return this;
+        },
+        'has': function(key) {
+            return 'value' in privates(key);
+        },
+        'delete': function (key) {
+            return delete privates(key).value;
+        }
+    }
+}
+
+
+/***/ }),
+/* 48 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var hiddenStore = __webpack_require__(49);
+
+module.exports = createStore;
+
+function createStore() {
+    var key = {};
+
+    return function (obj) {
+        if ((typeof obj !== 'object' || obj === null) &&
+            typeof obj !== 'function'
+        ) {
+            throw new Error('Weakmap-shim: Key must be object')
+        }
+
+        var store = obj.valueOf(key);
+        return store && store.identity === key ?
+            store : hiddenStore(obj, key);
+    };
+}
+
+
+/***/ }),
+/* 49 */
+/***/ (function(module, exports) {
+
+module.exports = hiddenStore;
+
+function hiddenStore(obj, key) {
+    var store = { identity: key };
+    var valueOf = obj.valueOf;
+
+    Object.defineProperty(obj, "valueOf", {
+        value: function (value) {
+            return value !== key ?
+                valueOf.apply(this, arguments) : store;
+        },
+        writable: true
+    });
+
+    return store;
+}
+
+
+/***/ }),
+/* 50 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+exports.uniforms    = runtimeUniforms
+exports.attributes  = runtimeAttributes
+
+var GL_TO_GLSL_TYPES = {
+  'FLOAT':       'float',
+  'FLOAT_VEC2':  'vec2',
+  'FLOAT_VEC3':  'vec3',
+  'FLOAT_VEC4':  'vec4',
+  'INT':         'int',
+  'INT_VEC2':    'ivec2',
+  'INT_VEC3':    'ivec3',
+  'INT_VEC4':    'ivec4',
+  'BOOL':        'bool',
+  'BOOL_VEC2':   'bvec2',
+  'BOOL_VEC3':   'bvec3',
+  'BOOL_VEC4':   'bvec4',
+  'FLOAT_MAT2':  'mat2',
+  'FLOAT_MAT3':  'mat3',
+  'FLOAT_MAT4':  'mat4',
+  'SAMPLER_2D':  'sampler2D',
+  'SAMPLER_CUBE':'samplerCube'
+}
+
+var GL_TABLE = null
+
+function getType(gl, type) {
+  if(!GL_TABLE) {
+    var typeNames = Object.keys(GL_TO_GLSL_TYPES)
+    GL_TABLE = {}
+    for(var i=0; i<typeNames.length; ++i) {
+      var tn = typeNames[i]
+      GL_TABLE[gl[tn]] = GL_TO_GLSL_TYPES[tn]
+    }
+  }
+  return GL_TABLE[type]
+}
+
+function runtimeUniforms(gl, program) {
+  var numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS)
+  var result = []
+  for(var i=0; i<numUniforms; ++i) {
+    var info = gl.getActiveUniform(program, i)
+    if(info) {
+      var type = getType(gl, info.type)
+      if(info.size > 1) {
+        for(var j=0; j<info.size; ++j) {
+          result.push({
+            name: info.name.replace('[0]', '[' + j + ']'),
+            type: type
+          })
+        }
+      } else {
+        result.push({
+          name: info.name,
+          type: type
+        })
+      }
+    }
+  }
+  return result
+}
+
+function runtimeAttributes(gl, program) {
+  var numAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES)
+  var result = []
+  for(var i=0; i<numAttributes; ++i) {
+    var info = gl.getActiveAttrib(program, i)
+    if(info) {
+      result.push({
+        name: info.name,
+        type: getType(gl, info.type)
+      })
+    }
+  }
+  return result
+}
+
+
+/***/ }),
+/* 51 */
+/***/ (function(module, exports, __webpack_require__) {
+
+module.exports = __webpack_require__(52)()
+
+/***/ }),
+/* 52 */
 /***/ (function(module, exports) {
 
 function clone(point) { //TODO: use gl-vec2 for this
@@ -9062,10 +10908,10 @@ module.exports = function createBezierBuilder(opt) {
 
 
 /***/ }),
-/* 34 */
+/* 53 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var util = __webpack_require__(35)
+var util = __webpack_require__(54)
 
 var lineA = [0, 0]
 var lineB = [0, 0]
@@ -9134,14 +10980,14 @@ function addNext(out, normal, length) {
 }
 
 /***/ }),
-/* 35 */
+/* 54 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var add = __webpack_require__(36)
-var set = __webpack_require__(37)
-var normalize = __webpack_require__(38)
-var subtract = __webpack_require__(39)
-var dot = __webpack_require__(40)
+var add = __webpack_require__(55)
+var set = __webpack_require__(56)
+var normalize = __webpack_require__(57)
+var subtract = __webpack_require__(58)
+var dot = __webpack_require__(59)
 
 var tmp = [0, 0]
 
@@ -9172,7 +11018,7 @@ module.exports.direction = function direction(out, a, b) {
 }
 
 /***/ }),
-/* 36 */
+/* 55 */
 /***/ (function(module, exports) {
 
 module.exports = add
@@ -9192,7 +11038,7 @@ function add(out, a, b) {
 }
 
 /***/ }),
-/* 37 */
+/* 56 */
 /***/ (function(module, exports) {
 
 module.exports = set
@@ -9212,7 +11058,7 @@ function set(out, x, y) {
 }
 
 /***/ }),
-/* 38 */
+/* 57 */
 /***/ (function(module, exports) {
 
 module.exports = normalize
@@ -9238,7 +11084,7 @@ function normalize(out, a) {
 }
 
 /***/ }),
-/* 39 */
+/* 58 */
 /***/ (function(module, exports) {
 
 module.exports = subtract
@@ -9258,7 +11104,7 @@ function subtract(out, a, b) {
 }
 
 /***/ }),
-/* 40 */
+/* 59 */
 /***/ (function(module, exports) {
 
 module.exports = dot
@@ -9275,15 +11121,15 @@ function dot(a, b) {
 }
 
 /***/ }),
-/* 41 */
+/* 60 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var pool = __webpack_require__(42)
-var ops = __webpack_require__(49)
-var ndarray = __webpack_require__(54)
+var pool = __webpack_require__(61)
+var ops = __webpack_require__(68)
+var ndarray = __webpack_require__(73)
 
 var SUPPORTED_TYPES = [
   "uint8",
@@ -9434,14 +11280,14 @@ module.exports = createBuffer
 
 
 /***/ }),
-/* 42 */
+/* 61 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 /* WEBPACK VAR INJECTION */(function(global, Buffer) {
 
-var bits = __webpack_require__(47)
-var dup = __webpack_require__(48)
+var bits = __webpack_require__(66)
+var dup = __webpack_require__(67)
 
 //Legacy pool support
 if(!global.__TYPEDARRAY_POOL) {
@@ -9652,10 +11498,10 @@ exports.clearCache = function clearCache() {
     BUFFER[i].length = 0
   }
 }
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(13), __webpack_require__(43).Buffer))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(17), __webpack_require__(62).Buffer))
 
 /***/ }),
-/* 43 */
+/* 62 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -9669,9 +11515,9 @@ exports.clearCache = function clearCache() {
 
 
 
-var base64 = __webpack_require__(44)
-var ieee754 = __webpack_require__(45)
-var isArray = __webpack_require__(46)
+var base64 = __webpack_require__(63)
+var ieee754 = __webpack_require__(64)
+var isArray = __webpack_require__(65)
 
 exports.Buffer = Buffer
 exports.SlowBuffer = SlowBuffer
@@ -11449,10 +13295,10 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(13)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(17)))
 
 /***/ }),
-/* 44 */
+/* 63 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11573,7 +13419,7 @@ function fromByteArray (uint8) {
 
 
 /***/ }),
-/* 45 */
+/* 64 */
 /***/ (function(module, exports) {
 
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
@@ -11663,7 +13509,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
 
 /***/ }),
-/* 46 */
+/* 65 */
 /***/ (function(module, exports) {
 
 var toString = {}.toString;
@@ -11674,7 +13520,7 @@ module.exports = Array.isArray || function (arr) {
 
 
 /***/ }),
-/* 47 */
+/* 66 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11885,7 +13731,7 @@ exports.nextCombination = function(v) {
 
 
 /***/ }),
-/* 48 */
+/* 67 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11940,13 +13786,13 @@ function dupe(count, value) {
 module.exports = dupe
 
 /***/ }),
-/* 49 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var compile = __webpack_require__(50)
+var compile = __webpack_require__(69)
 
 var EmptyProc = {
   body: "",
@@ -12408,13 +14254,13 @@ exports.equals = compile({
 
 
 /***/ }),
-/* 50 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var createThunk = __webpack_require__(51)
+var createThunk = __webpack_require__(70)
 
 function Procedure() {
   this.argTypes = []
@@ -12524,7 +14370,7 @@ module.exports = compileCwise
 
 
 /***/ }),
-/* 51 */
+/* 70 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12553,7 +14399,7 @@ module.exports = compileCwise
 //   return thunk(compile.bind1(proc))
 // }
 
-var compile = __webpack_require__(52)
+var compile = __webpack_require__(71)
 
 function createThunk(proc) {
   var code = ["'use strict'", "var CACHED={}"]
@@ -12617,13 +14463,13 @@ module.exports = createThunk
 
 
 /***/ }),
-/* 52 */
+/* 71 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var uniq = __webpack_require__(53)
+var uniq = __webpack_require__(72)
 
 // This function generates very simple loops analogous to how you typically traverse arrays (the outermost loop corresponds to the slowest changing index, the innermost loop to the fastest changing index)
 // TODO: If two arrays have the same strides (and offsets) there is potential for decreasing the number of "pointers" and related variables. The drawback is that the type signature would become more specific and that there would thus be less potential for caching, but it might still be worth it, especially when dealing with large numbers of arguments.
@@ -12982,7 +14828,7 @@ module.exports = generateCWiseOp
 
 
 /***/ }),
-/* 53 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13046,11 +14892,11 @@ module.exports = unique
 
 
 /***/ }),
-/* 54 */
+/* 73 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var iota = __webpack_require__(55)
-var isBuffer = __webpack_require__(56)
+var iota = __webpack_require__(74)
+var isBuffer = __webpack_require__(75)
 
 var hasTypedArrays  = ((typeof Float64Array) !== "undefined")
 
@@ -13395,7 +15241,7 @@ module.exports = wrappedNDArrayCtor
 
 
 /***/ }),
-/* 55 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13412,7 +15258,7 @@ function iota(n) {
 module.exports = iota
 
 /***/ }),
-/* 56 */
+/* 75 */
 /***/ (function(module, exports) {
 
 /*!
@@ -13439,2147 +15285,14 @@ function isSlowBuffer (obj) {
 
 
 /***/ }),
-/* 57 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var coallesceUniforms = __webpack_require__(15)
-var GLError = __webpack_require__(2)
-
-module.exports = createUniformWrapper
-
-//Binds a function and returns a value
-function identity(x) {
-  var c = new Function('y', 'return function(){return y}')
-  return c(x)
-}
-
-function makeVector(length, fill) {
-  var result = new Array(length)
-  for(var i=0; i<length; ++i) {
-    result[i] = fill
-  }
-  return result
-}
-
-//Create shims for uniforms
-function createUniformWrapper(gl, wrapper, uniforms, locations) {
-
-  function makeGetter(index) {
-    var proc = new Function(
-        'gl'
-      , 'wrapper'
-      , 'locations'
-      , 'return function(){return gl.getUniform(wrapper.program,locations[' + index + '])}')
-    return proc(gl, wrapper, locations)
-  }
-
-  function makePropSetter(path, index, type) {
-    switch(type) {
-      case 'bool':
-      case 'int':
-      case 'sampler2D':
-      case 'samplerCube':
-        return 'gl.uniform1i(locations[' + index + '],obj' + path + ')'
-      case 'float':
-        return 'gl.uniform1f(locations[' + index + '],obj' + path + ')'
-      default:
-        var vidx = type.indexOf('vec')
-        if(0 <= vidx && vidx <= 1 && type.length === 4 + vidx) {
-          var d = type.charCodeAt(type.length-1) - 48
-          if(d < 2 || d > 4) {
-            throw new GLError('', 'Invalid data type')
-          }
-          switch(type.charAt(0)) {
-            case 'b':
-            case 'i':
-              return 'gl.uniform' + d + 'iv(locations[' + index + '],obj' + path + ')'
-            case 'v':
-              return 'gl.uniform' + d + 'fv(locations[' + index + '],obj' + path + ')'
-            default:
-              throw new GLError('', 'Unrecognized data type for vector ' + name + ': ' + type)
-          }
-        } else if(type.indexOf('mat') === 0 && type.length === 4) {
-          var d = type.charCodeAt(type.length-1) - 48
-          if(d < 2 || d > 4) {
-            throw new GLError('', 'Invalid uniform dimension type for matrix ' + name + ': ' + type)
-          }
-          return 'gl.uniformMatrix' + d + 'fv(locations[' + index + '],false,obj' + path + ')'
-        } else {
-          throw new GLError('', 'Unknown uniform data type for ' + name + ': ' + type)
-        }
-      break
-    }
-  }
-
-  function enumerateIndices(prefix, type) {
-    if(typeof type !== 'object') {
-      return [ [prefix, type] ]
-    }
-    var indices = []
-    for(var id in type) {
-      var prop = type[id]
-      var tprefix = prefix
-      if(parseInt(id) + '' === id) {
-        tprefix += '[' + id + ']'
-      } else {
-        tprefix += '.' + id
-      }
-      if(typeof prop === 'object') {
-        indices.push.apply(indices, enumerateIndices(tprefix, prop))
-      } else {
-        indices.push([tprefix, prop])
-      }
-    }
-    return indices
-  }
-
-  function makeSetter(type) {
-    var code = [ 'return function updateProperty(obj){' ]
-    var indices = enumerateIndices('', type)
-    for(var i=0; i<indices.length; ++i) {
-      var item = indices[i]
-      var path = item[0]
-      var idx  = item[1]
-      if(locations[idx]) {
-        code.push(makePropSetter(path, idx, uniforms[idx].type))
-      }
-    }
-    code.push('return obj}')
-    var proc = new Function('gl', 'locations', code.join('\n'))
-    return proc(gl, locations)
-  }
-
-  function defaultValue(type) {
-    switch(type) {
-      case 'bool':
-        return false
-      case 'int':
-      case 'sampler2D':
-      case 'samplerCube':
-        return 0
-      case 'float':
-        return 0.0
-      default:
-        var vidx = type.indexOf('vec')
-        if(0 <= vidx && vidx <= 1 && type.length === 4 + vidx) {
-          var d = type.charCodeAt(type.length-1) - 48
-          if(d < 2 || d > 4) {
-            throw new GLError('', 'Invalid data type')
-          }
-          if(type.charAt(0) === 'b') {
-            return makeVector(d, false)
-          }
-          return makeVector(d, 0)
-        } else if(type.indexOf('mat') === 0 && type.length === 4) {
-          var d = type.charCodeAt(type.length-1) - 48
-          if(d < 2 || d > 4) {
-            throw new GLError('', 'Invalid uniform dimension type for matrix ' + name + ': ' + type)
-          }
-          return makeVector(d*d, 0)
-        } else {
-          throw new GLError('', 'Unknown uniform data type for ' + name + ': ' + type)
-        }
-      break
-    }
-  }
-
-  function storeProperty(obj, prop, type) {
-    if(typeof type === 'object') {
-      var child = processObject(type)
-      Object.defineProperty(obj, prop, {
-        get: identity(child),
-        set: makeSetter(type),
-        enumerable: true,
-        configurable: false
-      })
-    } else {
-      if(locations[type]) {
-        Object.defineProperty(obj, prop, {
-          get: makeGetter(type),
-          set: makeSetter(type),
-          enumerable: true,
-          configurable: false
-        })
-      } else {
-        obj[prop] = defaultValue(uniforms[type].type)
-      }
-    }
-  }
-
-  function processObject(obj) {
-    var result
-    if(Array.isArray(obj)) {
-      result = new Array(obj.length)
-      for(var i=0; i<obj.length; ++i) {
-        storeProperty(result, i, obj[i])
-      }
-    } else {
-      result = {}
-      for(var id in obj) {
-        storeProperty(result, id, obj[id])
-      }
-    }
-    return result
-  }
-
-  //Return data
-  var coallesced = coallesceUniforms(uniforms, true)
-  return {
-    get: identity(processObject(coallesced)),
-    set: makeSetter(coallesced),
-    enumerable: true,
-    configurable: true
-  }
-}
-
-
-/***/ }),
-/* 58 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = createAttributeWrapper
-
-var GLError = __webpack_require__(2)
-
-function ShaderAttribute(
-    gl
-  , wrapper
-  , index
-  , locations
-  , dimension
-  , constFunc) {
-  this._gl        = gl
-  this._wrapper   = wrapper
-  this._index     = index
-  this._locations = locations
-  this._dimension = dimension
-  this._constFunc = constFunc
-}
-
-var proto = ShaderAttribute.prototype
-
-proto.pointer = function setAttribPointer(
-    type
-  , normalized
-  , stride
-  , offset) {
-
-  var self      = this
-  var gl        = self._gl
-  var location  = self._locations[self._index]
-
-  gl.vertexAttribPointer(
-      location
-    , self._dimension
-    , type || gl.FLOAT
-    , !!normalized
-    , stride || 0
-    , offset || 0)
-  gl.enableVertexAttribArray(location)
-}
-
-proto.set = function(x0, x1, x2, x3) {
-  return this._constFunc(this._locations[this._index], x0, x1, x2, x3)
-}
-
-Object.defineProperty(proto, 'location', {
-  get: function() {
-    return this._locations[this._index]
-  }
-  , set: function(v) {
-    if(v !== this._locations[this._index]) {
-      this._locations[this._index] = v|0
-      this._wrapper.program = null
-    }
-    return v|0
-  }
-})
-
-//Adds a vector attribute to obj
-function addVectorAttribute(
-    gl
-  , wrapper
-  , index
-  , locations
-  , dimension
-  , obj
-  , name) {
-
-  //Construct constant function
-  var constFuncArgs = [ 'gl', 'v' ]
-  var varNames = []
-  for(var i=0; i<dimension; ++i) {
-    constFuncArgs.push('x'+i)
-    varNames.push('x'+i)
-  }
-  constFuncArgs.push(
-    'if(x0.length===void 0){return gl.vertexAttrib' +
-    dimension + 'f(v,' +
-    varNames.join() +
-    ')}else{return gl.vertexAttrib' +
-    dimension +
-    'fv(v,x0)}')
-  var constFunc = Function.apply(null, constFuncArgs)
-
-  //Create attribute wrapper
-  var attr = new ShaderAttribute(
-      gl
-    , wrapper
-    , index
-    , locations
-    , dimension
-    , constFunc)
-
-  //Create accessor
-  Object.defineProperty(obj, name, {
-    set: function(x) {
-      gl.disableVertexAttribArray(locations[index])
-      constFunc(gl, locations[index], x)
-      return x
-    }
-    , get: function() {
-      return attr
-    }
-    , enumerable: true
-  })
-}
-
-function addMatrixAttribute(
-    gl
-  , wrapper
-  , index
-  , locations
-  , dimension
-  , obj
-  , name) {
-
-  var parts = new Array(dimension)
-  var attrs = new Array(dimension)
-  for(var i=0; i<dimension; ++i) {
-    addVectorAttribute(
-        gl
-      , wrapper
-      , index[i]
-      , locations
-      , dimension
-      , parts
-      , i)
-    attrs[i] = parts[i]
-  }
-
-  Object.defineProperty(parts, 'location', {
-    set: function(v) {
-      if(Array.isArray(v)) {
-        for(var i=0; i<dimension; ++i) {
-          attrs[i].location = v[i]
-        }
-      } else {
-        for(var i=0; i<dimension; ++i) {
-          attrs[i].location = v + i
-        }
-      }
-      return v
-    }
-    , get: function() {
-      var result = new Array(dimension)
-      for(var i=0; i<dimension; ++i) {
-        result[i] = locations[index[i]]
-      }
-      return result
-    }
-    , enumerable: true
-  })
-
-  parts.pointer = function(type, normalized, stride, offset) {
-    type       = type || gl.FLOAT
-    normalized = !!normalized
-    stride     = stride || (dimension * dimension)
-    offset     = offset || 0
-    for(var i=0; i<dimension; ++i) {
-      var location = locations[index[i]]
-      gl.vertexAttribPointer(
-            location
-          , dimension
-          , type
-          , normalized
-          , stride
-          , offset + i * dimension)
-      gl.enableVertexAttribArray(location)
-    }
-  }
-
-  var scratch = new Array(dimension)
-  var vertexAttrib = gl['vertexAttrib' + dimension + 'fv']
-
-  Object.defineProperty(obj, name, {
-    set: function(x) {
-      for(var i=0; i<dimension; ++i) {
-        var loc = locations[index[i]]
-        gl.disableVertexAttribArray(loc)
-        if(Array.isArray(x[0])) {
-          vertexAttrib.call(gl, loc, x[i])
-        } else {
-          for(var j=0; j<dimension; ++j) {
-            scratch[j] = x[dimension*i + j]
-          }
-          vertexAttrib.call(gl, loc, scratch)
-        }
-      }
-      return x
-    }
-    , get: function() {
-      return parts
-    }
-    , enumerable: true
-  })
-}
-
-//Create shims for attributes
-function createAttributeWrapper(
-    gl
-  , wrapper
-  , attributes
-  , locations) {
-
-  var obj = {}
-  for(var i=0, n=attributes.length; i<n; ++i) {
-
-    var a = attributes[i]
-    var name = a.name
-    var type = a.type
-    var locs = a.locations
-
-    switch(type) {
-      case 'bool':
-      case 'int':
-      case 'float':
-        addVectorAttribute(
-            gl
-          , wrapper
-          , locs[0]
-          , locations
-          , 1
-          , obj
-          , name)
-      break
-
-      default:
-        if(type.indexOf('vec') >= 0) {
-          var d = type.charCodeAt(type.length-1) - 48
-          if(d < 2 || d > 4) {
-            throw new GLError('', 'Invalid data type for attribute ' + name + ': ' + type)
-          }
-          addVectorAttribute(
-              gl
-            , wrapper
-            , locs[0]
-            , locations
-            , d
-            , obj
-            , name)
-        } else if(type.indexOf('mat') >= 0) {
-          var d = type.charCodeAt(type.length-1) - 48
-          if(d < 2 || d > 4) {
-            throw new GLError('', 'Invalid data type for attribute ' + name + ': ' + type)
-          }
-          addMatrixAttribute(
-              gl
-            , wrapper
-            , locs
-            , locations
-            , d
-            , obj
-            , name)
-        } else {
-          throw new GLError('', 'Unknown data type for attribute ' + name + ': ' + type)
-        }
-      break
-    }
-  }
-  return obj
-}
-
-
-/***/ }),
-/* 59 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-exports.shader   = getShaderReference
-exports.program  = createProgram
-
-var GLError = __webpack_require__(2)
-var formatCompilerError = __webpack_require__(60);
-
-var weakMap = typeof WeakMap === 'undefined' ? __webpack_require__(74) : WeakMap
-var CACHE = new weakMap()
-
-var SHADER_COUNTER = 0
-
-function ShaderReference(id, src, type, shader, programs, count, cache) {
-  this.id       = id
-  this.src      = src
-  this.type     = type
-  this.shader   = shader
-  this.count    = count
-  this.programs = []
-  this.cache    = cache
-}
-
-ShaderReference.prototype.dispose = function() {
-  if(--this.count === 0) {
-    var cache    = this.cache
-    var gl       = cache.gl
-
-    //Remove program references
-    var programs = this.programs
-    for(var i=0, n=programs.length; i<n; ++i) {
-      var p = cache.programs[programs[i]]
-      if(p) {
-        delete cache.programs[i]
-        gl.deleteProgram(p)
-      }
-    }
-
-    //Remove shader reference
-    gl.deleteShader(this.shader)
-    delete cache.shaders[(this.type === gl.FRAGMENT_SHADER)|0][this.src]
-  }
-}
-
-function ContextCache(gl) {
-  this.gl       = gl
-  this.shaders  = [{}, {}]
-  this.programs = {}
-}
-
-var proto = ContextCache.prototype
-
-function compileShader(gl, type, src) {
-  var shader = gl.createShader(type)
-  gl.shaderSource(shader, src)
-  gl.compileShader(shader)
-  if(!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    var errLog = gl.getShaderInfoLog(shader)
-    try {
-        var fmt = formatCompilerError(errLog, src, type);
-    } catch (e){
-        console.warn('Failed to format compiler error: ' + e);
-        throw new GLError(errLog, 'Error compiling shader:\n' + errLog)
-    }
-    throw new GLError(errLog, fmt.short, fmt.long)
-  }
-  return shader
-}
-
-proto.getShaderReference = function(type, src) {
-  var gl      = this.gl
-  var shaders = this.shaders[(type === gl.FRAGMENT_SHADER)|0]
-  var shader  = shaders[src]
-  if(!shader || !gl.isShader(shader.shader)) {
-    var shaderObj = compileShader(gl, type, src)
-    shader = shaders[src] = new ShaderReference(
-      SHADER_COUNTER++,
-      src,
-      type,
-      shaderObj,
-      [],
-      1,
-      this)
-  } else {
-    shader.count += 1
-  }
-  return shader
-}
-
-function linkProgram(gl, vshader, fshader, attribs, locations) {
-  var program = gl.createProgram()
-  gl.attachShader(program, vshader)
-  gl.attachShader(program, fshader)
-  for(var i=0; i<attribs.length; ++i) {
-    gl.bindAttribLocation(program, locations[i], attribs[i])
-  }
-  gl.linkProgram(program)
-  if(!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    var errLog = gl.getProgramInfoLog(program)
-    throw new GLError(errLog, 'Error linking program: ' + errLog)
-  }
-  return program
-}
-
-proto.getProgram = function(vref, fref, attribs, locations) {
-  var token = [vref.id, fref.id, attribs.join(':'), locations.join(':')].join('@')
-  var prog  = this.programs[token]
-  if(!prog || !this.gl.isProgram(prog)) {
-    this.programs[token] = prog = linkProgram(
-      this.gl,
-      vref.shader,
-      fref.shader,
-      attribs,
-      locations)
-    vref.programs.push(token)
-    fref.programs.push(token)
-  }
-  return prog
-}
-
-function getCache(gl) {
-  var ctxCache = CACHE.get(gl)
-  if(!ctxCache) {
-    ctxCache = new ContextCache(gl)
-    CACHE.set(gl, ctxCache)
-  }
-  return ctxCache
-}
-
-function getShaderReference(gl, type, src) {
-  return getCache(gl).getShaderReference(type, src)
-}
-
-function createProgram(gl, vref, fref, attribs, locations) {
-  return getCache(gl).getProgram(vref, fref, attribs, locations)
-}
-
-
-/***/ }),
-/* 60 */
-/***/ (function(module, exports, __webpack_require__) {
-
-
-var sprintf = __webpack_require__(61).sprintf;
-var glConstants = __webpack_require__(62);
-var shaderName = __webpack_require__(64);
-var addLineNumbers = __webpack_require__(71);
-
-module.exports = formatCompilerError;
-
-function formatCompilerError(errLog, src, type) {
-    "use strict";
-
-    var name = shaderName(src) || 'of unknown name (see npm glsl-shader-name)';
-
-    var typeName = 'unknown type';
-    if (type !== undefined) {
-        typeName = type === glConstants.FRAGMENT_SHADER ? 'fragment' : 'vertex'
-    }
-
-    var longForm = sprintf('Error compiling %s shader %s:\n', typeName, name);
-    var shortForm = sprintf("%s%s", longForm, errLog);
-
-    var errorStrings = errLog.split('\n');
-    var errors = {};
-
-    for (var i = 0; i < errorStrings.length; i++) {
-        var errorString = errorStrings[i];
-        if (errorString === '' || errorString === "\0") continue;
-        var lineNo = parseInt(errorString.split(':')[2]);
-        if (isNaN(lineNo)) {
-            throw new Error(sprintf('Could not parse error: %s', errorString));
-        }
-        errors[lineNo] = errorString;
-    }
-
-    var lines = addLineNumbers(src).split('\n');
-
-    for (var i = 0; i < lines.length; i++) {
-        if (!errors[i+3] && !errors[i+2] && !errors[i+1]) continue;
-        var line = lines[i];
-        longForm += line + '\n';
-        if (errors[i+1]) {
-            var e = errors[i+1];
-            e = e.substr(e.split(':', 3).join(':').length + 1).trim();
-            longForm += sprintf('^^^ %s\n\n', e);
-        }
-    }
-
-    return {
-        long: longForm.trim(),
-        short: shortForm.trim()
-    };
-}
-
-
-
-/***/ }),
-/* 61 */
-/***/ (function(module, exports, __webpack_require__) {
-
-(function(window) {
-    var re = {
-        not_string: /[^s]/,
-        number: /[diefg]/,
-        json: /[j]/,
-        not_json: /[^j]/,
-        text: /^[^\x25]+/,
-        modulo: /^\x25{2}/,
-        placeholder: /^\x25(?:([1-9]\d*)\$|\(([^\)]+)\))?(\+)?(0|'[^$])?(-)?(\d+)?(?:\.(\d+))?([b-gijosuxX])/,
-        key: /^([a-z_][a-z_\d]*)/i,
-        key_access: /^\.([a-z_][a-z_\d]*)/i,
-        index_access: /^\[(\d+)\]/,
-        sign: /^[\+\-]/
-    }
-
-    function sprintf() {
-        var key = arguments[0], cache = sprintf.cache
-        if (!(cache[key] && cache.hasOwnProperty(key))) {
-            cache[key] = sprintf.parse(key)
-        }
-        return sprintf.format.call(null, cache[key], arguments)
-    }
-
-    sprintf.format = function(parse_tree, argv) {
-        var cursor = 1, tree_length = parse_tree.length, node_type = "", arg, output = [], i, k, match, pad, pad_character, pad_length, is_positive = true, sign = ""
-        for (i = 0; i < tree_length; i++) {
-            node_type = get_type(parse_tree[i])
-            if (node_type === "string") {
-                output[output.length] = parse_tree[i]
-            }
-            else if (node_type === "array") {
-                match = parse_tree[i] // convenience purposes only
-                if (match[2]) { // keyword argument
-                    arg = argv[cursor]
-                    for (k = 0; k < match[2].length; k++) {
-                        if (!arg.hasOwnProperty(match[2][k])) {
-                            throw new Error(sprintf("[sprintf] property '%s' does not exist", match[2][k]))
-                        }
-                        arg = arg[match[2][k]]
-                    }
-                }
-                else if (match[1]) { // positional argument (explicit)
-                    arg = argv[match[1]]
-                }
-                else { // positional argument (implicit)
-                    arg = argv[cursor++]
-                }
-
-                if (get_type(arg) == "function") {
-                    arg = arg()
-                }
-
-                if (re.not_string.test(match[8]) && re.not_json.test(match[8]) && (get_type(arg) != "number" && isNaN(arg))) {
-                    throw new TypeError(sprintf("[sprintf] expecting number but found %s", get_type(arg)))
-                }
-
-                if (re.number.test(match[8])) {
-                    is_positive = arg >= 0
-                }
-
-                switch (match[8]) {
-                    case "b":
-                        arg = arg.toString(2)
-                    break
-                    case "c":
-                        arg = String.fromCharCode(arg)
-                    break
-                    case "d":
-                    case "i":
-                        arg = parseInt(arg, 10)
-                    break
-                    case "j":
-                        arg = JSON.stringify(arg, null, match[6] ? parseInt(match[6]) : 0)
-                    break
-                    case "e":
-                        arg = match[7] ? arg.toExponential(match[7]) : arg.toExponential()
-                    break
-                    case "f":
-                        arg = match[7] ? parseFloat(arg).toFixed(match[7]) : parseFloat(arg)
-                    break
-                    case "g":
-                        arg = match[7] ? parseFloat(arg).toPrecision(match[7]) : parseFloat(arg)
-                    break
-                    case "o":
-                        arg = arg.toString(8)
-                    break
-                    case "s":
-                        arg = ((arg = String(arg)) && match[7] ? arg.substring(0, match[7]) : arg)
-                    break
-                    case "u":
-                        arg = arg >>> 0
-                    break
-                    case "x":
-                        arg = arg.toString(16)
-                    break
-                    case "X":
-                        arg = arg.toString(16).toUpperCase()
-                    break
-                }
-                if (re.json.test(match[8])) {
-                    output[output.length] = arg
-                }
-                else {
-                    if (re.number.test(match[8]) && (!is_positive || match[3])) {
-                        sign = is_positive ? "+" : "-"
-                        arg = arg.toString().replace(re.sign, "")
-                    }
-                    else {
-                        sign = ""
-                    }
-                    pad_character = match[4] ? match[4] === "0" ? "0" : match[4].charAt(1) : " "
-                    pad_length = match[6] - (sign + arg).length
-                    pad = match[6] ? (pad_length > 0 ? str_repeat(pad_character, pad_length) : "") : ""
-                    output[output.length] = match[5] ? sign + arg + pad : (pad_character === "0" ? sign + pad + arg : pad + sign + arg)
-                }
-            }
-        }
-        return output.join("")
-    }
-
-    sprintf.cache = {}
-
-    sprintf.parse = function(fmt) {
-        var _fmt = fmt, match = [], parse_tree = [], arg_names = 0
-        while (_fmt) {
-            if ((match = re.text.exec(_fmt)) !== null) {
-                parse_tree[parse_tree.length] = match[0]
-            }
-            else if ((match = re.modulo.exec(_fmt)) !== null) {
-                parse_tree[parse_tree.length] = "%"
-            }
-            else if ((match = re.placeholder.exec(_fmt)) !== null) {
-                if (match[2]) {
-                    arg_names |= 1
-                    var field_list = [], replacement_field = match[2], field_match = []
-                    if ((field_match = re.key.exec(replacement_field)) !== null) {
-                        field_list[field_list.length] = field_match[1]
-                        while ((replacement_field = replacement_field.substring(field_match[0].length)) !== "") {
-                            if ((field_match = re.key_access.exec(replacement_field)) !== null) {
-                                field_list[field_list.length] = field_match[1]
-                            }
-                            else if ((field_match = re.index_access.exec(replacement_field)) !== null) {
-                                field_list[field_list.length] = field_match[1]
-                            }
-                            else {
-                                throw new SyntaxError("[sprintf] failed to parse named argument key")
-                            }
-                        }
-                    }
-                    else {
-                        throw new SyntaxError("[sprintf] failed to parse named argument key")
-                    }
-                    match[2] = field_list
-                }
-                else {
-                    arg_names |= 2
-                }
-                if (arg_names === 3) {
-                    throw new Error("[sprintf] mixing positional and named placeholders is not (yet) supported")
-                }
-                parse_tree[parse_tree.length] = match
-            }
-            else {
-                throw new SyntaxError("[sprintf] unexpected placeholder")
-            }
-            _fmt = _fmt.substring(match[0].length)
-        }
-        return parse_tree
-    }
-
-    var vsprintf = function(fmt, argv, _argv) {
-        _argv = (argv || []).slice(0)
-        _argv.splice(0, 0, fmt)
-        return sprintf.apply(null, _argv)
-    }
-
-    /**
-     * helpers
-     */
-    function get_type(variable) {
-        return Object.prototype.toString.call(variable).slice(8, -1).toLowerCase()
-    }
-
-    function str_repeat(input, multiplier) {
-        return Array(multiplier + 1).join(input)
-    }
-
-    /**
-     * export to either browser or node.js
-     */
-    if (true) {
-        exports.sprintf = sprintf
-        exports.vsprintf = vsprintf
-    }
-    else {
-        window.sprintf = sprintf
-        window.vsprintf = vsprintf
-
-        if (typeof define === "function" && define.amd) {
-            define(function() {
-                return {
-                    sprintf: sprintf,
-                    vsprintf: vsprintf
-                }
-            })
-        }
-    }
-})(typeof window === "undefined" ? this : window);
-
-
-/***/ }),
-/* 62 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var gl10 = __webpack_require__(63)
-
-module.exports = function lookupConstant (number) {
-  return gl10[number]
-}
-
-
-/***/ }),
-/* 63 */
-/***/ (function(module, exports) {
-
-module.exports = {
-  0: 'NONE',
-  1: 'ONE',
-  2: 'LINE_LOOP',
-  3: 'LINE_STRIP',
-  4: 'TRIANGLES',
-  5: 'TRIANGLE_STRIP',
-  6: 'TRIANGLE_FAN',
-  256: 'DEPTH_BUFFER_BIT',
-  512: 'NEVER',
-  513: 'LESS',
-  514: 'EQUAL',
-  515: 'LEQUAL',
-  516: 'GREATER',
-  517: 'NOTEQUAL',
-  518: 'GEQUAL',
-  519: 'ALWAYS',
-  768: 'SRC_COLOR',
-  769: 'ONE_MINUS_SRC_COLOR',
-  770: 'SRC_ALPHA',
-  771: 'ONE_MINUS_SRC_ALPHA',
-  772: 'DST_ALPHA',
-  773: 'ONE_MINUS_DST_ALPHA',
-  774: 'DST_COLOR',
-  775: 'ONE_MINUS_DST_COLOR',
-  776: 'SRC_ALPHA_SATURATE',
-  1024: 'STENCIL_BUFFER_BIT',
-  1028: 'FRONT',
-  1029: 'BACK',
-  1032: 'FRONT_AND_BACK',
-  1280: 'INVALID_ENUM',
-  1281: 'INVALID_VALUE',
-  1282: 'INVALID_OPERATION',
-  1285: 'OUT_OF_MEMORY',
-  1286: 'INVALID_FRAMEBUFFER_OPERATION',
-  2304: 'CW',
-  2305: 'CCW',
-  2849: 'LINE_WIDTH',
-  2884: 'CULL_FACE',
-  2885: 'CULL_FACE_MODE',
-  2886: 'FRONT_FACE',
-  2928: 'DEPTH_RANGE',
-  2929: 'DEPTH_TEST',
-  2930: 'DEPTH_WRITEMASK',
-  2931: 'DEPTH_CLEAR_VALUE',
-  2932: 'DEPTH_FUNC',
-  2960: 'STENCIL_TEST',
-  2961: 'STENCIL_CLEAR_VALUE',
-  2962: 'STENCIL_FUNC',
-  2963: 'STENCIL_VALUE_MASK',
-  2964: 'STENCIL_FAIL',
-  2965: 'STENCIL_PASS_DEPTH_FAIL',
-  2966: 'STENCIL_PASS_DEPTH_PASS',
-  2967: 'STENCIL_REF',
-  2968: 'STENCIL_WRITEMASK',
-  2978: 'VIEWPORT',
-  3024: 'DITHER',
-  3042: 'BLEND',
-  3088: 'SCISSOR_BOX',
-  3089: 'SCISSOR_TEST',
-  3106: 'COLOR_CLEAR_VALUE',
-  3107: 'COLOR_WRITEMASK',
-  3317: 'UNPACK_ALIGNMENT',
-  3333: 'PACK_ALIGNMENT',
-  3379: 'MAX_TEXTURE_SIZE',
-  3386: 'MAX_VIEWPORT_DIMS',
-  3408: 'SUBPIXEL_BITS',
-  3410: 'RED_BITS',
-  3411: 'GREEN_BITS',
-  3412: 'BLUE_BITS',
-  3413: 'ALPHA_BITS',
-  3414: 'DEPTH_BITS',
-  3415: 'STENCIL_BITS',
-  3553: 'TEXTURE_2D',
-  4352: 'DONT_CARE',
-  4353: 'FASTEST',
-  4354: 'NICEST',
-  5120: 'BYTE',
-  5121: 'UNSIGNED_BYTE',
-  5122: 'SHORT',
-  5123: 'UNSIGNED_SHORT',
-  5124: 'INT',
-  5125: 'UNSIGNED_INT',
-  5126: 'FLOAT',
-  5386: 'INVERT',
-  5890: 'TEXTURE',
-  6401: 'STENCIL_INDEX',
-  6402: 'DEPTH_COMPONENT',
-  6406: 'ALPHA',
-  6407: 'RGB',
-  6408: 'RGBA',
-  6409: 'LUMINANCE',
-  6410: 'LUMINANCE_ALPHA',
-  7680: 'KEEP',
-  7681: 'REPLACE',
-  7682: 'INCR',
-  7683: 'DECR',
-  7936: 'VENDOR',
-  7937: 'RENDERER',
-  7938: 'VERSION',
-  9728: 'NEAREST',
-  9729: 'LINEAR',
-  9984: 'NEAREST_MIPMAP_NEAREST',
-  9985: 'LINEAR_MIPMAP_NEAREST',
-  9986: 'NEAREST_MIPMAP_LINEAR',
-  9987: 'LINEAR_MIPMAP_LINEAR',
-  10240: 'TEXTURE_MAG_FILTER',
-  10241: 'TEXTURE_MIN_FILTER',
-  10242: 'TEXTURE_WRAP_S',
-  10243: 'TEXTURE_WRAP_T',
-  10497: 'REPEAT',
-  10752: 'POLYGON_OFFSET_UNITS',
-  16384: 'COLOR_BUFFER_BIT',
-  32769: 'CONSTANT_COLOR',
-  32770: 'ONE_MINUS_CONSTANT_COLOR',
-  32771: 'CONSTANT_ALPHA',
-  32772: 'ONE_MINUS_CONSTANT_ALPHA',
-  32773: 'BLEND_COLOR',
-  32774: 'FUNC_ADD',
-  32777: 'BLEND_EQUATION_RGB',
-  32778: 'FUNC_SUBTRACT',
-  32779: 'FUNC_REVERSE_SUBTRACT',
-  32819: 'UNSIGNED_SHORT_4_4_4_4',
-  32820: 'UNSIGNED_SHORT_5_5_5_1',
-  32823: 'POLYGON_OFFSET_FILL',
-  32824: 'POLYGON_OFFSET_FACTOR',
-  32854: 'RGBA4',
-  32855: 'RGB5_A1',
-  32873: 'TEXTURE_BINDING_2D',
-  32926: 'SAMPLE_ALPHA_TO_COVERAGE',
-  32928: 'SAMPLE_COVERAGE',
-  32936: 'SAMPLE_BUFFERS',
-  32937: 'SAMPLES',
-  32938: 'SAMPLE_COVERAGE_VALUE',
-  32939: 'SAMPLE_COVERAGE_INVERT',
-  32968: 'BLEND_DST_RGB',
-  32969: 'BLEND_SRC_RGB',
-  32970: 'BLEND_DST_ALPHA',
-  32971: 'BLEND_SRC_ALPHA',
-  33071: 'CLAMP_TO_EDGE',
-  33170: 'GENERATE_MIPMAP_HINT',
-  33189: 'DEPTH_COMPONENT16',
-  33306: 'DEPTH_STENCIL_ATTACHMENT',
-  33635: 'UNSIGNED_SHORT_5_6_5',
-  33648: 'MIRRORED_REPEAT',
-  33901: 'ALIASED_POINT_SIZE_RANGE',
-  33902: 'ALIASED_LINE_WIDTH_RANGE',
-  33984: 'TEXTURE0',
-  33985: 'TEXTURE1',
-  33986: 'TEXTURE2',
-  33987: 'TEXTURE3',
-  33988: 'TEXTURE4',
-  33989: 'TEXTURE5',
-  33990: 'TEXTURE6',
-  33991: 'TEXTURE7',
-  33992: 'TEXTURE8',
-  33993: 'TEXTURE9',
-  33994: 'TEXTURE10',
-  33995: 'TEXTURE11',
-  33996: 'TEXTURE12',
-  33997: 'TEXTURE13',
-  33998: 'TEXTURE14',
-  33999: 'TEXTURE15',
-  34000: 'TEXTURE16',
-  34001: 'TEXTURE17',
-  34002: 'TEXTURE18',
-  34003: 'TEXTURE19',
-  34004: 'TEXTURE20',
-  34005: 'TEXTURE21',
-  34006: 'TEXTURE22',
-  34007: 'TEXTURE23',
-  34008: 'TEXTURE24',
-  34009: 'TEXTURE25',
-  34010: 'TEXTURE26',
-  34011: 'TEXTURE27',
-  34012: 'TEXTURE28',
-  34013: 'TEXTURE29',
-  34014: 'TEXTURE30',
-  34015: 'TEXTURE31',
-  34016: 'ACTIVE_TEXTURE',
-  34024: 'MAX_RENDERBUFFER_SIZE',
-  34041: 'DEPTH_STENCIL',
-  34055: 'INCR_WRAP',
-  34056: 'DECR_WRAP',
-  34067: 'TEXTURE_CUBE_MAP',
-  34068: 'TEXTURE_BINDING_CUBE_MAP',
-  34069: 'TEXTURE_CUBE_MAP_POSITIVE_X',
-  34070: 'TEXTURE_CUBE_MAP_NEGATIVE_X',
-  34071: 'TEXTURE_CUBE_MAP_POSITIVE_Y',
-  34072: 'TEXTURE_CUBE_MAP_NEGATIVE_Y',
-  34073: 'TEXTURE_CUBE_MAP_POSITIVE_Z',
-  34074: 'TEXTURE_CUBE_MAP_NEGATIVE_Z',
-  34076: 'MAX_CUBE_MAP_TEXTURE_SIZE',
-  34338: 'VERTEX_ATTRIB_ARRAY_ENABLED',
-  34339: 'VERTEX_ATTRIB_ARRAY_SIZE',
-  34340: 'VERTEX_ATTRIB_ARRAY_STRIDE',
-  34341: 'VERTEX_ATTRIB_ARRAY_TYPE',
-  34342: 'CURRENT_VERTEX_ATTRIB',
-  34373: 'VERTEX_ATTRIB_ARRAY_POINTER',
-  34466: 'NUM_COMPRESSED_TEXTURE_FORMATS',
-  34467: 'COMPRESSED_TEXTURE_FORMATS',
-  34660: 'BUFFER_SIZE',
-  34661: 'BUFFER_USAGE',
-  34816: 'STENCIL_BACK_FUNC',
-  34817: 'STENCIL_BACK_FAIL',
-  34818: 'STENCIL_BACK_PASS_DEPTH_FAIL',
-  34819: 'STENCIL_BACK_PASS_DEPTH_PASS',
-  34877: 'BLEND_EQUATION_ALPHA',
-  34921: 'MAX_VERTEX_ATTRIBS',
-  34922: 'VERTEX_ATTRIB_ARRAY_NORMALIZED',
-  34930: 'MAX_TEXTURE_IMAGE_UNITS',
-  34962: 'ARRAY_BUFFER',
-  34963: 'ELEMENT_ARRAY_BUFFER',
-  34964: 'ARRAY_BUFFER_BINDING',
-  34965: 'ELEMENT_ARRAY_BUFFER_BINDING',
-  34975: 'VERTEX_ATTRIB_ARRAY_BUFFER_BINDING',
-  35040: 'STREAM_DRAW',
-  35044: 'STATIC_DRAW',
-  35048: 'DYNAMIC_DRAW',
-  35632: 'FRAGMENT_SHADER',
-  35633: 'VERTEX_SHADER',
-  35660: 'MAX_VERTEX_TEXTURE_IMAGE_UNITS',
-  35661: 'MAX_COMBINED_TEXTURE_IMAGE_UNITS',
-  35663: 'SHADER_TYPE',
-  35664: 'FLOAT_VEC2',
-  35665: 'FLOAT_VEC3',
-  35666: 'FLOAT_VEC4',
-  35667: 'INT_VEC2',
-  35668: 'INT_VEC3',
-  35669: 'INT_VEC4',
-  35670: 'BOOL',
-  35671: 'BOOL_VEC2',
-  35672: 'BOOL_VEC3',
-  35673: 'BOOL_VEC4',
-  35674: 'FLOAT_MAT2',
-  35675: 'FLOAT_MAT3',
-  35676: 'FLOAT_MAT4',
-  35678: 'SAMPLER_2D',
-  35680: 'SAMPLER_CUBE',
-  35712: 'DELETE_STATUS',
-  35713: 'COMPILE_STATUS',
-  35714: 'LINK_STATUS',
-  35715: 'VALIDATE_STATUS',
-  35716: 'INFO_LOG_LENGTH',
-  35717: 'ATTACHED_SHADERS',
-  35718: 'ACTIVE_UNIFORMS',
-  35719: 'ACTIVE_UNIFORM_MAX_LENGTH',
-  35720: 'SHADER_SOURCE_LENGTH',
-  35721: 'ACTIVE_ATTRIBUTES',
-  35722: 'ACTIVE_ATTRIBUTE_MAX_LENGTH',
-  35724: 'SHADING_LANGUAGE_VERSION',
-  35725: 'CURRENT_PROGRAM',
-  36003: 'STENCIL_BACK_REF',
-  36004: 'STENCIL_BACK_VALUE_MASK',
-  36005: 'STENCIL_BACK_WRITEMASK',
-  36006: 'FRAMEBUFFER_BINDING',
-  36007: 'RENDERBUFFER_BINDING',
-  36048: 'FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE',
-  36049: 'FRAMEBUFFER_ATTACHMENT_OBJECT_NAME',
-  36050: 'FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL',
-  36051: 'FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE',
-  36053: 'FRAMEBUFFER_COMPLETE',
-  36054: 'FRAMEBUFFER_INCOMPLETE_ATTACHMENT',
-  36055: 'FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT',
-  36057: 'FRAMEBUFFER_INCOMPLETE_DIMENSIONS',
-  36061: 'FRAMEBUFFER_UNSUPPORTED',
-  36064: 'COLOR_ATTACHMENT0',
-  36096: 'DEPTH_ATTACHMENT',
-  36128: 'STENCIL_ATTACHMENT',
-  36160: 'FRAMEBUFFER',
-  36161: 'RENDERBUFFER',
-  36162: 'RENDERBUFFER_WIDTH',
-  36163: 'RENDERBUFFER_HEIGHT',
-  36164: 'RENDERBUFFER_INTERNAL_FORMAT',
-  36168: 'STENCIL_INDEX8',
-  36176: 'RENDERBUFFER_RED_SIZE',
-  36177: 'RENDERBUFFER_GREEN_SIZE',
-  36178: 'RENDERBUFFER_BLUE_SIZE',
-  36179: 'RENDERBUFFER_ALPHA_SIZE',
-  36180: 'RENDERBUFFER_DEPTH_SIZE',
-  36181: 'RENDERBUFFER_STENCIL_SIZE',
-  36194: 'RGB565',
-  36336: 'LOW_FLOAT',
-  36337: 'MEDIUM_FLOAT',
-  36338: 'HIGH_FLOAT',
-  36339: 'LOW_INT',
-  36340: 'MEDIUM_INT',
-  36341: 'HIGH_INT',
-  36346: 'SHADER_COMPILER',
-  36347: 'MAX_VERTEX_UNIFORM_VECTORS',
-  36348: 'MAX_VARYING_VECTORS',
-  36349: 'MAX_FRAGMENT_UNIFORM_VECTORS',
-  37440: 'UNPACK_FLIP_Y_WEBGL',
-  37441: 'UNPACK_PREMULTIPLY_ALPHA_WEBGL',
-  37442: 'CONTEXT_LOST_WEBGL',
-  37443: 'UNPACK_COLORSPACE_CONVERSION_WEBGL',
-  37444: 'BROWSER_DEFAULT_WEBGL'
-}
-
-
-/***/ }),
-/* 64 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var tokenize = __webpack_require__(65)
-var atob     = __webpack_require__(70)
-
-module.exports = getName
-
-function getName(src) {
-  var tokens = Array.isArray(src)
-    ? src
-    : tokenize(src)
-
-  for (var i = 0; i < tokens.length; i++) {
-    var token = tokens[i]
-    if (token.type !== 'preprocessor') continue
-    var match = token.data.match(/\#define\s+SHADER_NAME(_B64)?\s+(.+)$/)
-    if (!match) continue
-    if (!match[2]) continue
-
-    var b64  = match[1]
-    var name = match[2]
-
-    return (b64 ? atob(name) : name).trim()
-  }
-}
-
-
-/***/ }),
-/* 65 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var tokenize = __webpack_require__(66)
-
-module.exports = tokenizeString
-
-function tokenizeString(str, opt) {
-  var generator = tokenize(opt)
-  var tokens = []
-
-  tokens = tokens.concat(generator(str))
-  tokens = tokens.concat(generator(null))
-
-  return tokens
-}
-
-
-/***/ }),
-/* 66 */
-/***/ (function(module, exports, __webpack_require__) {
-
-module.exports = tokenize
-
-var literals100 = __webpack_require__(16)
-  , operators = __webpack_require__(67)
-  , builtins100 = __webpack_require__(17)
-  , literals300es = __webpack_require__(68)
-  , builtins300es = __webpack_require__(69)
-
-var NORMAL = 999          // <-- never emitted
-  , TOKEN = 9999          // <-- never emitted
-  , BLOCK_COMMENT = 0
-  , LINE_COMMENT = 1
-  , PREPROCESSOR = 2
-  , OPERATOR = 3
-  , INTEGER = 4
-  , FLOAT = 5
-  , IDENT = 6
-  , BUILTIN = 7
-  , KEYWORD = 8
-  , WHITESPACE = 9
-  , EOF = 10
-  , HEX = 11
-
-var map = [
-    'block-comment'
-  , 'line-comment'
-  , 'preprocessor'
-  , 'operator'
-  , 'integer'
-  , 'float'
-  , 'ident'
-  , 'builtin'
-  , 'keyword'
-  , 'whitespace'
-  , 'eof'
-  , 'integer'
-]
-
-function tokenize(opt) {
-  var i = 0
-    , total = 0
-    , mode = NORMAL
-    , c
-    , last
-    , content = []
-    , tokens = []
-    , token_idx = 0
-    , token_offs = 0
-    , line = 1
-    , col = 0
-    , start = 0
-    , isnum = false
-    , isoperator = false
-    , input = ''
-    , len
-
-  opt = opt || {}
-  var allBuiltins = builtins100
-  var allLiterals = literals100
-  if (opt.version === '300 es') {
-    allBuiltins = builtins300es
-    allLiterals = literals300es
-  }
-
-  return function(data) {
-    tokens = []
-    if (data !== null) return write(data.replace ? data.replace(/\r\n/g, '\n') : data)
-    return end()
-  }
-
-  function token(data) {
-    if (data.length) {
-      tokens.push({
-        type: map[mode]
-      , data: data
-      , position: start
-      , line: line
-      , column: col
-      })
-    }
-  }
-
-  function write(chunk) {
-    i = 0
-    input += chunk
-    len = input.length
-
-    var last
-
-    while(c = input[i], i < len) {
-      last = i
-
-      switch(mode) {
-        case BLOCK_COMMENT: i = block_comment(); break
-        case LINE_COMMENT: i = line_comment(); break
-        case PREPROCESSOR: i = preprocessor(); break
-        case OPERATOR: i = operator(); break
-        case INTEGER: i = integer(); break
-        case HEX: i = hex(); break
-        case FLOAT: i = decimal(); break
-        case TOKEN: i = readtoken(); break
-        case WHITESPACE: i = whitespace(); break
-        case NORMAL: i = normal(); break
-      }
-
-      if(last !== i) {
-        switch(input[last]) {
-          case '\n': col = 0; ++line; break
-          default: ++col; break
-        }
-      }
-    }
-
-    total += i
-    input = input.slice(i)
-    return tokens
-  }
-
-  function end(chunk) {
-    if(content.length) {
-      token(content.join(''))
-    }
-
-    mode = EOF
-    token('(eof)')
-    return tokens
-  }
-
-  function normal() {
-    content = content.length ? [] : content
-
-    if(last === '/' && c === '*') {
-      start = total + i - 1
-      mode = BLOCK_COMMENT
-      last = c
-      return i + 1
-    }
-
-    if(last === '/' && c === '/') {
-      start = total + i - 1
-      mode = LINE_COMMENT
-      last = c
-      return i + 1
-    }
-
-    if(c === '#') {
-      mode = PREPROCESSOR
-      start = total + i
-      return i
-    }
-
-    if(/\s/.test(c)) {
-      mode = WHITESPACE
-      start = total + i
-      return i
-    }
-
-    isnum = /\d/.test(c)
-    isoperator = /[^\w_]/.test(c)
-
-    start = total + i
-    mode = isnum ? INTEGER : isoperator ? OPERATOR : TOKEN
-    return i
-  }
-
-  function whitespace() {
-    if(/[^\s]/g.test(c)) {
-      token(content.join(''))
-      mode = NORMAL
-      return i
-    }
-    content.push(c)
-    last = c
-    return i + 1
-  }
-
-  function preprocessor() {
-    if((c === '\r' || c === '\n') && last !== '\\') {
-      token(content.join(''))
-      mode = NORMAL
-      return i
-    }
-    content.push(c)
-    last = c
-    return i + 1
-  }
-
-  function line_comment() {
-    return preprocessor()
-  }
-
-  function block_comment() {
-    if(c === '/' && last === '*') {
-      content.push(c)
-      token(content.join(''))
-      mode = NORMAL
-      return i + 1
-    }
-
-    content.push(c)
-    last = c
-    return i + 1
-  }
-
-  function operator() {
-    if(last === '.' && /\d/.test(c)) {
-      mode = FLOAT
-      return i
-    }
-
-    if(last === '/' && c === '*') {
-      mode = BLOCK_COMMENT
-      return i
-    }
-
-    if(last === '/' && c === '/') {
-      mode = LINE_COMMENT
-      return i
-    }
-
-    if(c === '.' && content.length) {
-      while(determine_operator(content));
-
-      mode = FLOAT
-      return i
-    }
-
-    if(c === ';' || c === ')' || c === '(') {
-      if(content.length) while(determine_operator(content));
-      token(c)
-      mode = NORMAL
-      return i + 1
-    }
-
-    var is_composite_operator = content.length === 2 && c !== '='
-    if(/[\w_\d\s]/.test(c) || is_composite_operator) {
-      while(determine_operator(content));
-      mode = NORMAL
-      return i
-    }
-
-    content.push(c)
-    last = c
-    return i + 1
-  }
-
-  function determine_operator(buf) {
-    var j = 0
-      , idx
-      , res
-
-    do {
-      idx = operators.indexOf(buf.slice(0, buf.length + j).join(''))
-      res = operators[idx]
-
-      if(idx === -1) {
-        if(j-- + buf.length > 0) continue
-        res = buf.slice(0, 1).join('')
-      }
-
-      token(res)
-
-      start += res.length
-      content = content.slice(res.length)
-      return content.length
-    } while(1)
-  }
-
-  function hex() {
-    if(/[^a-fA-F0-9]/.test(c)) {
-      token(content.join(''))
-      mode = NORMAL
-      return i
-    }
-
-    content.push(c)
-    last = c
-    return i + 1
-  }
-
-  function integer() {
-    if(c === '.') {
-      content.push(c)
-      mode = FLOAT
-      last = c
-      return i + 1
-    }
-
-    if(/[eE]/.test(c)) {
-      content.push(c)
-      mode = FLOAT
-      last = c
-      return i + 1
-    }
-
-    if(c === 'x' && content.length === 1 && content[0] === '0') {
-      mode = HEX
-      content.push(c)
-      last = c
-      return i + 1
-    }
-
-    if(/[^\d]/.test(c)) {
-      token(content.join(''))
-      mode = NORMAL
-      return i
-    }
-
-    content.push(c)
-    last = c
-    return i + 1
-  }
-
-  function decimal() {
-    if(c === 'f') {
-      content.push(c)
-      last = c
-      i += 1
-    }
-
-    if(/[eE]/.test(c)) {
-      content.push(c)
-      last = c
-      return i + 1
-    }
-
-    if (c === '-' && /[eE]/.test(last)) {
-      content.push(c)
-      last = c
-      return i + 1
-    }
-
-    if(/[^\d]/.test(c)) {
-      token(content.join(''))
-      mode = NORMAL
-      return i
-    }
-
-    content.push(c)
-    last = c
-    return i + 1
-  }
-
-  function readtoken() {
-    if(/[^\d\w_]/.test(c)) {
-      var contentstr = content.join('')
-      if(allLiterals.indexOf(contentstr) > -1) {
-        mode = KEYWORD
-      } else if(allBuiltins.indexOf(contentstr) > -1) {
-        mode = BUILTIN
-      } else {
-        mode = IDENT
-      }
-      token(content.join(''))
-      mode = NORMAL
-      return i
-    }
-    content.push(c)
-    last = c
-    return i + 1
-  }
-}
-
-
-/***/ }),
-/* 67 */
-/***/ (function(module, exports) {
-
-module.exports = [
-    '<<='
-  , '>>='
-  , '++'
-  , '--'
-  , '<<'
-  , '>>'
-  , '<='
-  , '>='
-  , '=='
-  , '!='
-  , '&&'
-  , '||'
-  , '+='
-  , '-='
-  , '*='
-  , '/='
-  , '%='
-  , '&='
-  , '^^'
-  , '^='
-  , '|='
-  , '('
-  , ')'
-  , '['
-  , ']'
-  , '.'
-  , '!'
-  , '~'
-  , '*'
-  , '/'
-  , '%'
-  , '+'
-  , '-'
-  , '<'
-  , '>'
-  , '&'
-  , '^'
-  , '|'
-  , '?'
-  , ':'
-  , '='
-  , ','
-  , ';'
-  , '{'
-  , '}'
-]
-
-
-/***/ }),
-/* 68 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var v100 = __webpack_require__(16)
-
-module.exports = v100.slice().concat([
-   'layout'
-  , 'centroid'
-  , 'smooth'
-  , 'case'
-  , 'mat2x2'
-  , 'mat2x3'
-  , 'mat2x4'
-  , 'mat3x2'
-  , 'mat3x3'
-  , 'mat3x4'
-  , 'mat4x2'
-  , 'mat4x3'
-  , 'mat4x4'
-  , 'uint'
-  , 'uvec2'
-  , 'uvec3'
-  , 'uvec4'
-  , 'samplerCubeShadow'
-  , 'sampler2DArray'
-  , 'sampler2DArrayShadow'
-  , 'isampler2D'
-  , 'isampler3D'
-  , 'isamplerCube'
-  , 'isampler2DArray'
-  , 'usampler2D'
-  , 'usampler3D'
-  , 'usamplerCube'
-  , 'usampler2DArray'
-  , 'coherent'
-  , 'restrict'
-  , 'readonly'
-  , 'writeonly'
-  , 'resource'
-  , 'atomic_uint'
-  , 'noperspective'
-  , 'patch'
-  , 'sample'
-  , 'subroutine'
-  , 'common'
-  , 'partition'
-  , 'active'
-  , 'filter'
-  , 'image1D'
-  , 'image2D'
-  , 'image3D'
-  , 'imageCube'
-  , 'iimage1D'
-  , 'iimage2D'
-  , 'iimage3D'
-  , 'iimageCube'
-  , 'uimage1D'
-  , 'uimage2D'
-  , 'uimage3D'
-  , 'uimageCube'
-  , 'image1DArray'
-  , 'image2DArray'
-  , 'iimage1DArray'
-  , 'iimage2DArray'
-  , 'uimage1DArray'
-  , 'uimage2DArray'
-  , 'image1DShadow'
-  , 'image2DShadow'
-  , 'image1DArrayShadow'
-  , 'image2DArrayShadow'
-  , 'imageBuffer'
-  , 'iimageBuffer'
-  , 'uimageBuffer'
-  , 'sampler1DArray'
-  , 'sampler1DArrayShadow'
-  , 'isampler1D'
-  , 'isampler1DArray'
-  , 'usampler1D'
-  , 'usampler1DArray'
-  , 'isampler2DRect'
-  , 'usampler2DRect'
-  , 'samplerBuffer'
-  , 'isamplerBuffer'
-  , 'usamplerBuffer'
-  , 'sampler2DMS'
-  , 'isampler2DMS'
-  , 'usampler2DMS'
-  , 'sampler2DMSArray'
-  , 'isampler2DMSArray'
-  , 'usampler2DMSArray'
-])
-
-
-/***/ }),
-/* 69 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// 300es builtins/reserved words that were previously valid in v100
-var v100 = __webpack_require__(17)
-
-// The texture2D|Cube functions have been removed
-// And the gl_ features are updated
-v100 = v100.slice().filter(function (b) {
-  return !/^(gl\_|texture)/.test(b)
-})
-
-module.exports = v100.concat([
-  // the updated gl_ constants
-    'gl_VertexID'
-  , 'gl_InstanceID'
-  , 'gl_Position'
-  , 'gl_PointSize'
-  , 'gl_FragCoord'
-  , 'gl_FrontFacing'
-  , 'gl_FragDepth'
-  , 'gl_PointCoord'
-  , 'gl_MaxVertexAttribs'
-  , 'gl_MaxVertexUniformVectors'
-  , 'gl_MaxVertexOutputVectors'
-  , 'gl_MaxFragmentInputVectors'
-  , 'gl_MaxVertexTextureImageUnits'
-  , 'gl_MaxCombinedTextureImageUnits'
-  , 'gl_MaxTextureImageUnits'
-  , 'gl_MaxFragmentUniformVectors'
-  , 'gl_MaxDrawBuffers'
-  , 'gl_MinProgramTexelOffset'
-  , 'gl_MaxProgramTexelOffset'
-  , 'gl_DepthRangeParameters'
-  , 'gl_DepthRange'
-
-  // other builtins
-  , 'trunc'
-  , 'round'
-  , 'roundEven'
-  , 'isnan'
-  , 'isinf'
-  , 'floatBitsToInt'
-  , 'floatBitsToUint'
-  , 'intBitsToFloat'
-  , 'uintBitsToFloat'
-  , 'packSnorm2x16'
-  , 'unpackSnorm2x16'
-  , 'packUnorm2x16'
-  , 'unpackUnorm2x16'
-  , 'packHalf2x16'
-  , 'unpackHalf2x16'
-  , 'outerProduct'
-  , 'transpose'
-  , 'determinant'
-  , 'inverse'
-  , 'texture'
-  , 'textureSize'
-  , 'textureProj'
-  , 'textureLod'
-  , 'textureOffset'
-  , 'texelFetch'
-  , 'texelFetchOffset'
-  , 'textureProjOffset'
-  , 'textureLodOffset'
-  , 'textureProjLod'
-  , 'textureProjLodOffset'
-  , 'textureGrad'
-  , 'textureGradOffset'
-  , 'textureProjGrad'
-  , 'textureProjGradOffset'
-])
-
-
-/***/ }),
-/* 70 */
-/***/ (function(module, exports) {
-
-module.exports = function _atob(str) {
-  return atob(str)
-}
-
-
-/***/ }),
-/* 71 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var padLeft = __webpack_require__(72)
-
-module.exports = addLineNumbers
-function addLineNumbers (string, start, delim) {
-  start = typeof start === 'number' ? start : 1
-  delim = delim || ': '
-
-  var lines = string.split(/\r?\n/)
-  var totalDigits = String(lines.length + start - 1).length
-  return lines.map(function (line, i) {
-    var c = i + start
-    var digits = String(c).length
-    var prefix = padLeft(c, totalDigits - digits)
-    return prefix + delim + line
-  }).join('\n')
-}
-
-
-/***/ }),
-/* 72 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-/*!
- * pad-left <https://github.com/jonschlinkert/pad-left>
- *
- * Copyright (c) 2014-2015, Jon Schlinkert.
- * Licensed under the MIT license.
- */
-
-
-
-var repeat = __webpack_require__(73);
-
-module.exports = function padLeft(str, num, ch) {
-  ch = typeof ch !== 'undefined' ? (ch + '') : ' ';
-  return repeat(ch, num) + str;
-};
-
-/***/ }),
-/* 73 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-/*!
- * repeat-string <https://github.com/jonschlinkert/repeat-string>
- *
- * Copyright (c) 2014-2015, Jon Schlinkert.
- * Licensed under the MIT License.
- */
-
-
-
-/**
- * Results cache
- */
-
-var res = '';
-var cache;
-
-/**
- * Expose `repeat`
- */
-
-module.exports = repeat;
-
-/**
- * Repeat the given `string` the specified `number`
- * of times.
- *
- * **Example:**
- *
- * ```js
- * var repeat = require('repeat-string');
- * repeat('A', 5);
- * //=> AAAAA
- * ```
- *
- * @param {String} `string` The string to repeat
- * @param {Number} `number` The number of times to repeat the string
- * @return {String} Repeated string
- * @api public
- */
-
-function repeat(str, num) {
-  if (typeof str !== 'string') {
-    throw new TypeError('expected a string');
-  }
-
-  // cover common, quick use cases
-  if (num === 1) return str;
-  if (num === 2) return str + str;
-
-  var max = str.length * num;
-  if (cache !== str || typeof cache === 'undefined') {
-    cache = str;
-    res = '';
-  } else if (res.length >= max) {
-    return res.substr(0, max);
-  }
-
-  while (max > res.length && num > 1) {
-    if (num & 1) {
-      res += str;
-    }
-
-    num >>= 1;
-    str += str;
-  }
-
-  res += str;
-  res = res.substr(0, max);
-  return res;
-}
-
-
-/***/ }),
-/* 74 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// Original - @Gozola.
-// https://gist.github.com/Gozala/1269991
-// This is a reimplemented version (with a few bug fixes).
-
-var createStore = __webpack_require__(75);
-
-module.exports = weakMap;
-
-function weakMap() {
-    var privates = createStore();
-
-    return {
-        'get': function (key, fallback) {
-            var store = privates(key)
-            return store.hasOwnProperty('value') ?
-                store.value : fallback
-        },
-        'set': function (key, value) {
-            privates(key).value = value;
-            return this;
-        },
-        'has': function(key) {
-            return 'value' in privates(key);
-        },
-        'delete': function (key) {
-            return delete privates(key).value;
-        }
-    }
-}
-
-
-/***/ }),
-/* 75 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var hiddenStore = __webpack_require__(76);
-
-module.exports = createStore;
-
-function createStore() {
-    var key = {};
-
-    return function (obj) {
-        if ((typeof obj !== 'object' || obj === null) &&
-            typeof obj !== 'function'
-        ) {
-            throw new Error('Weakmap-shim: Key must be object')
-        }
-
-        var store = obj.valueOf(key);
-        return store && store.identity === key ?
-            store : hiddenStore(obj, key);
-    };
-}
-
-
-/***/ }),
 /* 76 */
-/***/ (function(module, exports) {
-
-module.exports = hiddenStore;
-
-function hiddenStore(obj, key) {
-    var store = { identity: key };
-    var valueOf = obj.valueOf;
-
-    Object.defineProperty(obj, "valueOf", {
-        value: function (value) {
-            return value !== key ?
-                valueOf.apply(this, arguments) : store;
-        },
-        writable: true
-    });
-
-    return store;
-}
-
-
-/***/ }),
-/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-exports.uniforms    = runtimeUniforms
-exports.attributes  = runtimeAttributes
-
-var GL_TO_GLSL_TYPES = {
-  'FLOAT':       'float',
-  'FLOAT_VEC2':  'vec2',
-  'FLOAT_VEC3':  'vec3',
-  'FLOAT_VEC4':  'vec4',
-  'INT':         'int',
-  'INT_VEC2':    'ivec2',
-  'INT_VEC3':    'ivec3',
-  'INT_VEC4':    'ivec4',
-  'BOOL':        'bool',
-  'BOOL_VEC2':   'bvec2',
-  'BOOL_VEC3':   'bvec3',
-  'BOOL_VEC4':   'bvec4',
-  'FLOAT_MAT2':  'mat2',
-  'FLOAT_MAT3':  'mat3',
-  'FLOAT_MAT4':  'mat4',
-  'SAMPLER_2D':  'sampler2D',
-  'SAMPLER_CUBE':'samplerCube'
-}
-
-var GL_TABLE = null
-
-function getType(gl, type) {
-  if(!GL_TABLE) {
-    var typeNames = Object.keys(GL_TO_GLSL_TYPES)
-    GL_TABLE = {}
-    for(var i=0; i<typeNames.length; ++i) {
-      var tn = typeNames[i]
-      GL_TABLE[gl[tn]] = GL_TO_GLSL_TYPES[tn]
-    }
-  }
-  return GL_TABLE[type]
-}
-
-function runtimeUniforms(gl, program) {
-  var numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS)
-  var result = []
-  for(var i=0; i<numUniforms; ++i) {
-    var info = gl.getActiveUniform(program, i)
-    if(info) {
-      var type = getType(gl, info.type)
-      if(info.size > 1) {
-        for(var j=0; j<info.size; ++j) {
-          result.push({
-            name: info.name.replace('[0]', '[' + j + ']'),
-            type: type
-          })
-        }
-      } else {
-        result.push({
-          name: info.name,
-          type: type
-        })
-      }
-    }
-  }
-  return result
-}
-
-function runtimeAttributes(gl, program) {
-  var numAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES)
-  var result = []
-  for(var i=0; i<numAttributes; ++i) {
-    var info = gl.getActiveAttrib(program, i)
-    if(info) {
-      result.push({
-        name: info.name,
-        type: getType(gl, info.type)
-      })
-    }
-  }
-  return result
-}
-
-
-/***/ }),
-/* 78 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var createVAONative = __webpack_require__(79)
-var createVAOEmulated = __webpack_require__(80)
+var createVAONative = __webpack_require__(77)
+var createVAOEmulated = __webpack_require__(78)
 
 function ExtensionShim (gl) {
   this.bindVertexArrayOES = gl.bindVertexArray.bind(gl)
@@ -15606,7 +15319,7 @@ module.exports = createVAO
 
 
 /***/ }),
-/* 79 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15699,7 +15412,7 @@ function createVAONative(gl, ext) {
 module.exports = createVAONative
 
 /***/ }),
-/* 80 */
+/* 78 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15744,16 +15457,16 @@ function createVAOEmulated(gl) {
 module.exports = createVAOEmulated
 
 /***/ }),
-/* 81 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var monotoneTriangulate = __webpack_require__(82)
-var makeIndex = __webpack_require__(85)
-var delaunayFlip = __webpack_require__(86)
-var filterTriangulation = __webpack_require__(88)
+var monotoneTriangulate = __webpack_require__(80)
+var makeIndex = __webpack_require__(83)
+var delaunayFlip = __webpack_require__(84)
+var filterTriangulation = __webpack_require__(86)
 
 module.exports = cdt2d
 
@@ -15833,14 +15546,14 @@ function cdt2d(points, edges, options) {
 
 
 /***/ }),
-/* 82 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bsearch = __webpack_require__(3)
-var orient = __webpack_require__(83)[3]
+var bsearch = __webpack_require__(4)
+var orient = __webpack_require__(81)[3]
 
 var EVENT_POINT = 0
 var EVENT_END   = 1
@@ -16027,7 +15740,7 @@ function monotoneTriangulate(points, edges) {
 
 
 /***/ }),
-/* 83 */
+/* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16223,7 +15936,7 @@ function generateOrientationProc() {
 generateOrientationProc()
 
 /***/ }),
-/* 84 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16246,13 +15959,13 @@ function fastTwoSum(a, b, result) {
 }
 
 /***/ }),
-/* 85 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bsearch = __webpack_require__(3)
+var bsearch = __webpack_require__(4)
 
 module.exports = createTriangulation
 
@@ -16357,14 +16070,14 @@ function createTriangulation(numVerts, edges) {
 
 
 /***/ }),
-/* 86 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var inCircle = __webpack_require__(87)[4]
-var bsearch = __webpack_require__(3)
+var inCircle = __webpack_require__(85)[4]
+var bsearch = __webpack_require__(4)
 
 module.exports = delaunayRefine
 
@@ -16479,7 +16192,7 @@ function delaunayRefine(points, triangulation) {
 
 
 /***/ }),
-/* 87 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16652,13 +16365,13 @@ function generateInSphereTest() {
 generateInSphereTest()
 
 /***/ }),
-/* 88 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bsearch = __webpack_require__(3)
+var bsearch = __webpack_require__(4)
 
 module.exports = classifyFaces
 
@@ -16839,81 +16552,13 @@ function classifyFaces(triangulation, target, infinity) {
 
 
 /***/ }),
-/* 89 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const createShader = __webpack_require__(14);
-
-module.exports = function (gl) {
-  return {
-    path: function () {
-      const shader = createShader(gl, `
-precision mediump float;
-
-attribute vec2 position;
-attribute vec2 normal;
-attribute float miter;
-attribute float thickness;
-uniform mat4 transform;
-
-void main() {
-  vec2 pos = position + vec2(normal * thickness / 2.0 * sign(miter));
-  gl_Position = transform * vec4(pos, 0.0, 1.0);
-}
-        `, `
-precision highp float;
-
-uniform vec4 color;
-
-void main() {
-  gl_FragColor = color;
-}
-        `);
-
-      shader.bind();
-      shader.attributes.position.location = 0;
-      shader.attributes.normal.location = 1;
-      shader.attributes.miter.location = 2;
-      shader.attributes.thickness.location = 3;
-
-      return shader;
-    }(),
-    pathFill: function () {
-      const shader = createShader(gl, `
-precision mediump float;
-
-attribute vec2 position;
-uniform mat4 transform;
-
-void main() {
-  gl_Position = transform * vec4(position, 0.0, 1.0);
-}
-      `, `
-precision highp float;
-
-uniform vec4 color;
-
-void main() {
-  gl_FragColor = color;
-}
-      `);
-
-      shader.bind();
-      shader.attributes.position.location = 0;
-
-      return shader;
-    }()
-  };
-};
-
-/***/ }),
-/* 90 */
-/***/ (function(module, exports, __webpack_require__) {
-
-const arc = __webpack_require__(91);
+const arc = __webpack_require__(88);
 const Path = __webpack_require__(6);
-const Color = __webpack_require__(4);
-const Brush = __webpack_require__(29);
+const Color = __webpack_require__(3);
+const Brush = __webpack_require__(89);
 
 module.exports = class Editor {
   constructor(canvas) {
@@ -17088,7 +16733,7 @@ module.exports = class Editor {
 };
 
 /***/ }),
-/* 91 */
+/* 88 */
 /***/ (function(module, exports) {
 
 //if 'steps' is not specified, we'll just approximate it
@@ -17138,7 +16783,86 @@ module.exports = function arc(x, y, radius, start, end, clockwise, steps, path) 
 }
 
 /***/ }),
-/* 92 */
+/* 89 */
+/***/ (function(module, exports, __webpack_require__) {
+
+const Tool = __webpack_require__(90);
+const PathFitter = __webpack_require__(91);
+const Path = __webpack_require__(6);
+const Color = __webpack_require__(3);
+
+module.exports = class Brush extends Tool {
+  constructor(...args) {
+    super(...args);
+
+    this.size = 10;
+
+    this.points = [];
+  }
+
+  stroke() {
+    let pathFitter = new PathFitter(this.points.map(x => [x.x, x.y]));
+    let segments = pathFitter.fit(2); // TODO: weighted by time?
+
+    let path = new Path();
+    path.stroke = new Color(0, 0, 0, 1);
+
+    let lastSegment = null;
+    for (let segment of segments) {
+      if ((!lastSegment || !lastSegment.handleOutLength()) && !segment.handleInLength()) {
+        // line from last segment to this one is straight
+        path.data.push(new Path.Command(0x20, ...segment.point));
+      } else if (lastSegment) {
+        // cubic bezier curve
+
+        // get absolute handle out & in
+        let handleOut = lastSegment.handleOut.map((x, i) => x + lastSegment.point[i]);
+        let handleIn = segment.handleIn.map((x, i) => x + segment.point[i]);
+
+        path.data.push(new Path.Command(0x30, ...handleOut, ...handleIn, ...segment.point));
+      } else {
+        path.data.push(new Path.Command(0x10, ...segment.point));
+      }
+
+      lastSegment = segment;
+    }
+
+    // TODO: don't do the following
+    // copy width data to simplified path
+    let length = 0;
+    let lastPoint = null;
+    for (let point of this.points) {
+      if (lastPoint) {
+        length += Math.hypot(point.x - lastPoint.x, point.y - lastPoint.y);
+      }
+      lastPoint = point;
+      path.data.push(new Path.Command(0x60, length, point.left, point.right));
+    }
+
+    this.editor.currentLayer.appendChild(path);
+  }
+
+  strokeStart(x, y, left, right) {
+    this.points = [];
+    this.points.push({ x, y, left, right });
+  }
+
+  strokeMove(x, y, left, right) {
+    let lastPoint = this.points[this.points.length - 1];
+    if (lastPoint.x === x && lastPoint.y === y) {
+      Object.assign(lastPoint, { left, right });
+    } else this.points.push({ x, y, left, right });
+  }
+
+  strokeEnd(x, y, left, right) {
+    this.strokeMove(x, y, left, right);
+
+    this.stroke();
+  }
+};
+
+/***/ }),
+/* 90 */
 /***/ (function(module, exports) {
 
 module.exports = class Tool {
@@ -17156,6 +16880,383 @@ module.exports = class Tool {
 
   strokeEnd(x, y, left, right, e) {
     console.warn(`${this.constructor.name}#strokeEnd not implemented`);
+  }
+};
+
+/***/ }),
+/* 91 */
+/***/ (function(module, exports) {
+
+/*
+ * paper.js PathFitter modified for Graphein
+ */
+
+/*
+ * Paper.js - The Swiss Army Knife of Vector Graphics Scripting.
+ * http://paperjs.org/
+ *
+ * Copyright (c) 2011 - 2016, Juerg Lehni & Jonathan Puckey
+ * http://scratchdisk.com/ & http://jonathanpuckey.com/
+ *
+ * Distributed under the MIT license. See LICENSE file for details.
+ *
+ * All rights reserved.
+ */
+
+// An Algorithm for Automatically Fitting Digitized Curves
+// by Philip J. Schneider
+// from "Graphics Gems", Academic Press, 1990
+// Modifications and optimizations of original algorithm by Juerg Lehni.
+
+// paperjs shim
+
+// Numerical.EPSILON
+const EPSILON = 1e-12;
+
+// Numerical.isZero
+const isZero = x => Math.abs(x) <= EPSILON;
+
+// Point methods
+const add = function (b) {
+  return this.map((x, i) => x + b[i]);
+};
+const subtract = function (b) {
+  return this.map((x, i) => x - b[i]);
+};
+const getDistance = function (b) {
+  return Math.hypot(...subtract.call(this, b));
+};
+const normalize = function (length = 1) {
+  let scale = length / Math.hypot(...this);
+  if (!Number.isFinite(scale)) scale = 0;
+  return this.map(x => x * scale);
+};
+const negate = function () {
+  return this.map(x => -x);
+};
+const multiply = function (b) {
+  return this.map(x => x * b);
+};
+const dot = function (b) {
+  return this.map((x, i) => x * b[i]).reduce((a, b) => a + b, 0);
+};
+
+// simple Segment implementation
+class Segment {
+  constructor(point = [0, 0], handleIn = [0, 0], handleOut = [0, 0]) {
+    this.point = point;
+    this.handleIn = handleIn;
+    this.handleOut = handleOut;
+  }
+
+  setHandleOut(point) {
+    this.handleOut = point;
+  }
+
+  // additional utilities not required by path fitter
+
+  handleInLength() {
+    return Math.hypot(...this.handleIn);
+  }
+
+  handleOutLength() {
+    return Math.hypot(...this.handleOut);
+  }
+}
+
+/**
+ * @name PathFitter
+ * @class
+ * @private
+ */
+module.exports = class PathFitter {
+  constructor(pathPoints, closed = false) {
+    let points = this.points = pathPoints;
+
+    // We need to duplicate the first and last segment when simplifying a
+    // closed path.
+    if (closed) {
+      points.unshift(points[points.length - 1]);
+      points.push(points[1]); // The point previously at index 0 is now 1.
+    }
+
+    this.closed = closed;
+  }
+
+  fit(error) {
+    let points = this.points;
+    let length = points.length;
+    let segments = null;
+
+    if (length > 0) {
+      // To support reducing paths with multiple points in the same place
+      // to one segment:
+      segments = [new Segment(points[0])];
+
+      if (length > 1) {
+        var _context;
+
+        this.fitCubic(segments, error, 0, length - 1,
+        // Left Tangent
+        (_context = points[1], subtract).call(_context, points[0]),
+        // Right Tangent
+        (_context = points[length - 2], subtract).call(_context, points[length - 1]));
+
+        // Remove the duplicated segments for closed paths again.
+        if (this.closed) {
+          segments.shift();
+          segments.pop();
+        }
+      }
+    }
+
+    return segments;
+  }
+
+  // Fit a Bezier curve to a (sub)set of digitized points
+  fitCubic(segments, error, first, last, tan1, tan2) {
+    var _context2;
+
+    let points = this.points;
+
+    // Use heuristic if region only has two points in it
+    if (last - first === 1) {
+      let pt1 = points[first];
+      let pt2 = points[last];
+      let dist = getDistance.call(pt1, pt2) / 3;
+
+      this.addCurve(segments, [pt1, add.call(pt1, normalize.call(tan1, dist)), add.call(pt2, normalize.call(tan2, dist)), pt2]);
+      return;
+    }
+
+    // Parameterize points, and attempt to fit curve
+    let uPrime = this.chordLengthParameterize(first, last);
+    let maxError = Math.max(error, error * error);
+    let split;
+    let parametersInOrder = true;
+
+    // Try 4 iterations
+    for (let i = 0; i <= 4; i++) {
+      let curve = this.generateBezier(first, last, uPrime, tan1, tan2);
+
+      // Find max deviation of points to fitted curve
+      let max = this.findMaxError(first, last, curve, uPrime);
+      if (max.error < error && parametersInOrder) {
+        this.addCurve(segments, curve);
+        return;
+      }
+      split = max.index;
+
+      // If error not too large, try reparameterization and iteration
+      if (max.error >= maxError) {
+        break;
+      }
+      parametersInOrder = this.reparameterize(first, last, uPrime, curve);
+      maxError = max.error;
+    }
+
+    // Fitting failed -- split at max error point and fit recursively
+    let tanCenter = (_context2 = points[split - 1], subtract).call(_context2, points[split + 1]);
+    this.fitCubic(segments, error, first, split, tan1, tanCenter);
+    this.fitCubic(segments, error, split, last, negate.call(tanCenter), tan2);
+  }
+
+  addCurve(segments, curve) {
+    var _context3;
+
+    let prev = segments[segments.length - 1];
+    prev.setHandleOut((_context3 = curve[1], subtract).call(_context3, curve[0]));
+    segments.push(new Segment(curve[3], (_context3 = curve[2], subtract).call(_context3, curve[3])));
+  }
+
+  // Use least-squares method to find Bezier control points for region.
+  generateBezier(first, last, uPrime, tan1, tan2) {
+    let epsilon = /* #= */EPSILON;
+    let abs = Math.abs;
+    let points = this.points;
+    let pt1 = points[first];
+    let pt2 = points[last];
+
+    // Create the C and X matrices
+    let C = [[0, 0], [0, 0]];
+    let X = [0, 0];
+
+    for (let i = 0, l = last - first + 1; i < l; i++) {
+      var _context4;
+
+      let u = uPrime[i];
+      let t = 1 - u;
+      let b = 3 * u * t;
+      let b0 = t * t * t;
+      let b1 = b * t;
+      let b2 = b * u;
+      let b3 = u * u * u;
+      let a1 = normalize.call(tan1, b1);
+      let a2 = normalize.call(tan2, b2);
+      let tmp = (_context4 = (_context4 = points[first + i], subtract).call(_context4, multiply.call(pt1, b0 + b1)), subtract).call(_context4, multiply.call(pt2, b2 + b3));
+
+      C[0][0] += dot.call(a1, a1);
+      C[0][1] += dot.call(a1, a2);
+      // C[1][0] += a1.dot(a2);
+      C[1][0] = C[0][1];
+      C[1][1] += dot.call(a2, a2);
+      X[0] += dot.call(a1, tmp);
+      X[1] += dot.call(a2, tmp);
+    }
+
+    // Compute the determinants of C and X
+    let detC0C1 = C[0][0] * C[1][1] - C[1][0] * C[0][1];
+    let alpha1;
+    let alpha2;
+
+    if (abs(detC0C1) > epsilon) {
+      // Kramer's rule
+      let detC0X = C[0][0] * X[1] - C[1][0] * X[0];
+      let detXC1 = X[0] * C[1][1] - X[1] * C[0][1];
+
+      // Derive alpha values
+      alpha1 = detXC1 / detC0C1;
+      alpha2 = detC0X / detC0C1;
+    } else {
+      // Matrix is under-determined, try assuming alpha1 == alpha2
+      let c0 = C[0][0] + C[0][1];
+      let c1 = C[1][0] + C[1][1];
+
+      alpha1 = alpha2 = abs(c0) > epsilon ? X[0] / c0 : abs(c1) > epsilon ? X[1] / c1 : 0;
+    }
+
+    // If alpha negative, use the Wu/Barsky heuristic (see text)
+    // (if alpha is 0, you get coincident control points that lead to
+    // divide by zero in any subsequent NewtonRaphsonRootFind() call.
+    let segLength = getDistance.call(pt2, pt1);
+    let eps = epsilon * segLength;
+    let handle1;
+    let handle2;
+
+    if (alpha1 < eps || alpha2 < eps) {
+      // fall back on standard (probably inaccurate) formula,
+      // and subdivide further if needed.
+      alpha1 = alpha2 = segLength / 3;
+    } else {
+      var _context5;
+
+      // Check if the found control points are in the right order when
+      // projected onto the line through pt1 and pt2.
+      let line = subtract.call(pt2, pt1);
+      // Control points 1 and 2 are positioned an alpha distance out
+      // on the tangent vectors, left and right, respectively
+      handle1 = normalize.call(tan1, alpha1);
+      handle2 = normalize.call(tan2, alpha2);
+      if ((_context5 = handle1, dot).call(_context5, line) - (_context5 = handle2, dot).call(_context5, line) > segLength * segLength) {
+        // Fall back to the Wu/Barsky heuristic above.
+        alpha1 = alpha2 = segLength / 3;
+        handle1 = handle2 = null; // Force recalculation
+      }
+    }
+
+    // First and last control points of the Bezier curve are
+    // positioned exactly at the first and last data points
+    return [pt1, add.call(pt1, handle1 || normalize.call(tan1, alpha1)), add.call(pt2, handle2 || normalize.call(tan2, alpha2)), pt2];
+  }
+
+  // Given set of points and their parameterization, try to find
+  // a better parameterization.
+  reparameterize(first, last, u, curve) {
+    for (let i = first; i <= last; i++) {
+      u[i - first] = this.findRoot(curve, this.points[i], u[i - first]);
+    }
+
+    // Detect if the new parameterization has reordered the points.
+    // In that case, we would fit the points of the path in the wrong order.
+    for (let i = 1, l = u.length; i < l; i++) {
+      if (u[i] <= u[i - 1]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Use Newton-Raphson iteration to find better root.
+  findRoot(curve, point, u) {
+    let curve1 = [];
+    let curve2 = [];
+
+    // Generate control vertices for Q'
+    for (let i = 0; i <= 2; i++) {
+      var _context6;
+
+      curve1[i] = (_context6 = (_context6 = curve[i + 1], subtract).call(_context6, curve[i]), multiply).call(_context6, 3);
+    }
+
+    // Generate control vertices for Q''
+    for (let i = 0; i <= 1; i++) {
+      var _context7;
+
+      curve2[i] = (_context7 = (_context7 = curve1[i + 1], subtract).call(_context7, curve1[i]), multiply).call(_context7, 2);
+    }
+
+    // Compute Q(u), Q'(u) and Q''(u)
+    let pt = this.evaluate(3, curve, u);
+    let pt1 = this.evaluate(2, curve1, u);
+    let pt2 = this.evaluate(1, curve2, u);
+    let diff = subtract.call(pt, point);
+    let df = dot.call(pt1, pt1) + dot.call(diff, pt2);
+
+    // u = u - f(u) / f'(u)
+    return isZero(df) ? u : u - dot.call(diff, pt1) / df;
+  }
+
+  // Evaluate a bezier curve at a particular parameter value
+  evaluate(degree, curve, t) {
+    // Copy array
+    let tmp = curve.slice();
+
+    // Triangle computation
+    for (let i = 1; i <= degree; i++) {
+      for (let j = 0; j <= degree - i; j++) {
+        var _context8;
+
+        tmp[j] = (_context8 = (_context8 = tmp[j], multiply).call(_context8, 1 - t), add).call(_context8, (_context8 = tmp[j + 1], multiply).call(_context8, t));
+      }
+    }
+    return tmp[0];
+  }
+
+  // Assign parameter values to digitized points
+  // using relative distances between points.
+  chordLengthParameterize(first, last) {
+    let u = [0];
+    for (let i = first + 1; i <= last; i++) {
+      var _context9;
+
+      u[i - first] = u[i - first - 1] + (_context9 = this.points[i], getDistance).call(_context9, this.points[i - 1]);
+    }
+    for (let i = 1, m = last - first; i <= m; i++) {
+      u[i] /= u[m];
+    }
+    return u;
+  }
+
+  // Find the maximum squared distance of digitized points to fitted curve.
+  findMaxError(first, last, curve, u) {
+    let index = Math.floor((last - first + 1) / 2);
+    let maxDist = 0;
+
+    for (let i = first + 1; i < last; i++) {
+      let P = this.evaluate(3, curve, u[i - first]);
+      let v = subtract.call(P, this.points[i]);
+      // let dist = v.x * v.x + v.y * v.y // squared
+      let dist = v[0] * v[0] + v[1] * v[1];
+      if (dist >= maxDist) {
+        maxDist = dist;
+        index = i;
+      }
+    }
+
+    return {
+      error: maxDist,
+      index: index
+    };
   }
 };
 

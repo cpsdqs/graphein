@@ -24,6 +24,24 @@ class StrokeRenderer {
     this.fill = fill
     this.shader = context.shaders.path
     this.fillShader = context.shaders.pathFill
+
+    this.strokeIsDirty = false
+    this.fillIsDirty = false
+
+    // cache
+    this.strokeVAO = null
+    this.strokeAttributeBuffers = null
+    this.strokeVAOLength = 0
+    this.fillVAO = null
+    this.fillAttributeBuffers = null
+    this.fillVAOLength = 0
+  }
+
+  clearPaths () {
+    this.currentPath = []
+    this.paths = [this.currentPath]
+
+    this.strokeIsDirty = this.fillIsDirty = true
   }
 
   add (type, ...args) {
@@ -88,9 +106,11 @@ class StrokeRenderer {
     } else {
       // TODO: stroke width bezier relative
     }
+
+    this.strokeIsDirty = this.fillIsDirty = true
   }
 
-  render () {
+  updateStroke () {
     const gl = this.gl
 
     // TODO: render all paths instead of only one
@@ -141,39 +161,64 @@ class StrokeRenderer {
       miters.push(-normals[i][1])
     }
 
-    const vao = createVAO(gl, [
-      {
-        buffer: createBuffer(gl, positions),
-        type: gl.FLOAT,
-        size: 2
-      },
-      {
-        buffer: createBuffer(gl, vnormals),
-        type: gl.FLOAT,
-        size: 2
-      },
-      {
-        buffer: createBuffer(gl, miters),
-        type: gl.FLOAT,
-        size: 1
-      },
-      {
-        buffer: createBuffer(gl, thicknesses),
-        type: gl.FLOAT,
-        size: 1
-      },
-    ])
+    if (!this.strokeAttributeBuffers) {
+      this.strokeAttributeBuffers = {
+        positions: createBuffer(gl, positions),
+        normals: createBuffer(gl, vnormals),
+        miters: createBuffer(gl, miters),
+        thicknesses: createBuffer(gl, thicknesses)
+      }
+    } else {
+      this.strokeAttributeBuffers.positions.update(positions)
+      this.strokeAttributeBuffers.normals.update(vnormals)
+      this.strokeAttributeBuffers.miters.update(miters)
+      this.strokeAttributeBuffers.thicknesses.update(thicknesses)
+    }
+
+    if (!this.strokeVAO) {
+      this.strokeVAO = createVAO(gl, [
+        {
+          buffer: this.strokeAttributeBuffers.positions,
+          type: gl.FLOAT,
+          size: 2
+        },
+        {
+          buffer: this.strokeAttributeBuffers.normals,
+          type: gl.FLOAT,
+          size: 2
+        },
+        {
+          buffer: this.strokeAttributeBuffers.miters,
+          type: gl.FLOAT,
+          size: 1
+        },
+        {
+          buffer: this.strokeAttributeBuffers.thicknesses,
+          type: gl.FLOAT,
+          size: 1
+        },
+      ])
+    }
+
+    this.strokeVAOLength = positions.length / 2
+    this.strokeIsDirty = false
+  }
+
+  render () {
+    const gl = this.gl
+
+    if (!this.strokeVAO || this.strokeIsDirty) this.updateStroke()
 
     this.shader.bind()
     this.shader.uniforms.color = this.stroke
     this.shader.uniforms.transform = this.transform
 
-    vao.bind()
-    vao.draw(gl.TRIANGLE_STRIP, positions.length / 2)
-    vao.unbind()
+    this.strokeVAO.bind()
+    this.strokeVAO.draw(gl.TRIANGLE_STRIP, this.strokeVAOLength)
+    this.strokeVAO.unbind()
   }
 
-  renderFill () {
+  updateFill () {
     const gl = this.gl
 
     let path = this.currentPath.slice()
@@ -185,21 +230,40 @@ class StrokeRenderer {
       for (let pos of cell.map(x => path[x])) positions.push(...pos)
     }
 
-    const vao = createVAO(gl, [
-      {
-        buffer: createBuffer(gl, positions),
-        type: gl.FLOAT,
-        size: 2
+    if (!this.fillAttributeBuffers) {
+      this.fillAttributeBuffers = {
+        positions: createBuffer(gl, positions)
       }
-    ])
+    } else {
+      this.fillAttributeBuffers.positions.update(positions)
+    }
+
+    if (!this.fillVAO) {
+      this.fillVAO = createVAO(gl, [
+        {
+          buffer: this.fillAttributeBuffers.positions,
+          type: gl.FLOAT,
+          size: 2
+        }
+      ])
+    }
+
+    this.fillVAOLength = positions.length / 2
+    this.fillIsDirty = false
+  }
+
+  renderFill () {
+    const gl = this.gl
+
+    if (!this.fillVAO || this.fillIsDirty) this.updateFill()
 
     this.fillShader.bind()
     this.fillShader.uniforms.color = this.fill
     this.fillShader.uniforms.transform = this.transform
 
-    vao.bind()
-    vao.draw(gl.TRIANGLES, positions.length / 2)
-    vao.unbind()
+    this.fillVAO.bind()
+    this.fillVAO.draw(gl.TRIANGLES, this.fillVAOLength)
+    this.fillVAO.unbind()
   }
 
   static curveToFunction (points) {
@@ -237,6 +301,7 @@ class StrokeRenderer {
     }
   }
 }
+
 class PathCommand {
   constructor (type, ...data) {
     this.type = type | 0
@@ -274,6 +339,9 @@ class PathCommand {
   }
 }
 
+// WeakMap<WebGLRenderingContext, WeakMap<Path, StrokeRenderer>>
+const strokeRendererContexts = new WeakMap()
+
 module.exports = class Path extends Layer {
   constructor () {
     super()
@@ -285,24 +353,56 @@ module.exports = class Path extends Layer {
     this.cap = Path.cap.BUTT
     this.join = Path.join.MITER
     this.miter = 0
-    this.data = []
+
+    this.dataIsDirty = false
+    const self = this
+    this.data = new Proxy([], {
+      set (target, key, value) {
+        target[key] = value
+        self.dataIsDirty = true
+        return true
+      }
+    })
   }
 
   render (gl, transform, context) {
     let subTransform = mat4.create()
     mat4.multiply(subTransform, transform, this.transform.toMat4())
 
-    let renderer = new StrokeRenderer(gl, subTransform, context,
-      this.stroke ? this.stroke.toVec4() : [0, 0, 0, 0],
-      this.fill ? this.fill.toVec4() : [0, 0, 0, 0])
-    this.data.forEach(command => command.render(renderer))
+    let renderer
 
-    if (this.stroke && this.stroke.alpha) {
-      renderer.render()
+    // get stroke renderer from cache
+    let strokeRenderers = strokeRendererContexts.get(gl)
+    if (strokeRenderers) {
+      renderer = strokeRenderers.get(this)
     }
-    if (this.fill && this.fill.alpha) {
-      renderer.renderFill()
+
+    let strokeColor = this.stroke ? this.stroke.toVec4() : [0, 0, 0, 0]
+    let fillColor = this.fill ? this.fill.toVec4() : [0, 0, 0, 0]
+
+    if (!renderer) {
+      // not in cache, create one
+      renderer = new StrokeRenderer(gl, subTransform, context, strokeColor, fillColor)
+      this.data.forEach(command => command.render(renderer))
+
+      if (!strokeRendererContexts.has(gl)) strokeRendererContexts.set(gl, new WeakMap())
+      strokeRendererContexts.get(gl).set(this, renderer)
+    } else {
+      // update variables
+      renderer.transform = subTransform
+      renderer.context = context
+      renderer.stroke = strokeColor
+      renderer.fill = fillColor
+
+      if (this.dataIsDirty) {
+        renderer.clearPaths()
+        this.data.forEach(command => command.render(renderer))
+        this.dataIsDirty = false
+      }
     }
+
+    if (this.stroke && this.stroke.alpha) renderer.render()
+    if (this.fill && this.fill.alpha) renderer.renderFill()
   }
 
   get roughLength () {
