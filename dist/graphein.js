@@ -4287,7 +4287,6 @@ module.exports = window.graphein = graphein;
 /***/ (function(module, exports, __webpack_require__) {
 
 const Image = __webpack_require__(8);
-const Brush = __webpack_require__(29);
 const shaders = __webpack_require__(89);
 
 class Canvas extends window.HTMLElement {
@@ -4302,17 +4301,8 @@ class Canvas extends window.HTMLElement {
 
     this.shaders = shaders(this.gl);
 
-    this.brush = new Brush();
-    this.brush.bind(this.canvas);
-
     this._image = new Image();
     this.updateSize();
-
-    this.brush.previewLayer = this._image;
-    this.brush.on('update', () => this.render());
-    this.brush.on('stroke', stroke => {
-      this.image.children[this.image.children.length - 1].children.push(stroke);
-    });
   }
 
   connectedCallback() {
@@ -4341,7 +4331,7 @@ class Canvas extends window.HTMLElement {
 
   set image(v) {
     this._image = v;
-    this.brush.previewLayer = v;
+    this.dispatchEvent(new Event('image-change'));
     this.updateSize();
     this.render();
   }
@@ -8409,143 +8399,18 @@ const forEach = (function() {
 /* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const EventEmitter = __webpack_require__(30);
+const Tool = __webpack_require__(92);
 const PathFitter = __webpack_require__(31);
 const Path = __webpack_require__(6);
 const Color = __webpack_require__(4);
 
-// TODO: pen tilt
-
-module.exports = class Brush extends EventEmitter {
-  constructor() {
-    super();
-
-    this.onMouseDown = e => {
-      this.onPointerDown({
-        offsetX: e.offsetX,
-        offsetY: e.offsetY,
-        pressure: 0.5
-      });
-    };
-
-    this.onMouseMove = e => {
-      this.onPointerMove({
-        offsetX: e.offsetX,
-        offsetY: e.offsetY,
-        pressure: 0.5
-      });
-    };
-
-    this.onMouseUp = e => {
-      this.onPointerUp({
-        offsetX: e.offsetX,
-        offsetY: e.offsetY,
-        pressure: 0.5
-      });
-    };
-
-    this.onPointerDown = e => {
-      this.isDown = true;
-      this.points = [];
-      this.points.push({
-        x: e.offsetX,
-        y: e.offsetY,
-        pressure: e.pressure,
-        isStart: true
-      });
-      this.previewStroke = new Path();
-      this.previewStroke.stroke = new Color(1, 0, 0, 0.5);
-      this.previewStroke.data.push(new Path.Command(0x10, e.offsetX, e.offsetY));
-      this.previewStroke.data.push(new Path.Command(0x60, 0, e.pressure * this.size / 2, e.pressure * this.size / 2));
-      if (this.previewLayer) this.previewLayer.children.push(this.previewStroke);
-      this.emit('update');
-    };
-
-    this.onPointerMove = e => {
-      if (!this.isDown) return;
-
-      let events = [e];
-      // coalesced events currently break everything
-      if (e.getCoalescedEvents) events.unshift(...e.getCoalescedEvents());
-
-      for (let event of events) {
-        let point = {
-          x: event.offsetX,
-          y: event.offsetY,
-          pressure: event.pressure
-        };
-
-        let lastPoint = this.points[this.points.length - 1];
-        if (!lastPoint.isStart && point.x === lastPoint.x && point.y === lastPoint.y) {
-          this.points.pop();
-          this.previewStroke.data.pop();
-          this.previewStroke.data.pop();
-        }
-
-        this.points.push(point);
-        this.previewStroke.data.push(new Path.Command(0x20, e.offsetX, e.offsetY));
-        this.previewStroke.data.push(new Path.Command(0x60, this.getCurrentLength(), e.pressure * this.size / 2, e.pressure * this.size / 2));
-      }
-      this.emit('update');
-    };
-
-    this.onPointerUp = e => {
-      this.isDown = false;
-      this.points.push({
-        x: e.offsetX,
-        y: e.offsetY,
-        pressure: e.pressure,
-        isEnd: true
-      });
-
-      this.previewStroke.data.push(new Path.Command(0x20, e.offsetX, e.offsetY));
-      this.previewStroke.data.push(new Path.Command(0x60, this.getCurrentLength(), e.pressure * this.size / 2, e.pressure * this.size / 2));
-
-      if (this.previewLayer) {
-        this.previewLayer.children.splice(this.previewLayer.children.indexOf(this.previewStroke), 1);
-      }
-
-      this.stroke();
-
-      this.emit('update');
-    };
-
-    this.eventTarget = null;
-    this.previewLayer = null;
+module.exports = class Brush extends Tool {
+  constructor(...args) {
+    super(...args);
 
     this.size = 10;
 
-    this.isDown = false;
     this.points = [];
-    this.previewStroke = null;
-  }
-
-  bind(target) {
-    if (this.eventTarget) console.warn('Binding brush to multiple elements');
-    this.eventTarget = target;
-
-    if (typeof target.onpointermove === 'undefined') {
-      // pointer events not supported
-      target.addEventListener('mousedown', this.onMouseDown);
-      target.addEventListener('mousemove', this.onMouseMove);
-      target.addEventListener('mouseup', this.onMouseUp);
-    } else {
-      target.addEventListener('pointerdown', this.onPointerDown);
-      target.addEventListener('pointermove', this.onPointerMove);
-      target.addEventListener('pointerup', this.onPointerUp);
-    }
-  }
-
-  unbind() {
-    if (typeof this.eventTarget.onpointermove === 'undefined') {
-      this.eventTarget.removeEventListener('mousedown', this.onMouseDown);
-      this.eventTarget.removeEventListener('mousemove', this.onMouseMove);
-      this.eventTarget.removeEventListener('mouseup', this.onMouseUp);
-    } else {
-      this.eventTarget.removeEventListener('pointerdown', this.onPointerDown);
-      this.eventTarget.removeEventListener('pointermove', this.onPointerMove);
-      this.eventTarget.removeEventListener('pointerup', this.onPointerUp);
-    }
   }
 
   stroke() {
@@ -8577,338 +8442,40 @@ module.exports = class Brush extends EventEmitter {
 
     // TODO: don't do the following
     // copy width data to simplified path
-    for (let command of this.previewStroke.data) {
-      if (command.type === 0x60) path.data.push(command);
-    }
-
-    this.emit('stroke', path);
-  }
-
-  getCurrentLength() {
     let length = 0;
-    let lastPoint = [0, 0];
-    for (let command of this.previewStroke.data) {
-      if (command.type === 0x10) {
-        lastPoint = command.data;
-      } else if (command.type === 0x20) {
-        length += Math.hypot(command.data[0] - lastPoint[0], command.data[1] - lastPoint[1]);
-        lastPoint = command.data;
+    let lastPoint = null;
+    for (let point of this.points) {
+      if (lastPoint) {
+        length += Math.hypot(point.x - lastPoint.x, point.y - lastPoint.y);
       }
+      lastPoint = point;
+      path.data.push(new Path.Command(0x60, length, point.left, point.right));
     }
-    return length;
+
+    this.editor.currentLayer.appendChild(path);
   }
 
+  strokeStart(x, y, left, right) {
+    this.points = [];
+    this.points.push({ x, y, left, right });
+  }
+
+  strokeMove(x, y, left, right) {
+    let lastPoint = this.points[this.points.length - 1];
+    if (lastPoint.x === x && lastPoint.y === y) {
+      Object.assign(lastPoint, { left, right });
+    } else this.points.push({ x, y, left, right });
+  }
+
+  strokeEnd(x, y, left, right) {
+    this.strokeMove(x, y, left, right);
+
+    this.stroke();
+  }
 };
 
 /***/ }),
-/* 30 */
-/***/ (function(module, exports) {
-
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-function EventEmitter() {
-  this._events = this._events || {};
-  this._maxListeners = this._maxListeners || undefined;
-}
-module.exports = EventEmitter;
-
-// Backwards-compat with node 0.10.x
-EventEmitter.EventEmitter = EventEmitter;
-
-EventEmitter.prototype._events = undefined;
-EventEmitter.prototype._maxListeners = undefined;
-
-// By default EventEmitters will print a warning if more than 10 listeners are
-// added to it. This is a useful default which helps finding memory leaks.
-EventEmitter.defaultMaxListeners = 10;
-
-// Obviously not all Emitters should be limited to 10. This function allows
-// that to be increased. Set to zero for unlimited.
-EventEmitter.prototype.setMaxListeners = function(n) {
-  if (!isNumber(n) || n < 0 || isNaN(n))
-    throw TypeError('n must be a positive number');
-  this._maxListeners = n;
-  return this;
-};
-
-EventEmitter.prototype.emit = function(type) {
-  var er, handler, len, args, i, listeners;
-
-  if (!this._events)
-    this._events = {};
-
-  // If there is no 'error' event listener then throw.
-  if (type === 'error') {
-    if (!this._events.error ||
-        (isObject(this._events.error) && !this._events.error.length)) {
-      er = arguments[1];
-      if (er instanceof Error) {
-        throw er; // Unhandled 'error' event
-      } else {
-        // At least give some kind of context to the user
-        var err = new Error('Uncaught, unspecified "error" event. (' + er + ')');
-        err.context = er;
-        throw err;
-      }
-    }
-  }
-
-  handler = this._events[type];
-
-  if (isUndefined(handler))
-    return false;
-
-  if (isFunction(handler)) {
-    switch (arguments.length) {
-      // fast cases
-      case 1:
-        handler.call(this);
-        break;
-      case 2:
-        handler.call(this, arguments[1]);
-        break;
-      case 3:
-        handler.call(this, arguments[1], arguments[2]);
-        break;
-      // slower
-      default:
-        args = Array.prototype.slice.call(arguments, 1);
-        handler.apply(this, args);
-    }
-  } else if (isObject(handler)) {
-    args = Array.prototype.slice.call(arguments, 1);
-    listeners = handler.slice();
-    len = listeners.length;
-    for (i = 0; i < len; i++)
-      listeners[i].apply(this, args);
-  }
-
-  return true;
-};
-
-EventEmitter.prototype.addListener = function(type, listener) {
-  var m;
-
-  if (!isFunction(listener))
-    throw TypeError('listener must be a function');
-
-  if (!this._events)
-    this._events = {};
-
-  // To avoid recursion in the case that type === "newListener"! Before
-  // adding it to the listeners, first emit "newListener".
-  if (this._events.newListener)
-    this.emit('newListener', type,
-              isFunction(listener.listener) ?
-              listener.listener : listener);
-
-  if (!this._events[type])
-    // Optimize the case of one listener. Don't need the extra array object.
-    this._events[type] = listener;
-  else if (isObject(this._events[type]))
-    // If we've already got an array, just append.
-    this._events[type].push(listener);
-  else
-    // Adding the second element, need to change to array.
-    this._events[type] = [this._events[type], listener];
-
-  // Check for listener leak
-  if (isObject(this._events[type]) && !this._events[type].warned) {
-    if (!isUndefined(this._maxListeners)) {
-      m = this._maxListeners;
-    } else {
-      m = EventEmitter.defaultMaxListeners;
-    }
-
-    if (m && m > 0 && this._events[type].length > m) {
-      this._events[type].warned = true;
-      console.error('(node) warning: possible EventEmitter memory ' +
-                    'leak detected. %d listeners added. ' +
-                    'Use emitter.setMaxListeners() to increase limit.',
-                    this._events[type].length);
-      if (typeof console.trace === 'function') {
-        // not supported in IE 10
-        console.trace();
-      }
-    }
-  }
-
-  return this;
-};
-
-EventEmitter.prototype.on = EventEmitter.prototype.addListener;
-
-EventEmitter.prototype.once = function(type, listener) {
-  if (!isFunction(listener))
-    throw TypeError('listener must be a function');
-
-  var fired = false;
-
-  function g() {
-    this.removeListener(type, g);
-
-    if (!fired) {
-      fired = true;
-      listener.apply(this, arguments);
-    }
-  }
-
-  g.listener = listener;
-  this.on(type, g);
-
-  return this;
-};
-
-// emits a 'removeListener' event iff the listener was removed
-EventEmitter.prototype.removeListener = function(type, listener) {
-  var list, position, length, i;
-
-  if (!isFunction(listener))
-    throw TypeError('listener must be a function');
-
-  if (!this._events || !this._events[type])
-    return this;
-
-  list = this._events[type];
-  length = list.length;
-  position = -1;
-
-  if (list === listener ||
-      (isFunction(list.listener) && list.listener === listener)) {
-    delete this._events[type];
-    if (this._events.removeListener)
-      this.emit('removeListener', type, listener);
-
-  } else if (isObject(list)) {
-    for (i = length; i-- > 0;) {
-      if (list[i] === listener ||
-          (list[i].listener && list[i].listener === listener)) {
-        position = i;
-        break;
-      }
-    }
-
-    if (position < 0)
-      return this;
-
-    if (list.length === 1) {
-      list.length = 0;
-      delete this._events[type];
-    } else {
-      list.splice(position, 1);
-    }
-
-    if (this._events.removeListener)
-      this.emit('removeListener', type, listener);
-  }
-
-  return this;
-};
-
-EventEmitter.prototype.removeAllListeners = function(type) {
-  var key, listeners;
-
-  if (!this._events)
-    return this;
-
-  // not listening for removeListener, no need to emit
-  if (!this._events.removeListener) {
-    if (arguments.length === 0)
-      this._events = {};
-    else if (this._events[type])
-      delete this._events[type];
-    return this;
-  }
-
-  // emit removeListener for all listeners on all events
-  if (arguments.length === 0) {
-    for (key in this._events) {
-      if (key === 'removeListener') continue;
-      this.removeAllListeners(key);
-    }
-    this.removeAllListeners('removeListener');
-    this._events = {};
-    return this;
-  }
-
-  listeners = this._events[type];
-
-  if (isFunction(listeners)) {
-    this.removeListener(type, listeners);
-  } else if (listeners) {
-    // LIFO order
-    while (listeners.length)
-      this.removeListener(type, listeners[listeners.length - 1]);
-  }
-  delete this._events[type];
-
-  return this;
-};
-
-EventEmitter.prototype.listeners = function(type) {
-  var ret;
-  if (!this._events || !this._events[type])
-    ret = [];
-  else if (isFunction(this._events[type]))
-    ret = [this._events[type]];
-  else
-    ret = this._events[type].slice();
-  return ret;
-};
-
-EventEmitter.prototype.listenerCount = function(type) {
-  if (this._events) {
-    var evlistener = this._events[type];
-
-    if (isFunction(evlistener))
-      return 1;
-    else if (evlistener)
-      return evlistener.length;
-  }
-  return 0;
-};
-
-EventEmitter.listenerCount = function(emitter, type) {
-  return emitter.listenerCount(type);
-};
-
-function isFunction(arg) {
-  return typeof arg === 'function';
-}
-
-function isNumber(arg) {
-  return typeof arg === 'number';
-}
-
-function isObject(arg) {
-  return typeof arg === 'object' && arg !== null;
-}
-
-function isUndefined(arg) {
-  return arg === void 0;
-}
-
-
-/***/ }),
+/* 30 */,
 /* 31 */
 /***/ (function(module, exports) {
 
@@ -17346,6 +16913,7 @@ void main() {
 const arc = __webpack_require__(91);
 const Path = __webpack_require__(6);
 const Color = __webpack_require__(4);
+const Brush = __webpack_require__(29);
 
 module.exports = class Editor {
   constructor(canvas) {
@@ -17373,43 +16941,15 @@ module.exports = class Editor {
 
       this.lastPoint = [e.offsetX, e.offsetY];
 
+      this.tool.strokeStart(e.offsetX, e.offsetY, left, right, e);
       this.canvas.render();
     };
 
     this.onPointerMove = e => {
-      if (!this.down) this.cursorSize = 10;
-      this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY);
+      let events = [e];
+      if (e.getCoalescedEvents) events.unshift(...e.getCoalescedEvents());
 
-      if (this.down !== 'pointer') return;
-
-      let vec = [e.offsetX, e.offsetY].map((x, i) => x - this.lastPoint[i]);
-      let angle = Math.atan2(...vec);
-
-      // angles:
-      //        pi
-      // -pi/2      pi/2
-      //        0
-
-      let tiltAngle = Math.atan2(e.tiltX, -e.tiltY);
-      let tiltLength = Math.hypot(e.tiltX, e.tiltY) / 100;
-
-      // left normal vector
-      let vecLeft = [Math.cos(angle + Math.PI / 2), Math.sin(angle + Math.PI / 2)];
-      // right normal vector
-      let vecRight = [Math.cos(angle - Math.PI / 2), Math.sin(angle - Math.PI / 2)];
-
-      let tiltVector = [Math.cos(tiltAngle), Math.sin(tiltAngle)];
-
-      let left = e.pressure * this.previewMaxWidth / 2;
-      let right = e.pressure * this.previewMaxWidth / 2;
-
-      // dot left normal with tilt vector to get amount
-      left += vecLeft.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength;
-      right += vecRight.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength;
-
-      this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right);
-
-      this.lastPoint = [e.offsetX, e.offsetY];
+      for (let event of events) this.handleSinglePointerMove(event);
 
       this.canvas.render();
     };
@@ -17423,6 +16963,7 @@ module.exports = class Editor {
       this.previewStroke.parentNode.removeChild(this.previewStroke);
 
       this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY);
+      this.tool.strokeEnd(e.offsetX, e.offsetY, left, right, e);
       this.canvas.render();
     };
 
@@ -17438,7 +16979,14 @@ module.exports = class Editor {
     this.previewStroke = null;
     this.lastPoint = null;
 
+    this.tool = new Brush(this);
+
+    this.currentLayer = canvas.image.children[0];
     this.cursorSize = 10;
+
+    this.canvas.addEventListener('image-change', e => {
+      this.currentLayer = canvas.image.children[0];
+    });
 
     this.canvas.style.cursor = 'none';
 
@@ -17455,6 +17003,10 @@ module.exports = class Editor {
 
       // TODO: touch
     }
+  }
+
+  updateImage() {
+    this.currentLayer = canvas.image.children[0];
   }
 
   renderCursor(x, y, p, dx, dy) {
@@ -17491,6 +17043,46 @@ module.exports = class Editor {
     ctx.stroke();
 
     ctx.restore();
+  }
+
+  handleSinglePointerMove(e) {
+    if (!this.down) this.cursorSize = 10;
+    this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY);
+
+    if (this.down !== 'pointer') return;
+
+    // TODO: deduplicate points
+
+    let vec = [e.offsetX, e.offsetY].map((x, i) => x - this.lastPoint[i]);
+    let angle = Math.atan2(...vec);
+
+    // angles:
+    //        pi
+    // -pi/2      pi/2
+    //        0
+
+    let tiltAngle = Math.atan2(e.tiltX, -e.tiltY);
+    let tiltLength = Math.hypot(e.tiltX, e.tiltY) / 100;
+
+    // left normal vector
+    let vecLeft = [Math.cos(angle + Math.PI / 2), Math.sin(angle + Math.PI / 2)];
+    // right normal vector
+    let vecRight = [Math.cos(angle - Math.PI / 2), Math.sin(angle - Math.PI / 2)];
+
+    let tiltVector = [Math.cos(tiltAngle), Math.sin(tiltAngle)];
+
+    let left = e.pressure * this.previewMaxWidth / 2;
+    let right = e.pressure * this.previewMaxWidth / 2;
+
+    // dot left normal with tilt vector to get amount
+    left += Math.abs(vecLeft.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength);
+    right += Math.abs(vecRight.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength);
+
+    this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right);
+
+    this.lastPoint = [e.offsetX, e.offsetY];
+
+    this.tool.strokeMove(e.offsetX, e.offsetY, left, right, e);
   }
 
 };
@@ -17544,6 +17136,28 @@ module.exports = function arc(x, y, radius, start, end, clockwise, steps, path) 
     }
     return path
 }
+
+/***/ }),
+/* 92 */
+/***/ (function(module, exports) {
+
+module.exports = class Tool {
+  constructor(editor) {
+    this.editor = editor;
+  }
+
+  strokeStart(x, y, left, right, e) {
+    console.warn(`${this.constructor.name}#strokeStart not implemented`);
+  }
+
+  strokeMove(x, y, left, right, e) {
+    console.warn(`${this.constructor.name}#strokeMove not implemented`);
+  }
+
+  strokeEnd(x, y, left, right, e) {
+    console.warn(`${this.constructor.name}#strokeEnd not implemented`);
+  }
+};
 
 /***/ })
 /******/ ]);

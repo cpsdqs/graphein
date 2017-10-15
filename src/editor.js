@@ -1,6 +1,7 @@
 const arc = require('arc-to')
 const Path = require('./path')
 const Color = require('./color')
+const Brush = require('./brush')
 
 module.exports = class Editor {
   constructor (canvas) {
@@ -11,7 +12,14 @@ module.exports = class Editor {
     this.previewStroke = null
     this.lastPoint = null
 
+    this.tool = new Brush(this)
+
+    this.currentLayer = canvas.image.children[0]
     this.cursorSize = 10
+
+    this.canvas.addEventListener('image-change', e => {
+      this.currentLayer = canvas.image.children[0]
+    })
 
     this.canvas.style.cursor = 'none'
 
@@ -28,6 +36,10 @@ module.exports = class Editor {
 
       // TODO: touch
     }
+  }
+
+  updateImage () {
+    this.currentLayer = canvas.image.children[0]
   }
 
   renderCursor (x, y, p, dx, dy) {
@@ -91,14 +103,17 @@ module.exports = class Editor {
 
     this.lastPoint = [e.offsetX, e.offsetY]
 
+    this.tool.strokeStart(e.offsetX, e.offsetY, left, right, e)
     this.canvas.render()
   }
 
-  onPointerMove = e => {
+  handleSinglePointerMove (e) {
     if (!this.down) this.cursorSize = 10
     this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY)
 
     if (this.down !== 'pointer') return
+
+    // TODO: deduplicate points
 
     let vec = [e.offsetX, e.offsetY].map((x, i) => x - this.lastPoint[i])
     let angle = Math.atan2(...vec)
@@ -122,12 +137,21 @@ module.exports = class Editor {
     let right = e.pressure * this.previewMaxWidth / 2
 
     // dot left normal with tilt vector to get amount
-    left += vecLeft.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength
-    right += vecRight.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength
+    left += Math.abs(vecLeft.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength)
+    right += Math.abs(vecRight.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength)
 
     this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right)
 
     this.lastPoint = [e.offsetX, e.offsetY]
+
+    this.tool.strokeMove(e.offsetX, e.offsetY, left, right, e)
+  }
+
+  onPointerMove = e => {
+    let events = [e]
+    if (e.getCoalescedEvents) events.unshift(...e.getCoalescedEvents())
+
+    for (let event of events) this.handleSinglePointerMove(event)
 
     this.canvas.render()
   }
@@ -141,6 +165,7 @@ module.exports = class Editor {
     this.previewStroke.parentNode.removeChild(this.previewStroke)
 
     this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY)
+    this.tool.strokeEnd(e.offsetX, e.offsetY, left, right, e)
     this.canvas.render()
   }
 

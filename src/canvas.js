@@ -1,5 +1,4 @@
 const Image = require('./image')
-const Brush = require('./brush')
 const shaders = require('./shaders')
 
 class Canvas extends window.HTMLElement {
@@ -14,17 +13,8 @@ class Canvas extends window.HTMLElement {
 
     this.shaders = shaders(this.gl)
 
-    this.brush = new Brush()
-    this.brush.bind(this.canvas)
-
     this._image = new Image()
     this.updateSize()
-
-    this.brush.previewLayer = this._image
-    this.brush.on('update', () => this.render())
-    this.brush.on('stroke', stroke => {
-      this.image.children[this.image.children.length - 1].children.push(stroke)
-    })
   }
 
   connectedCallback () {
@@ -53,7 +43,7 @@ class Canvas extends window.HTMLElement {
 
   set image (v) {
     this._image = v
-    this.brush.previewLayer = v
+    this.dispatchEvent(new Event('image-change'))
     this.updateSize()
     this.render()
   }
