@@ -5,6 +5,7 @@ const createBuffer = require('gl-buffer')
 const createShader = require('gl-shader')
 const createVAO = require('gl-vao')
 const triangulate = require('cdt2d')
+const { Intersection, Point2D } = require('kld-intersections')
 const Layer = require('./layer')
 const Color = require('./color')
 
@@ -22,8 +23,13 @@ class StrokeRenderer {
     this.transform = transform
     this.stroke = stroke
     this.fill = fill
-    this.shader = context.shaders.path
-    this.fillShader = context.shaders.pathFill
+
+    if (context) {
+      this.shader = context.shaders.path
+      this.fillShader = context.shaders.pathFill
+    }
+
+    this.selectedStyle = false
 
     this.strokeIsDirty = false
     this.fillIsDirty = false
@@ -212,6 +218,7 @@ class StrokeRenderer {
     this.shader.bind()
     this.shader.uniforms.color = this.stroke
     this.shader.uniforms.transform = this.transform
+    this.shader.uniforms.isSelected = this.selectedStyle
 
     this.strokeVAO.bind()
     this.strokeVAO.draw(gl.TRIANGLE_STRIP, this.strokeVAOLength)
@@ -260,6 +267,7 @@ class StrokeRenderer {
     this.fillShader.bind()
     this.fillShader.uniforms.color = this.fill
     this.fillShader.uniforms.transform = this.transform
+    this.fillShader.uniforms.isSelected = this.selectedStyle
 
     this.fillVAO.bind()
     this.fillVAO.draw(gl.TRIANGLES, this.fillVAOLength)
@@ -377,10 +385,7 @@ module.exports = class Path extends Layer {
     this._data.push(...v)
   }
 
-  render (gl, transform, context) {
-    let subTransform = mat4.create()
-    mat4.multiply(subTransform, transform, this.transform.toMat4())
-
+  getRenderer (gl, subTransform, context, strokeColor, fillColor) {
     let renderer
 
     // get stroke renderer from cache
@@ -389,17 +394,14 @@ module.exports = class Path extends Layer {
       renderer = strokeRenderers.get(this)
     }
 
-    let strokeColor = this.stroke ? this.stroke.toVec4() : [0, 0, 0, 0]
-    let fillColor = this.fill ? this.fill.toVec4() : [0, 0, 0, 0]
-
     if (!renderer) {
       // not in cache, create one
       renderer = new StrokeRenderer(gl, subTransform, context, strokeColor, fillColor)
       this.data.forEach(command => command.render(renderer))
       this.dataIsDirty = false
 
-      if (!strokeRendererContexts.has(gl)) strokeRendererContexts.set(gl, new WeakMap())
-      strokeRendererContexts.get(gl).set(this, renderer)
+      if (gl && !strokeRendererContexts.has(gl)) strokeRendererContexts.set(gl, new WeakMap())
+      if (strokeRendererContexts.has(gl)) strokeRendererContexts.get(gl).set(this, renderer)
     } else {
       // update variables
       renderer.transform = subTransform
@@ -413,6 +415,22 @@ module.exports = class Path extends Layer {
         this.dataIsDirty = false
       }
     }
+
+    if (context) {
+      renderer.selectedStyle = context.selection.includes(this)
+    }
+
+    return renderer
+  }
+
+  render (gl, transform, context) {
+    let subTransform = mat4.create()
+    mat4.multiply(subTransform, transform, this.transform.toMat4())
+
+    let strokeColor = this.stroke ? this.stroke.toVec4() : [0, 0, 0, 0]
+    let fillColor = this.fill ? this.fill.toVec4() : [0, 0, 0, 0]
+
+    let renderer = this.getRenderer(gl, transform, context, strokeColor, fillColor)
 
     if (this.stroke && this.stroke.alpha) renderer.render()
     if (this.fill && this.fill.alpha) renderer.renderFill()
@@ -440,6 +458,32 @@ module.exports = class Path extends Layer {
   addRoughPoint (x, y, left, right, first = false) {
     this.data.push(new PathCommand(first ? 0x10 : 0x20, x, y))
     this.data.push(new PathCommand(0x60, this.roughLength, left, right))
+  }
+
+  toPolyline () {
+    let renderer = this.getRenderer(null, this.getWorldTransform())
+
+    // TODO: consider all paths
+    return renderer.currentPath.slice()
+  }
+
+  intersect (layer) {
+    if (layer instanceof Path) {
+      let ownPoints = this.toPolyline().map(point => new Point2D(...point))
+      let layerPoints = layer.toPolyline().map(point => new Point2D(...point))
+      let intersection = Intersection.intersectPolylinePolyline(ownPoints, layerPoints)
+      return intersection.points
+    } else throw new Error(`Intersection of Path with ${layer.constructor.name} not implemented`)
+  }
+
+  static fromPoints (points) {
+    let path = new Path()
+
+    for (let i = 0; i < points.length; i++) {
+      path.data.push(new PathCommand(i === 0 ? 0x10 : 0x20, ...points[i]))
+    }
+
+    return path
   }
 
   serialize () {

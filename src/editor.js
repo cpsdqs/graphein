@@ -2,6 +2,7 @@ const arc = require('arc-to')
 const Path = require('./path')
 const Color = require('./color')
 const Brush = require('./brush')
+const Select = require('./select')
 
 module.exports = class Editor {
   constructor (canvas) {
@@ -13,7 +14,12 @@ module.exports = class Editor {
     this.previewStroke = null
     this.lastPoint = null
 
-    this.tool = new Brush(this)
+    this.tools = {
+      brush: new Brush(this),
+      select: new Select(this)
+    }
+
+    this.tool = this.tools.brush
 
     this.currentLayer = canvas.image.children[0]
     this.cursorSize = 10
@@ -39,6 +45,14 @@ module.exports = class Editor {
 
       // TODO: touch
     }
+  }
+
+  get selection () {
+    return this.canvas.context.selection
+  }
+
+  set selection (v) {
+    this.canvas.context.selection = v
   }
 
   updateImage () {
@@ -104,6 +118,11 @@ module.exports = class Editor {
     this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY)
 
     this.erasing = e.pointerType === 'pen' && e.button === 5
+
+    if (this.erasing) {
+      // TEMP: selection!
+      this.tool = this.tools.select
+    } else this.tool = this.tools.brush
 
     this.previewStrokes = []
     this.createPreviewStroke()

@@ -13,6 +13,11 @@ class Canvas extends window.HTMLElement {
 
     this.shaders = shaders(this.gl)
 
+    this.context = {
+      shaders: this.shaders,
+      selection: []
+    }
+
     this._image = new Image()
     this.updateSize()
   }
@@ -54,9 +59,7 @@ class Canvas extends window.HTMLElement {
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
     this.gl.enable(this.gl.DEPTH_TEST)
 
-    this.image.render(this.gl, {
-      shaders: this.shaders
-    })
+    this.image.render(this.gl, this.context)
   }
 }
 

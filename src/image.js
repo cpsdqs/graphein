@@ -24,7 +24,7 @@ module.exports = class Image extends Layer {
     }
   }
 
-  render (gl, context) {
+  getWorldTransform () {
     let near = 0.1
     let far = 1000
     let fov = Math.PI
@@ -61,7 +61,11 @@ module.exports = class Image extends Layer {
     mat4.scale(result, projection, [2 / this.width, -2 / this.height, 1])
     mat4.translate(result, result, [-this.width / 2, -this.height / 2, 0])
 
-    this.renderChildren(gl, result, context)
+    return result
+  }
+
+  render (gl, context) {
+    this.renderChildren(gl, this.getWorldTransform(), context)
   }
 
   static deserialize (data) {

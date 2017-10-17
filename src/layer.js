@@ -28,6 +28,21 @@ module.exports = registry.types.g = class Layer {
     }
   }
 
+  getContext () {
+    if (!this.parentNode) throw new Error('Failed to get context: no parent node')
+    return this.parentNode.getContext()
+  }
+
+  getWorldTransform () {
+    let transform = this.transform.toMat4()
+    if (this.parentNode) mat4.multiply(transform, transform, this.parentNode.getWorldTransform())
+    return transform
+  }
+
+  intersect (layer) {
+    throw new Error(`Intersect not implemented for ${this.constructor.name}`)
+  }
+
   render (gl, transform, context) {
     let subTransform = mat4.create()
     mat4.multiply(subTransform, transform, this.transform.toMat4())
