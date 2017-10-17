@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 14);
+/******/ 	return __webpack_require__(__webpack_require__.s = 27);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -143,21 +143,13 @@ function equals(a, b) {
 
 /***/ }),
 /* 1 */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
 
-function GLError (rawError, shortMessage, longMessage) {
-    this.shortMessage = shortMessage || ''
-    this.longMessage = longMessage || ''
-    this.rawError = rawError || ''
-    this.message =
-      'gl-shader: ' + (shortMessage || rawError || '') +
-      (longMessage ? '\n'+longMessage : '')
-    this.stack = (new Error()).stack
-}
-GLError.prototype = new Error
-GLError.prototype.name = 'GLError'
-GLError.prototype.constructor = GLError
-module.exports = GLError
+// expose classes
+
+exports.Point2D = __webpack_require__(93);
+exports.Vector2D = __webpack_require__(94);
+exports.Matrix2D = __webpack_require__(95);
 
 
 /***/ }),
@@ -167,14 +159,14 @@ module.exports = GLError
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__ = __webpack_require__(16);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__ = __webpack_require__(17);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__ = __webpack_require__(6);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__ = __webpack_require__(18);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__ = __webpack_require__(19);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__ = __webpack_require__(20);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__ = __webpack_require__(7);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__ = __webpack_require__(8);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__ = __webpack_require__(29);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__ = __webpack_require__(30);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__ = __webpack_require__(11);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__ = __webpack_require__(31);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__ = __webpack_require__(32);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__ = __webpack_require__(33);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__ = __webpack_require__(12);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__ = __webpack_require__(13);
 /* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "glMatrix", function() { return __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__; });
 /* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat2", function() { return __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__; });
 /* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat2d", function() { return __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__; });
@@ -228,6 +220,25 @@ THE SOFTWARE. */
 /* 3 */
 /***/ (function(module, exports) {
 
+function GLError (rawError, shortMessage, longMessage) {
+    this.shortMessage = shortMessage || ''
+    this.longMessage = longMessage || ''
+    this.rawError = rawError || ''
+    this.message =
+      'gl-shader: ' + (shortMessage || rawError || '') +
+      (longMessage ? '\n'+longMessage : '')
+    this.stack = (new Error()).stack
+}
+GLError.prototype = new Error
+GLError.prototype.name = 'GLError'
+GLError.prototype.constructor = GLError
+module.exports = GLError
+
+
+/***/ }),
+/* 4 */
+/***/ (function(module, exports) {
+
 module.exports = class Color {
   constructor(r = 0, g = 0, b = 0, a = 1) {
     this.alpha = a;
@@ -270,7 +281,7 @@ module.exports = class Color {
 };
 
 /***/ }),
-/* 4 */
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var _class, _temp;
@@ -279,12 +290,12 @@ const { mat4 } = __webpack_require__(2);
 const bezier = __webpack_require__(56);
 const getNormals = __webpack_require__(58);
 const createBuffer = __webpack_require__(65);
-const createShader = __webpack_require__(22);
+const createShader = __webpack_require__(15);
 const createVAO = __webpack_require__(81);
-const triangulate = __webpack_require__(84);
-const { Intersection, Point2D } = __webpack_require__(95);
-const Layer = __webpack_require__(9);
-const Color = __webpack_require__(3);
+const triangulate = __webpack_require__(21);
+const { Intersection, Point2D } = __webpack_require__(91);
+const Layer = __webpack_require__(7);
+const Color = __webpack_require__(4);
 
 class StrokeRenderer {
   constructor(gl, transform, context, stroke, fill) {
@@ -792,11 +803,271 @@ module.exports = (_temp = _class = class Path extends Layer {
 Layer.registry.define('p', module.exports);
 
 /***/ }),
-/* 5 */
+/* 6 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+function compileSearch(funcName, predicate, reversed, extraArgs, earlyOut) {
+  var code = [
+    "function ", funcName, "(a,l,h,", extraArgs.join(","),  "){",
+earlyOut ? "" : "var i=", (reversed ? "l-1" : "h+1"),
+";while(l<=h){\
+var m=(l+h)>>>1,x=a[m]"]
+  if(earlyOut) {
+    if(predicate.indexOf("c") < 0) {
+      code.push(";if(x===y){return m}else if(x<=y){")
+    } else {
+      code.push(";var p=c(x,y);if(p===0){return m}else if(p<=0){")
+    }
+  } else {
+    code.push(";if(", predicate, "){i=m;")
+  }
+  if(reversed) {
+    code.push("l=m+1}else{h=m-1}")
+  } else {
+    code.push("h=m-1}else{l=m+1}")
+  }
+  code.push("}")
+  if(earlyOut) {
+    code.push("return -1};")
+  } else {
+    code.push("return i};")
+  }
+  return code.join("")
+}
+
+function compileBoundsSearch(predicate, reversed, suffix, earlyOut) {
+  var result = new Function([
+  compileSearch("A", "x" + predicate + "y", reversed, ["y"], earlyOut),
+  compileSearch("P", "c(x,y)" + predicate + "0", reversed, ["y", "c"], earlyOut),
+"function dispatchBsearch", suffix, "(a,y,c,l,h){\
+if(typeof(c)==='function'){\
+return P(a,(l===void 0)?0:l|0,(h===void 0)?a.length-1:h|0,y,c)\
+}else{\
+return A(a,(c===void 0)?0:c|0,(l===void 0)?a.length-1:l|0,y)\
+}}\
+return dispatchBsearch", suffix].join(""))
+  return result()
+}
+
+module.exports = {
+  ge: compileBoundsSearch(">=", false, "GE"),
+  gt: compileBoundsSearch(">", false, "GT"),
+  lt: compileBoundsSearch("<", true, "LT"),
+  le: compileBoundsSearch("<=", true, "LE"),
+  eq: compileBoundsSearch("-", true, "EQ", true)
+}
+
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var _class, _temp;
+
+const Transform = __webpack_require__(14);
+const { mat4 } = __webpack_require__(2);
+
+const registry = {
+  types: {},
+  define(type, typeClass) {
+    if (this.types[type]) {
+      throw new Error(`Layer type registry: ${type} already exists`);
+    }
+    this.types[type] = typeClass;
+    return typeClass;
+  }
+};
+
+module.exports = registry.types.g = (_temp = _class = class Layer {
+  constructor() {
+    this.type = Layer.types.GROUP;
+    this.transform = new Transform();
+    this.children = [];
+    this.parentNode = null;
+  }
+
+  serialize() {
+    return {
+      t: this.type,
+      a: this.transform.serialize(),
+      c: this.children.map(child => child.serialize())
+    };
+  }
+
+  getContext() {
+    if (!this.parentNode) throw new Error('Failed to get context: no parent node');
+    return this.parentNode.getContext();
+  }
+
+  getWorldTransform() {
+    let transform = this.transform.toMat4();
+    if (this.parentNode) mat4.multiply(transform, transform, this.parentNode.getWorldTransform());
+    return transform;
+  }
+
+  intersect(layer) {
+    throw new Error(`Intersect not implemented for ${this.constructor.name}`);
+  }
+
+  render(gl, transform, context) {
+    let subTransform = mat4.create();
+    mat4.multiply(subTransform, transform, this.transform.toMat4());
+    this.renderChildren(gl, subTransform, context);
+  }
+
+  renderChildren(gl, transform, context) {
+    for (let i = this.children.length - 1; i >= 0; i--) {
+      this.children[i].render(gl, transform, context);
+    }
+  }
+
+  appendChild(child) {
+    if (!child.parentNode) {
+      this.children.push(child);
+      child.parentNode = this;
+    } else {
+      throw new Error('Cannot add child to multiple parents');
+    }
+  }
+
+  removeChild(child) {
+    if (child.parentNode === this) {
+      this.children.splice(this.children.indexOf(child), 1);
+      child.parentNode = null;
+    }
+  }
+
+  static deserializeLayerData(layer, data) {
+    layer.transform = Transform.deserialize(data.a);
+    layer.children = Layer.deserializeChildren(data.c, layer);
+  }
+
+  static deserialize(data) {
+    let group = new Layer();
+    if (data.t !== Layer.types.GROUP) {
+      throw new Error(`Tried to deserialize layer of type ${data.t} as g`);
+    }
+    group.transform = Transform.deserialize(data.a);
+    group.children = Layer.deserializeChildren(data.c, group);
+
+    return group;
+  }
+
+  static deserializeChildren(data, parentNode) {
+    if (!data) return [];
+    let children = [];
+
+    for (let item of data) {
+      if (registry.types[item.t]) {
+        let child = registry.types[item.t].deserialize(item);
+        child.parentNode = parentNode;
+        children.push(child);
+      } else {
+        throw new Error(`Unknown layer type: ${item.t}`);
+      }
+    }
+
+    return children;
+  }
+
+}, _class.registry = registry, _class.types = {
+  GROUP: 'g',
+  PATH: 'p',
+  CLIPPING_MASK: 'c',
+  RECTANGLE: 'sr',
+  CIRCLE: 'sc',
+  TEXT: 't',
+  RASTER_IMAGE: 'b'
+}, _temp);
+
+/***/ }),
+/* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+module.exports = twoProduct
+
+var SPLITTER = +(Math.pow(2, 27) + 1.0)
+
+function twoProduct(a, b, result) {
+  var x = a * b
+
+  var c = SPLITTER * a
+  var abig = c - a
+  var ahi = c - abig
+  var alo = a - ahi
+
+  var d = SPLITTER * b
+  var bbig = d - b
+  var bhi = d - bbig
+  var blo = b - bhi
+
+  var err1 = x - (ahi * bhi)
+  var err2 = err1 - (alo * bhi)
+  var err3 = err2 - (ahi * blo)
+
+  var y = alo * blo - err3
+
+  if(result) {
+    result[0] = y
+    result[1] = x
+    return result
+  }
+
+  return [ y, x ]
+}
+
+/***/ }),
+/* 9 */
+/***/ (function(module, exports, __webpack_require__) {
+
+/**
+ *
+ *   IntersectionArgs.js
+ *
+ *   @copyright 2002, Kevin Lindsey
+ *
+ */
+
+/**
+ *  IntersectionArgs
+ *
+ *  @param {String} name
+ *  @param {Array<Point2D} args
+ *  @returns {IntersectionArgs}
+ */
+function IntersectionArgs(name, args) {
+    this.init(name, args);
+}
+
+
+/**
+ *  init
+ *
+ *  @param {String} name
+ *  @param {Array<Point2D>} args
+ */
+IntersectionArgs.prototype.init = function(name, args) {
+    this.name   = name;
+    this.args = args;
+};
+
+if (true) {
+    module.exports = IntersectionArgs;
+}
+
+
+/***/ }),
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 const { mat4 } = __webpack_require__(2);
-const Layer = __webpack_require__(9);
+const Layer = __webpack_require__(7);
 
 const version = '0.0.0';
 
@@ -879,7 +1150,7 @@ module.exports = class Image extends Layer {
 };
 
 /***/ }),
-/* 6 */
+/* 11 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1687,7 +1958,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 7 */
+/* 12 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -2527,7 +2798,7 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 8 */
+/* 13 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -3189,129 +3460,7 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 9 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var _class, _temp;
-
-const Transform = __webpack_require__(10);
-const { mat4 } = __webpack_require__(2);
-
-const registry = {
-  types: {},
-  define(type, typeClass) {
-    if (this.types[type]) {
-      throw new Error(`Layer type registry: ${type} already exists`);
-    }
-    this.types[type] = typeClass;
-    return typeClass;
-  }
-};
-
-module.exports = registry.types.g = (_temp = _class = class Layer {
-  constructor() {
-    this.type = Layer.types.GROUP;
-    this.transform = new Transform();
-    this.children = [];
-    this.parentNode = null;
-  }
-
-  serialize() {
-    return {
-      t: this.type,
-      a: this.transform.serialize(),
-      c: this.children.map(child => child.serialize())
-    };
-  }
-
-  getContext() {
-    if (!this.parentNode) throw new Error('Failed to get context: no parent node');
-    return this.parentNode.getContext();
-  }
-
-  getWorldTransform() {
-    let transform = this.transform.toMat4();
-    if (this.parentNode) mat4.multiply(transform, transform, this.parentNode.getWorldTransform());
-    return transform;
-  }
-
-  intersect(layer) {
-    throw new Error(`Intersect not implemented for ${this.constructor.name}`);
-  }
-
-  render(gl, transform, context) {
-    let subTransform = mat4.create();
-    mat4.multiply(subTransform, transform, this.transform.toMat4());
-    this.renderChildren(gl, subTransform, context);
-  }
-
-  renderChildren(gl, transform, context) {
-    for (let i = this.children.length - 1; i >= 0; i--) {
-      this.children[i].render(gl, transform, context);
-    }
-  }
-
-  appendChild(child) {
-    if (!child.parentNode) {
-      this.children.push(child);
-      child.parentNode = this;
-    } else {
-      throw new Error('Cannot add child to multiple parents');
-    }
-  }
-
-  removeChild(child) {
-    if (child.parentNode === this) {
-      this.children.splice(this.children.indexOf(child), 1);
-      child.parentNode = null;
-    }
-  }
-
-  static deserializeLayerData(layer, data) {
-    layer.transform = Transform.deserialize(data.a);
-    layer.children = Layer.deserializeChildren(data.c, layer);
-  }
-
-  static deserialize(data) {
-    let group = new Layer();
-    if (data.t !== Layer.types.GROUP) {
-      throw new Error(`Tried to deserialize layer of type ${data.t} as g`);
-    }
-    group.transform = Transform.deserialize(data.a);
-    group.children = Layer.deserializeChildren(data.c, group);
-
-    return group;
-  }
-
-  static deserializeChildren(data, parentNode) {
-    if (!data) return [];
-    let children = [];
-
-    for (let item of data) {
-      if (registry.types[item.t]) {
-        let child = registry.types[item.t].deserialize(item);
-        child.parentNode = parentNode;
-        children.push(child);
-      } else {
-        throw new Error(`Unknown layer type: ${item.t}`);
-      }
-    }
-
-    return children;
-  }
-
-}, _class.registry = registry, _class.types = {
-  GROUP: 'g',
-  PATH: 'p',
-  CLIPPING_MASK: 'c',
-  RECTANGLE: 'sr',
-  CIRCLE: 'sc',
-  TEXT: 't',
-  RASTER_IMAGE: 'b'
-}, _temp);
-
-/***/ }),
-/* 10 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var _class, _temp;
@@ -3372,7 +3521,278 @@ module.exports = (_temp = _class = class Transform {
 }, _temp);
 
 /***/ }),
-/* 11 */
+/* 15 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var createUniformWrapper   = __webpack_require__(35)
+var createAttributeWrapper = __webpack_require__(36)
+var makeReflect            = __webpack_require__(16)
+var shaderCache            = __webpack_require__(37)
+var runtime                = __webpack_require__(55)
+var GLError                = __webpack_require__(3)
+
+//Shader object
+function Shader(gl) {
+  this.gl         = gl
+  this.gl.lastAttribCount = 0  // fixme where else should we store info, safe but not nice on the gl object
+
+  //Default initialize these to null
+  this._vref      =
+  this._fref      =
+  this._relink    =
+  this.vertShader =
+  this.fragShader =
+  this.program    =
+  this.attributes =
+  this.uniforms   =
+  this.types      = null
+}
+
+var proto = Shader.prototype
+
+proto.bind = function() {
+  if(!this.program) {
+    this._relink()
+  }
+
+  // ensuring that we have the right number of enabled vertex attributes
+  var i
+  var newAttribCount = this.gl.getProgramParameter(this.program, this.gl.ACTIVE_ATTRIBUTES) // more robust approach
+  //var newAttribCount = Object.keys(this.attributes).length // avoids the probably immaterial introspection slowdown
+  var oldAttribCount = this.gl.lastAttribCount
+  if(newAttribCount > oldAttribCount) {
+    for(i = oldAttribCount; i < newAttribCount; i++) {
+      this.gl.enableVertexAttribArray(i)
+    }
+  } else if(oldAttribCount > newAttribCount) {
+    for(i = newAttribCount; i < oldAttribCount; i++) {
+      this.gl.disableVertexAttribArray(i)
+    }
+  }
+
+  this.gl.lastAttribCount = newAttribCount
+
+  this.gl.useProgram(this.program)
+}
+
+proto.dispose = function() {
+
+  // disabling vertex attributes so new shader starts with zero
+  // and it's also useful if all shaders are disposed but the
+  // gl context is reused for subsequent replotting
+  var oldAttribCount = this.gl.lastAttribCount
+  for (var i = 0; i < oldAttribCount; i++) {
+    this.gl.disableVertexAttribArray(i)
+  }
+  this.gl.lastAttribCount = 0
+
+  if(this._fref) {
+    this._fref.dispose()
+  }
+  if(this._vref) {
+    this._vref.dispose()
+  }
+  this.attributes =
+  this.types      =
+  this.vertShader =
+  this.fragShader =
+  this.program    =
+  this._relink    =
+  this._fref      =
+  this._vref      = null
+}
+
+function compareAttributes(a, b) {
+  if(a.name < b.name) {
+    return -1
+  }
+  return 1
+}
+
+//Update export hook for glslify-live
+proto.update = function(
+    vertSource
+  , fragSource
+  , uniforms
+  , attributes) {
+
+  //If only one object passed, assume glslify style output
+  if(!fragSource || arguments.length === 1) {
+    var obj = vertSource
+    vertSource = obj.vertex
+    fragSource = obj.fragment
+    uniforms   = obj.uniforms
+    attributes = obj.attributes
+  }
+
+  var wrapper = this
+  var gl      = wrapper.gl
+
+  //Compile vertex and fragment shaders
+  var pvref = wrapper._vref
+  wrapper._vref = shaderCache.shader(gl, gl.VERTEX_SHADER, vertSource)
+  if(pvref) {
+    pvref.dispose()
+  }
+  wrapper.vertShader = wrapper._vref.shader
+  var pfref = this._fref
+  wrapper._fref = shaderCache.shader(gl, gl.FRAGMENT_SHADER, fragSource)
+  if(pfref) {
+    pfref.dispose()
+  }
+  wrapper.fragShader = wrapper._fref.shader
+
+  //If uniforms/attributes is not specified, use RT reflection
+  if(!uniforms || !attributes) {
+
+    //Create initial test program
+    var testProgram = gl.createProgram()
+    gl.attachShader(testProgram, wrapper.fragShader)
+    gl.attachShader(testProgram, wrapper.vertShader)
+    gl.linkProgram(testProgram)
+    if(!gl.getProgramParameter(testProgram, gl.LINK_STATUS)) {
+      var errLog = gl.getProgramInfoLog(testProgram)
+      throw new GLError(errLog, 'Error linking program:' + errLog)
+    }
+
+    //Load data from runtime
+    uniforms   = uniforms   || runtime.uniforms(gl, testProgram)
+    attributes = attributes || runtime.attributes(gl, testProgram)
+
+    //Release test program
+    gl.deleteProgram(testProgram)
+  }
+
+  //Sort attributes lexicographically
+  // overrides undefined WebGL behavior for attribute locations
+  attributes = attributes.slice()
+  attributes.sort(compareAttributes)
+
+  //Convert attribute types, read out locations
+  var attributeUnpacked  = []
+  var attributeNames     = []
+  var attributeLocations = []
+  var i
+  for(i=0; i<attributes.length; ++i) {
+    var attr = attributes[i]
+    if(attr.type.indexOf('mat') >= 0) {
+      var size = attr.type.charAt(attr.type.length-1)|0
+      var locVector = new Array(size)
+      for(var j=0; j<size; ++j) {
+        locVector[j] = attributeLocations.length
+        attributeNames.push(attr.name + '[' + j + ']')
+        if(typeof attr.location === 'number') {
+          attributeLocations.push(attr.location + j)
+        } else if(Array.isArray(attr.location) &&
+                  attr.location.length === size &&
+                  typeof attr.location[j] === 'number') {
+          attributeLocations.push(attr.location[j]|0)
+        } else {
+          attributeLocations.push(-1)
+        }
+      }
+      attributeUnpacked.push({
+        name: attr.name,
+        type: attr.type,
+        locations: locVector
+      })
+    } else {
+      attributeUnpacked.push({
+        name: attr.name,
+        type: attr.type,
+        locations: [ attributeLocations.length ]
+      })
+      attributeNames.push(attr.name)
+      if(typeof attr.location === 'number') {
+        attributeLocations.push(attr.location|0)
+      } else {
+        attributeLocations.push(-1)
+      }
+    }
+  }
+
+  //For all unspecified attributes, assign them lexicographically min attribute
+  var curLocation = 0
+  for(i=0; i<attributeLocations.length; ++i) {
+    if(attributeLocations[i] < 0) {
+      while(attributeLocations.indexOf(curLocation) >= 0) {
+        curLocation += 1
+      }
+      attributeLocations[i] = curLocation
+    }
+  }
+
+  //Rebuild program and recompute all uniform locations
+  var uniformLocations = new Array(uniforms.length)
+  function relink() {
+    wrapper.program = shaderCache.program(
+        gl
+      , wrapper._vref
+      , wrapper._fref
+      , attributeNames
+      , attributeLocations)
+
+    for(var i=0; i<uniforms.length; ++i) {
+      uniformLocations[i] = gl.getUniformLocation(
+          wrapper.program
+        , uniforms[i].name)
+    }
+  }
+
+  //Perform initial linking, reuse program used for reflection
+  relink()
+
+  //Save relinking procedure, defer until runtime
+  wrapper._relink = relink
+
+  //Generate type info
+  wrapper.types = {
+    uniforms:   makeReflect(uniforms),
+    attributes: makeReflect(attributes)
+  }
+
+  //Generate attribute wrappers
+  wrapper.attributes = createAttributeWrapper(
+      gl
+    , wrapper
+    , attributeUnpacked
+    , attributeLocations)
+
+  //Generate uniform wrappers
+  Object.defineProperty(wrapper, 'uniforms', createUniformWrapper(
+      gl
+    , wrapper
+    , uniforms
+    , uniformLocations))
+}
+
+//Compiles and links a shader program with the given attribute and vertex list
+function createShader(
+    gl
+  , vertSource
+  , fragSource
+  , uniforms
+  , attributes) {
+
+  var shader = new Shader(gl)
+
+  shader.update(
+      vertSource
+    , fragSource
+    , uniforms
+    , attributes)
+
+  return shader
+}
+
+module.exports = createShader
+
+
+/***/ }),
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3435,7 +3855,7 @@ function makeReflectTypes(uniforms, useIndex) {
 }
 
 /***/ }),
-/* 12 */
+/* 17 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -3534,7 +3954,7 @@ module.exports = [
 
 
 /***/ }),
-/* 13 */
+/* 18 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -3690,16 +4110,1489 @@ module.exports = [
 
 
 /***/ }),
-/* 14 */
+/* 19 */
+/***/ (function(module, exports) {
+
+var g;
+
+// This works in non-strict mode
+g = (function() {
+	return this;
+})();
+
+try {
+	// This works if eval is allowed (see CSP)
+	g = g || Function("return this")() || (1,eval)("this");
+} catch(e) {
+	// This works if the window reference is available
+	if(typeof window === "object")
+		g = window;
+}
+
+// g can still be undefined, but nothing to do about it...
+// We return undefined, instead of nothing here, so it's
+// easier to handle this case. if(!global) { ...}
+
+module.exports = g;
+
+
+/***/ }),
+/* 20 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Canvas = __webpack_require__(15);
-const Color = __webpack_require__(3);
-const Image = __webpack_require__(5);
-const Layer = __webpack_require__(9);
-const Transform = __webpack_require__(10);
-const Path = __webpack_require__(4);
-const Editor = __webpack_require__(44);
+"use strict";
+
+
+function doBind(gl, elements, attributes) {
+  if(elements) {
+    elements.bind()
+  } else {
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
+  }
+  var nattribs = gl.getParameter(gl.MAX_VERTEX_ATTRIBS)|0
+  if(attributes) {
+    if(attributes.length > nattribs) {
+      throw new Error("gl-vao: Too many vertex attributes")
+    }
+    for(var i=0; i<attributes.length; ++i) {
+      var attrib = attributes[i]
+      if(attrib.buffer) {
+        var buffer = attrib.buffer
+        var size = attrib.size || 4
+        var type = attrib.type || gl.FLOAT
+        var normalized = !!attrib.normalized
+        var stride = attrib.stride || 0
+        var offset = attrib.offset || 0
+        buffer.bind()
+        gl.enableVertexAttribArray(i)
+        gl.vertexAttribPointer(i, size, type, normalized, stride, offset)
+      } else {
+        if(typeof attrib === "number") {
+          gl.vertexAttrib1f(i, attrib)
+        } else if(attrib.length === 1) {
+          gl.vertexAttrib1f(i, attrib[0])
+        } else if(attrib.length === 2) {
+          gl.vertexAttrib2f(i, attrib[0], attrib[1])
+        } else if(attrib.length === 3) {
+          gl.vertexAttrib3f(i, attrib[0], attrib[1], attrib[2])
+        } else if(attrib.length === 4) {
+          gl.vertexAttrib4f(i, attrib[0], attrib[1], attrib[2], attrib[3])
+        } else {
+          throw new Error("gl-vao: Invalid vertex attribute")
+        }
+        gl.disableVertexAttribArray(i)
+      }
+    }
+    for(; i<nattribs; ++i) {
+      gl.disableVertexAttribArray(i)
+    }
+  } else {
+    gl.bindBuffer(gl.ARRAY_BUFFER, null)
+    for(var i=0; i<nattribs; ++i) {
+      gl.disableVertexAttribArray(i)
+    }
+  }
+}
+
+module.exports = doBind
+
+/***/ }),
+/* 21 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var monotoneTriangulate = __webpack_require__(84)
+var makeIndex = __webpack_require__(87)
+var delaunayFlip = __webpack_require__(88)
+var filterTriangulation = __webpack_require__(90)
+
+module.exports = cdt2d
+
+function canonicalizeEdge(e) {
+  return [Math.min(e[0], e[1]), Math.max(e[0], e[1])]
+}
+
+function compareEdge(a, b) {
+  return a[0]-b[0] || a[1]-b[1]
+}
+
+function canonicalizeEdges(edges) {
+  return edges.map(canonicalizeEdge).sort(compareEdge)
+}
+
+function getDefault(options, property, dflt) {
+  if(property in options) {
+    return options[property]
+  }
+  return dflt
+}
+
+function cdt2d(points, edges, options) {
+
+  if(!Array.isArray(edges)) {
+    options = edges || {}
+    edges = []
+  } else {
+    options = options || {}
+    edges = edges || []
+  }
+
+  //Parse out options
+  var delaunay = !!getDefault(options, 'delaunay', true)
+  var interior = !!getDefault(options, 'interior', true)
+  var exterior = !!getDefault(options, 'exterior', true)
+  var infinity = !!getDefault(options, 'infinity', false)
+
+  //Handle trivial case
+  if((!interior && !exterior) || points.length === 0) {
+    return []
+  }
+
+  //Construct initial triangulation
+  var cells = monotoneTriangulate(points, edges)
+
+  //If delaunay refinement needed, then improve quality by edge flipping
+  if(delaunay || interior !== exterior || infinity) {
+
+    //Index all of the cells to support fast neighborhood queries
+    var triangulation = makeIndex(points.length, canonicalizeEdges(edges))
+    for(var i=0; i<cells.length; ++i) {
+      var f = cells[i]
+      triangulation.addTriangle(f[0], f[1], f[2])
+    }
+
+    //Run edge flipping
+    if(delaunay) {
+      delaunayFlip(points, triangulation)
+    }
+
+    //Filter points
+    if(!exterior) {
+      return filterTriangulation(triangulation, -1)
+    } else if(!interior) {
+      return filterTriangulation(triangulation,  1, infinity)
+    } else if(infinity) {
+      return filterTriangulation(triangulation, 0, infinity)
+    } else {
+      return triangulation.cells()
+    }
+    
+  } else {
+    return cells
+  }
+}
+
+
+/***/ }),
+/* 22 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+module.exports = linearExpansionSum
+
+//Easy case: Add two scalars
+function scalarScalar(a, b) {
+  var x = a + b
+  var bv = x - a
+  var av = x - bv
+  var br = b - bv
+  var ar = a - av
+  var y = ar + br
+  if(y) {
+    return [y, x]
+  }
+  return [x]
+}
+
+function linearExpansionSum(e, f) {
+  var ne = e.length|0
+  var nf = f.length|0
+  if(ne === 1 && nf === 1) {
+    return scalarScalar(e[0], f[0])
+  }
+  var n = ne + nf
+  var g = new Array(n)
+  var count = 0
+  var eptr = 0
+  var fptr = 0
+  var abs = Math.abs
+  var ei = e[eptr]
+  var ea = abs(ei)
+  var fi = f[fptr]
+  var fa = abs(fi)
+  var a, b
+  if(ea < fa) {
+    b = ei
+    eptr += 1
+    if(eptr < ne) {
+      ei = e[eptr]
+      ea = abs(ei)
+    }
+  } else {
+    b = fi
+    fptr += 1
+    if(fptr < nf) {
+      fi = f[fptr]
+      fa = abs(fi)
+    }
+  }
+  if((eptr < ne && ea < fa) || (fptr >= nf)) {
+    a = ei
+    eptr += 1
+    if(eptr < ne) {
+      ei = e[eptr]
+      ea = abs(ei)
+    }
+  } else {
+    a = fi
+    fptr += 1
+    if(fptr < nf) {
+      fi = f[fptr]
+      fa = abs(fi)
+    }
+  }
+  var x = a + b
+  var bv = x - a
+  var y = b - bv
+  var q0 = y
+  var q1 = x
+  var _x, _bv, _av, _br, _ar
+  while(eptr < ne && fptr < nf) {
+    if(ea < fa) {
+      a = ei
+      eptr += 1
+      if(eptr < ne) {
+        ei = e[eptr]
+        ea = abs(ei)
+      }
+    } else {
+      a = fi
+      fptr += 1
+      if(fptr < nf) {
+        fi = f[fptr]
+        fa = abs(fi)
+      }
+    }
+    b = q0
+    x = a + b
+    bv = x - a
+    y = b - bv
+    if(y) {
+      g[count++] = y
+    }
+    _x = q1 + x
+    _bv = _x - q1
+    _av = _x - _bv
+    _br = x - _bv
+    _ar = q1 - _av
+    q0 = _ar + _br
+    q1 = _x
+  }
+  while(eptr < ne) {
+    a = ei
+    b = q0
+    x = a + b
+    bv = x - a
+    y = b - bv
+    if(y) {
+      g[count++] = y
+    }
+    _x = q1 + x
+    _bv = _x - q1
+    _av = _x - _bv
+    _br = x - _bv
+    _ar = q1 - _av
+    q0 = _ar + _br
+    q1 = _x
+    eptr += 1
+    if(eptr < ne) {
+      ei = e[eptr]
+    }
+  }
+  while(fptr < nf) {
+    a = fi
+    b = q0
+    x = a + b
+    bv = x - a
+    y = b - bv
+    if(y) {
+      g[count++] = y
+    } 
+    _x = q1 + x
+    _bv = _x - q1
+    _av = _x - _bv
+    _br = x - _bv
+    _ar = q1 - _av
+    q0 = _ar + _br
+    q1 = _x
+    fptr += 1
+    if(fptr < nf) {
+      fi = f[fptr]
+    }
+  }
+  if(q0) {
+    g[count++] = q0
+  }
+  if(q1) {
+    g[count++] = q1
+  }
+  if(!count) {
+    g[count++] = 0.0  
+  }
+  g.length = count
+  return g
+}
+
+/***/ }),
+/* 23 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var twoProduct = __webpack_require__(8)
+var twoSum = __webpack_require__(86)
+
+module.exports = scaleLinearExpansion
+
+function scaleLinearExpansion(e, scale) {
+  var n = e.length
+  if(n === 1) {
+    var ts = twoProduct(e[0], scale)
+    if(ts[0]) {
+      return ts
+    }
+    return [ ts[1] ]
+  }
+  var g = new Array(2 * n)
+  var q = [0.1, 0.1]
+  var t = [0.1, 0.1]
+  var count = 0
+  twoProduct(e[0], scale, q)
+  if(q[0]) {
+    g[count++] = q[0]
+  }
+  for(var i=1; i<n; ++i) {
+    twoProduct(e[i], scale, t)
+    var pq = q[1]
+    twoSum(pq, t[0], q)
+    if(q[0]) {
+      g[count++] = q[0]
+    }
+    var a = t[1]
+    var b = q[1]
+    var x = a + b
+    var bv = x - a
+    var y = b - bv
+    q[1] = x
+    if(y) {
+      g[count++] = y
+    }
+  }
+  if(q[1]) {
+    g[count++] = q[1]
+  }
+  if(count === 0) {
+    g[count++] = 0.0
+  }
+  g.length = count
+  return g
+}
+
+/***/ }),
+/* 24 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+module.exports = robustSubtract
+
+//Easy case: Add two scalars
+function scalarScalar(a, b) {
+  var x = a + b
+  var bv = x - a
+  var av = x - bv
+  var br = b - bv
+  var ar = a - av
+  var y = ar + br
+  if(y) {
+    return [y, x]
+  }
+  return [x]
+}
+
+function robustSubtract(e, f) {
+  var ne = e.length|0
+  var nf = f.length|0
+  if(ne === 1 && nf === 1) {
+    return scalarScalar(e[0], -f[0])
+  }
+  var n = ne + nf
+  var g = new Array(n)
+  var count = 0
+  var eptr = 0
+  var fptr = 0
+  var abs = Math.abs
+  var ei = e[eptr]
+  var ea = abs(ei)
+  var fi = -f[fptr]
+  var fa = abs(fi)
+  var a, b
+  if(ea < fa) {
+    b = ei
+    eptr += 1
+    if(eptr < ne) {
+      ei = e[eptr]
+      ea = abs(ei)
+    }
+  } else {
+    b = fi
+    fptr += 1
+    if(fptr < nf) {
+      fi = -f[fptr]
+      fa = abs(fi)
+    }
+  }
+  if((eptr < ne && ea < fa) || (fptr >= nf)) {
+    a = ei
+    eptr += 1
+    if(eptr < ne) {
+      ei = e[eptr]
+      ea = abs(ei)
+    }
+  } else {
+    a = fi
+    fptr += 1
+    if(fptr < nf) {
+      fi = -f[fptr]
+      fa = abs(fi)
+    }
+  }
+  var x = a + b
+  var bv = x - a
+  var y = b - bv
+  var q0 = y
+  var q1 = x
+  var _x, _bv, _av, _br, _ar
+  while(eptr < ne && fptr < nf) {
+    if(ea < fa) {
+      a = ei
+      eptr += 1
+      if(eptr < ne) {
+        ei = e[eptr]
+        ea = abs(ei)
+      }
+    } else {
+      a = fi
+      fptr += 1
+      if(fptr < nf) {
+        fi = -f[fptr]
+        fa = abs(fi)
+      }
+    }
+    b = q0
+    x = a + b
+    bv = x - a
+    y = b - bv
+    if(y) {
+      g[count++] = y
+    }
+    _x = q1 + x
+    _bv = _x - q1
+    _av = _x - _bv
+    _br = x - _bv
+    _ar = q1 - _av
+    q0 = _ar + _br
+    q1 = _x
+  }
+  while(eptr < ne) {
+    a = ei
+    b = q0
+    x = a + b
+    bv = x - a
+    y = b - bv
+    if(y) {
+      g[count++] = y
+    }
+    _x = q1 + x
+    _bv = _x - q1
+    _av = _x - _bv
+    _br = x - _bv
+    _ar = q1 - _av
+    q0 = _ar + _br
+    q1 = _x
+    eptr += 1
+    if(eptr < ne) {
+      ei = e[eptr]
+    }
+  }
+  while(fptr < nf) {
+    a = fi
+    b = q0
+    x = a + b
+    bv = x - a
+    y = b - bv
+    if(y) {
+      g[count++] = y
+    } 
+    _x = q1 + x
+    _bv = _x - q1
+    _av = _x - _bv
+    _br = x - _bv
+    _ar = q1 - _av
+    q0 = _ar + _br
+    q1 = _x
+    fptr += 1
+    if(fptr < nf) {
+      fi = -f[fptr]
+    }
+  }
+  if(q0) {
+    g[count++] = q0
+  }
+  if(q1) {
+    g[count++] = q1
+  }
+  if(!count) {
+    g[count++] = 0.0  
+  }
+  g.length = count
+  return g
+}
+
+/***/ }),
+/* 25 */
+/***/ (function(module, exports, __webpack_require__) {
+
+/**
+ *
+ *   Polynomial.js
+ *
+ *   copyright 2002, 2013 Kevin Lindsey
+ * 
+ *   contribution {@link http://github.com/Quazistax/kld-polynomial}
+ *       @copyright 2015 Robert Benko (Quazistax) <quazistax@gmail.com>
+ *       @license MIT
+ */
+
+Polynomial.TOLERANCE = 1e-6;
+Polynomial.ACCURACY  = 15;
+
+
+/**
+ *  interpolate
+ *
+ *  Based on code from "Numerical Recipes in C, 2nd Edition"
+ *  Section 3.1, pages 109-110
+ *
+ *  @param {Array<Number>} xs
+ *  @param {Array<Number>} ys
+ *  @param {Number} n
+ *  @param {Number} offset
+ *  @param {Number} x
+ *
+ *  @returns {y:Number, dy:Number}
+ */
+Polynomial.interpolate = function(xs, ys, n, offset, x) {
+    if ( xs.constructor !== Array || ys.constructor !== Array )
+        throw new Error("Polynomial.interpolate: xs and ys must be arrays");
+    if ( isNaN(n) || isNaN(offset) || isNaN(x) )
+        throw new Error("Polynomial.interpolate: n, offset, and x must be numbers");
+
+    var y  = 0;
+    var dy = 0;
+    var c = new Array(n);
+    var d = new Array(n);
+    var ns = 0;
+
+    var diff = Math.abs(x - xs[offset]);
+    for ( var i = 0; i < n; i++ ) {
+        var dift = Math.abs(x - xs[offset+i]);
+
+        if ( dift < diff ) {
+            ns = i;
+            diff = dift;
+        }
+        c[i] = d[i] = ys[offset+i];
+    }
+    y = ys[offset+ns];
+    ns--;
+
+    for ( var m = 1; m < n; m++ ) {
+        for ( var i = 0; i < n-m; i++ ) {
+            var ho = xs[offset+i] - x;
+            var hp = xs[offset+i+m] - x;
+            var w = c[i+1]-d[i];
+            var den = ho - hp;
+
+            if ( den == 0.0 ) {
+                throw new Error("Unable to interpolate polynomial. Two numbers in n were identical (to within roundoff)");
+            }
+
+            den = w / den;
+            d[i] = hp*den;
+            c[i] = ho*den;
+        }
+        dy = (2*(ns+1) < (n-m)) ? c[ns+1] : d[ns--];
+        y += dy;
+    }
+
+    return { y: y, dy: dy };
+};
+
+
+/**
+ *  Polynomial
+ *
+ *  @returns {Polynomial}
+ */
+function Polynomial() {
+    this.init( arguments );
+}
+
+
+/**
+ *  init
+ */
+Polynomial.prototype.init = function(coefs) {
+    this.coefs = new Array();
+
+    for ( var i = coefs.length - 1; i >= 0; i-- )
+        this.coefs.push( coefs[i] );
+
+    this._variable = "t";
+    this._s = 0;
+};
+
+
+/**
+ *  eval
+ */
+Polynomial.prototype.eval = function(x) {
+    if ( isNaN(x) )
+        throw new Error("Polynomial.eval: parameter must be a number");
+
+    var result = 0;
+
+    for ( var i = this.coefs.length - 1; i >= 0; i-- )
+        result = result * x + this.coefs[i];
+
+    return result;
+};
+
+
+/**
+ *  add
+ */
+Polynomial.prototype.add = function(that) {
+    var result = new Polynomial();
+    var d1 = this.getDegree();
+    var d2 = that.getDegree();
+    var dmax = Math.max(d1,d2);
+
+    for ( var i = 0; i <= dmax; i++ ) {
+        var v1 = (i <= d1) ? this.coefs[i] : 0;
+        var v2 = (i <= d2) ? that.coefs[i] : 0;
+
+        result.coefs[i] = v1 + v2;
+    }
+
+    return result;
+};
+
+
+/**
+ *  multiply
+ */
+Polynomial.prototype.multiply = function(that) {
+    var result = new Polynomial();
+
+    for ( var i = 0; i <= this.getDegree() + that.getDegree(); i++ )
+        result.coefs.push(0);
+
+    for ( var i = 0; i <= this.getDegree(); i++ )
+        for ( var j = 0; j <= that.getDegree(); j++ )
+            result.coefs[i+j] += this.coefs[i] * that.coefs[j];
+
+    return result;
+};
+
+
+/**
+ *  divide_scalar
+ */
+Polynomial.prototype.divide_scalar = function(scalar) {
+    for ( var i = 0; i < this.coefs.length; i++ )
+        this.coefs[i] /= scalar;
+};
+
+
+/**
+ *  simplify
+ */
+Polynomial.prototype.simplify = function() {
+    var TOLERANCE = 1e-15;
+    for ( var i = this.getDegree(); i >= 0; i-- ) {
+        if ( Math.abs( this.coefs[i] ) <= TOLERANCE )
+            this.coefs.pop();
+        else
+            break;
+    }
+};
+
+
+/**
+ *  bisection
+ */
+Polynomial.prototype.bisection = function(min, max) {
+    var minValue = this.eval(min);
+    var maxValue = this.eval(max);
+    var result;
+
+    if ( Math.abs(minValue) <= Polynomial.TOLERANCE )
+        result = min;
+    else if ( Math.abs(maxValue) <= Polynomial.TOLERANCE )
+        result = max;
+    else if ( minValue * maxValue <= 0 ) {
+        var tmp1  = Math.log(max - min);
+        var tmp2  = Math.LN10 * Polynomial.ACCURACY;
+        var iters = Math.ceil( (tmp1+tmp2) / Math.LN2 );
+
+        for ( var i = 0; i < iters; i++ ) {
+            result = 0.5 * (min + max);
+            var value = this.eval(result);
+
+            if ( Math.abs(value) <= Polynomial.TOLERANCE ) {
+                break;
+            }
+
+            if ( value * minValue < 0 ) {
+                max = result;
+                maxValue = value;
+            } else {
+                min = result;
+                minValue = value;
+            }
+        }
+    }
+
+    return result;
+};
+
+
+/**
+ *  toString
+ */
+Polynomial.prototype.toString = function() {
+    var coefs = new Array();
+    var signs = new Array();
+
+    for ( var i = this.coefs.length - 1; i >= 0; i-- ) {
+        var value = Math.round(this.coefs[i]*1000)/1000;
+        //var value = this.coefs[i];
+
+        if ( value != 0 ) {
+            var sign = ( value < 0 ) ? " - " : " + ";
+
+            value = Math.abs(value);
+            if ( i > 0 )
+                if ( value == 1 )
+                    value = this._variable;
+                else
+                    value += this._variable;
+            if ( i > 1 ) value += "^" + i;
+
+            signs.push( sign );
+            coefs.push( value );
+        }
+    }
+
+    signs[0] = ( signs[0] == " + " ) ? "" : "-";
+
+    var result = "";
+    for ( var i = 0; i < coefs.length; i++ )
+        result += signs[i] + coefs[i];
+
+    return result;
+};
+
+
+/**
+ *  trapezoid
+ *  Based on trapzd in "Numerical Recipes in C", page 137
+ */
+Polynomial.prototype.trapezoid = function(min, max, n) {
+    if ( isNaN(min) || isNaN(max) || isNaN(n) )
+        throw new Error("Polynomial.trapezoid: parameters must be numbers");
+
+    var range = max - min;
+    var TOLERANCE = 1e-7;
+
+    if ( n == 1 ) {
+        var minValue = this.eval(min);
+        var maxValue = this.eval(max);
+        this._s = 0.5*range*( minValue + maxValue );
+    } else {
+        var it = 1 << (n-2);
+        var delta = range / it;
+        var x = min + 0.5*delta;
+        var sum = 0;
+
+        for ( var i = 0; i < it; i++ ) {
+            sum += this.eval(x);
+            x += delta;
+        }
+        this._s = 0.5*(this._s + range*sum/it);
+    }
+
+    if ( isNaN(this._s) )
+        throw new Error("Polynomial.trapezoid: this._s is NaN");
+
+    return this._s;
+};
+
+
+/**
+ *  simpson
+ *  Based on trapzd in "Numerical Recipes in C", page 139
+ */
+Polynomial.prototype.simpson = function(min, max) {
+    if ( isNaN(min) || isNaN(max) )
+        throw new Error("Polynomial.simpson: parameters must be numbers");
+
+    var range = max - min;
+    var st = 0.5 * range * ( this.eval(min) + this.eval(max) );
+    var t = st;
+    var s = 4.0*st/3.0;
+    var os = s;
+    var ost = st;
+    var TOLERANCE = 1e-7;
+
+    var it = 1;
+    for ( var n = 2; n <= 20; n++ ) {
+        var delta = range / it;
+        var x     = min + 0.5*delta;
+        var sum   = 0;
+
+        for ( var i = 1; i <= it; i++ ) {
+            sum += this.eval(x);
+            x += delta;
+        }
+
+        t = 0.5 * (t + range * sum / it);
+        st = t;
+        s = (4.0*st - ost)/3.0;
+
+        if ( Math.abs(s-os) < TOLERANCE*Math.abs(os) )
+            break;
+
+        os = s;
+        ost = st;
+        it <<= 1;
+    }
+
+    return s;
+};
+
+
+/**
+ *  romberg
+ */
+Polynomial.prototype.romberg = function(min, max) {
+    if ( isNaN(min) || isNaN(max) )
+        throw new Error("Polynomial.romberg: parameters must be numbers");
+
+    var MAX = 20;
+    var K = 3;
+    var TOLERANCE = 1e-6;
+    var s = new Array(MAX+1);
+    var h = new Array(MAX+1);
+    var result = { y: 0, dy: 0 };
+
+    h[0] = 1.0;
+    for ( var j = 1; j <= MAX; j++ ) {
+        s[j-1] = this.trapezoid(min, max, j);
+        if ( j >= K ) {
+            result = Polynomial.interpolate(h, s, K, j-K, 0.0);
+            if ( Math.abs(result.dy) <= TOLERANCE*result.y) break;
+        }
+        s[j] = s[j-1];
+        h[j] = 0.25 * h[j-1];
+    }
+
+    return result.y;
+};
+
+// getters and setters
+
+/**
+ *  get degree
+ */
+Polynomial.prototype.getDegree = function() {
+    return this.coefs.length - 1;
+};
+
+
+/**
+ *  getDerivative
+ */
+Polynomial.prototype.getDerivative = function() {
+    var derivative = new Polynomial();
+
+    for ( var i = 1; i < this.coefs.length; i++ ) {
+        derivative.coefs.push(i*this.coefs[i]);
+    }
+
+    return derivative;
+};
+
+
+/**
+ *  getRoots
+ */
+Polynomial.prototype.getRoots = function() {
+    var result;
+
+    this.simplify();
+    switch ( this.getDegree() ) {
+        case 0: result = new Array();              break;
+        case 1: result = this.getLinearRoot();     break;
+        case 2: result = this.getQuadraticRoots(); break;
+        case 3: result = this.getCubicRoots();     break;
+        case 4: result = this.getQuarticRoots();   break;
+        default:
+            result = new Array();
+            // should try Newton's method and/or bisection
+    }
+
+    return result;
+};
+
+
+/**
+ *  getRootsInInterval
+ */
+Polynomial.prototype.getRootsInInterval = function(min, max) {
+    var roots = new Array();
+    var root;
+
+    if ( this.getDegree() == 1 ) {
+        root = this.bisection(min, max);
+        if ( root != null ) roots.push(root);
+    } else {
+        // get roots of derivative
+        var deriv  = this.getDerivative();
+        var droots = deriv.getRootsInInterval(min, max);
+
+        if ( droots.length > 0 ) {
+            // find root on [min, droots[0]]
+            root = this.bisection(min, droots[0]);
+            if ( root != null ) roots.push(root);
+
+            // find root on [droots[i],droots[i+1]] for 0 <= i <= count-2
+            for ( i = 0; i <= droots.length-2; i++ ) {
+                root = this.bisection(droots[i], droots[i+1]);
+                if ( root != null ) roots.push(root);
+            }
+
+            // find root on [droots[count-1],xmax]
+            root = this.bisection(droots[droots.length-1], max);
+            if ( root != null ) roots.push(root);
+        } else {
+            // polynomial is monotone on [min,max], has at most one root
+            root = this.bisection(min, max);
+            if ( root != null ) roots.push(root);
+        }
+    }
+
+    return roots;
+};
+
+
+/**
+ *  getLinearRoot
+ */
+Polynomial.prototype.getLinearRoot = function() {
+    var result = new Array();
+    var a = this.coefs[1];
+
+    if ( a != 0 )
+        result.push( -this.coefs[0] / a );
+
+    return result;
+};
+
+
+/**
+ *  getQuadraticRoots
+ */
+Polynomial.prototype.getQuadraticRoots = function() {
+    var results = new Array();
+
+    if ( this.getDegree() == 2 ) {
+        var a = this.coefs[2];
+        var b = this.coefs[1] / a;
+        var c = this.coefs[0] / a;
+        var d = b*b - 4*c;
+
+        if ( d > 0 ) {
+            var e = Math.sqrt(d);
+
+            results.push( 0.5 * (-b + e) );
+            results.push( 0.5 * (-b - e) );
+        } else if ( d == 0 ) {
+            // really two roots with same value, but we only return one
+            results.push( 0.5 * -b );
+        }
+    }
+
+    return results;
+};
+
+
+/**
+ *  getCubicRoots
+ *
+ *  This code is based on MgcPolynomial.cpp written by David Eberly.  His
+ *  code along with many other excellent examples are avaiable at his site:
+ *  http://www.geometrictools.com
+ */
+Polynomial.prototype.getCubicRoots = function() {
+    var results = new Array();
+
+    if ( this.getDegree() == 3 ) {
+        var c3 = this.coefs[3];
+        var c2 = this.coefs[2] / c3;
+        var c1 = this.coefs[1] / c3;
+        var c0 = this.coefs[0] / c3;
+
+        var a       = (3*c1 - c2*c2) / 3;
+        var b       = (2*c2*c2*c2 - 9*c1*c2 + 27*c0) / 27;
+        var offset  = c2 / 3;
+        var discrim = b*b/4 + a*a*a/27;
+        var halfB   = b / 2;
+
+        var ZEROepsilon = this.zeroErrorEstimate();
+        if (Math.abs(discrim) <= ZEROepsilon) discrim = 0;
+
+        if ( discrim > 0 ) {
+            var e = Math.sqrt(discrim);
+            var tmp;
+            var root;
+
+            tmp = -halfB + e;
+            if ( tmp >= 0 )
+                root = Math.pow(tmp, 1/3);
+            else
+                root = -Math.pow(-tmp, 1/3);
+
+            tmp = -halfB - e;
+            if ( tmp >= 0 )
+                root += Math.pow(tmp, 1/3);
+            else
+                root -= Math.pow(-tmp, 1/3);
+
+            results.push( root - offset );
+        } else if ( discrim < 0 ) {
+            var distance = Math.sqrt(-a/3);
+            var angle    = Math.atan2( Math.sqrt(-discrim), -halfB) / 3;
+            var cos      = Math.cos(angle);
+            var sin      = Math.sin(angle);
+            var sqrt3    = Math.sqrt(3);
+
+            results.push( 2*distance*cos - offset );
+            results.push( -distance * (cos + sqrt3 * sin) - offset);
+            results.push( -distance * (cos - sqrt3 * sin) - offset);
+        } else {
+            var tmp;
+
+            if ( halfB >= 0 )
+                tmp = -Math.pow(halfB, 1/3);
+            else
+                tmp = Math.pow(-halfB, 1/3);
+
+            results.push( 2*tmp - offset );
+            // really should return next root twice, but we return only one
+            results.push( -tmp - offset );
+        }
+    }
+
+    return results;
+};
+
+/**
+    Sign of a number (+1, -1, +0, -0).
+ */
+var sign = function (x) {
+    return typeof x === 'number' ? x ? x < 0 ? -1 : 1 : x === x ? x : NaN : NaN;
+};
+
+
+///////////////////////////////////////////////////////////////////
+/**
+    Calculates roots of quartic polynomial. <br/>
+    First, derivative roots are found, then used to split quartic polynomial 
+    into segments, each containing one root of quartic polynomial.
+    Segments are then passed to newton's method to find roots.
+
+    @returns {Array<Number>} roots
+*/
+Polynomial.prototype.getQuarticRoots = function () {
+    var results = [];
+
+    var n = this.getDegree();
+    if (n == 4) {
+
+        var poly = new Polynomial();
+        poly.coefs = this.coefs.slice();
+        poly.divide_scalar(poly.coefs[n]);
+        var ERRF = 1e-15;
+        if (Math.abs(poly.coefs[0]) < 10 * ERRF * Math.abs(poly.coefs[3]))
+            poly.coefs[0] = 0;
+        var poly_d = poly.getDerivative();
+        var derrt = poly_d.getRoots().sort(function (a, b) { return a - b; });
+        var dery = [];
+        var nr = derrt.length - 1;
+        var i;
+        var rb = this.bounds();
+        maxabsX = Math.max(Math.abs(rb.minX), Math.abs(rb.maxX));
+        var ZEROepsilon = this.zeroErrorEstimate(maxabsX);
+        
+        for (i = 0; i <= nr; i++) {
+            dery.push(poly.eval(derrt[i]));
+        }
+
+        for (i = 0; i <= nr; i++) {
+            if (Math.abs(dery[i]) < ZEROepsilon)
+                dery[i] = 0;
+        }
+
+        i = 0;
+        var dx = Math.max(0.1 * (rb.maxX - rb.minX) / n, ERRF);
+        var guesses = [];
+        var minmax = [];
+        if (nr > -1) {
+            if (dery[0] != 0) {
+                if (sign(dery[0]) != sign(poly.eval(derrt[0] - dx) - dery[0])) {
+                    guesses.push(derrt[0] - dx);
+                    minmax.push([rb.minX, derrt[0]]);
+                }
+            }
+            else {
+                results.push(derrt[0], derrt[0]);
+                i++;
+            }
+
+            for (; i < nr; i++) {
+                if (dery[i + 1] == 0) {
+                    results.push(derrt[i + 1], derrt[i + 1]);
+                    i++;
+                }
+                else if (sign(dery[i]) != sign(dery[i + 1])) {
+                    guesses.push((derrt[i] + derrt[i + 1]) / 2);
+                    minmax.push([derrt[i], derrt[i + 1]]);
+                }
+            }
+            if (dery[nr] != 0 && sign(dery[nr]) != sign(poly.eval(derrt[nr] + dx) - dery[nr])) {
+                guesses.push(derrt[nr] + dx);
+                minmax.push([derrt[nr], rb.maxX]);
+            }
+        }
+
+        var f = function (x) { return poly.eval(x); };
+        var df = function (x) { return poly_d.eval(x); };
+        if (guesses.length > 0) {
+            for (i = 0; i < guesses.length; i++) {
+                guesses[i] = Polynomial.newton_secant_bisection(guesses[i], f, df, 32, minmax[i][0], minmax[i][1]);
+            }
+        }
+
+        results = results.concat(guesses);
+    }
+    return results;
+};
+
+///////////////////////////////////////////////////////////////////
+/**
+    Estimate what is the maximum polynomial evaluation error value under which polynomial evaluation could be in fact 0.
+    
+    @returns {Number} 
+*/
+Polynomial.prototype.zeroErrorEstimate = function (maxabsX) {
+    var poly = this;
+    var ERRF = 1e-15;
+    if (typeof maxabsX === 'undefined') {
+        var rb = poly.bounds();
+        maxabsX = Math.max(Math.abs(rb.minX), Math.abs(rb.maxX));
+    }
+    if (maxabsX < 0.001) {
+        return 2*Math.abs(poly.eval(ERRF));
+    }
+    var n = poly.coefs.length - 1;
+    var an = poly.coefs[n];
+    return 10 * ERRF * poly.coefs.reduce(function (m, v, i) {
+        var nm = v / an * Math.pow(maxabsX, i);
+        return nm > m ? nm : m;
+    }, 0);
+}
+
+///////////////////////////////////////////////////////////////////
+/**
+    Calculates upper Real roots bounds. <br/>
+    Real roots are in interval [negX, posX]. Determined by Fujiwara method.
+    @see {@link http://en.wikipedia.org/wiki/Properties_of_polynomial_roots}
+
+    @returns {{ negX: Number, posX: Number }}
+*/
+Polynomial.prototype.bounds_UpperReal_Fujiwara = function () {
+    var a = this.coefs;
+    var n = a.length - 1;
+    var an = a[n];
+    if (an != 1) {
+        a = this.coefs.map(function (v) { return v / an; });
+    }
+    var b = a.map(function (v, i) { return (i < n) ? Math.pow(Math.abs((i == 0) ? v / 2 : v), 1 / (n - i)) : v; });
+
+    var coefSelectionFunc;
+    var find2Max = function (acc, bi, i) {
+        if (coefSelectionFunc(i)) {
+            if (acc.max < bi) {
+                acc.nearmax = acc.max;
+                acc.max = bi;
+            }
+            else if (acc.nearmax < bi) {
+                acc.nearmax = bi;
+            }
+        }
+        return acc;
+    };
+
+    coefSelectionFunc = function (i) { return i < n && a[i] < 0; };
+    var max_nearmax_pos = b.reduce(find2Max, { max: 0, nearmax: 0 });
+
+    coefSelectionFunc = function (i) { return i < n && ((n % 2 == i % 2) ? a[i] < 0 : a[i] > 0); };
+    var max_nearmax_neg = b.reduce(find2Max, { max: 0, nearmax: 0 });
+
+    return {
+        negX: -2 * max_nearmax_neg.max,
+        posX: 2 * max_nearmax_pos.max
+    };
+};
+
+
+///////////////////////////////////////////////////////////////////
+/** 
+    Calculates lower Real roots bounds. <br/>
+    There are no Real roots in interval <negX, posX>. Determined by Fujiwara method.
+    @see {@link http://en.wikipedia.org/wiki/Properties_of_polynomial_roots}
+
+    @returns {{ negX: Number, posX: Number }}
+*/
+Polynomial.prototype.bounds_LowerReal_Fujiwara = function () {
+    var poly = new Polynomial();
+    poly.coefs = this.coefs.slice().reverse();
+    var res = poly.bounds_UpperReal_Fujiwara();
+    res.negX = 1 / res.negX;
+    res.posX = 1 / res.posX;
+    return res;
+};
+
+
+///////////////////////////////////////////////////////////////////
+/** 
+    Calculates left and right Real roots bounds. <br/>
+    Real roots are in interval [minX, maxX]. Combines Fujiwara lower and upper bounds to get minimal interval.
+    @see {@link http://en.wikipedia.org/wiki/Properties_of_polynomial_roots}
+
+    @returns {{ minX: Number, maxX: Number }}
+*/
+Polynomial.prototype.bounds = function () {
+    var urb = this.bounds_UpperReal_Fujiwara();
+    var rb = { minX: urb.negX, maxX: urb.posX };
+    if (urb.negX === 0 && urb.posX === 0)
+        return rb;
+    if (urb.negX === 0) {
+        rb.minX = this.bounds_LowerReal_Fujiwara().posX;
+    }
+    else if (urb.posX === 0) {
+        rb.maxX = this.bounds_LowerReal_Fujiwara().negX;
+    }
+    if (rb.minX > rb.maxX) {
+        //console.log('Polynomial.prototype.bounds: poly has no real roots? or floating point error?');
+        rb.minX = rb.maxX = 0;
+    }
+    return rb;
+    // TODO: if sure that there are no complex roots 
+    // (maybe by using Sturm's theorem) use:
+    //return this.bounds_Real_Laguerre();
+};
+
+
+/////////////////////////////////////////////////////////////////// 
+/**
+    Newton's (Newton-Raphson) method for finding Real roots on univariate function. <br/>
+    When using bounds, algorithm falls back to secant if newton goes out of range.
+    Bisection is fallback for secant when determined secant is not efficient enough.
+    @see {@link http://en.wikipedia.org/wiki/Newton%27s_method}
+    @see {@link http://en.wikipedia.org/wiki/Secant_method}
+    @see {@link http://en.wikipedia.org/wiki/Bisection_method}
+
+    @param {Number} x0 - Inital root guess
+    @param {function(x)} f - Function which root we are trying to find
+    @param {function(x)} df - Derivative of function f
+    @param {Number} max_iterations - Maximum number of algorithm iterations
+    @param {Number} [min_x] - Left bound value
+    @param {Number} [max_x] - Right bound value
+    @returns {Number} - root
+*/
+Polynomial.newton_secant_bisection = function (x0, f, df, max_iterations, min, max) {
+    var x, prev_dfx = 0, dfx, prev_x_ef_correction = 0, x_correction, x_new;
+    var v, y_atmin, y_atmax;
+    x = x0;
+    var ACCURACY = 14;
+    var min_correction_factor = Math.pow(10, -ACCURACY);
+    var isBounded = (typeof min === 'number' && typeof max === 'number');
+    if (isBounded) {
+        if (min > max)
+            throw new Error("newton root finding: min must be greater than max");
+        y_atmin = f(min);
+        y_atmax = f(max);
+        if (sign(y_atmin) ==  sign(y_atmax))
+            throw new Error("newton root finding: y values of bounds must be of opposite sign");
+    }
+
+    var isEnoughCorrection = function () {
+        // stop if correction is too small
+        // or if correction is in simple loop
+        return (Math.abs(x_correction) <= min_correction_factor * Math.abs(x))
+            || (prev_x_ef_correction == (x - x_correction) - x);
+    };
+
+    var i;
+    //var stepMethod;
+    //var details = [];
+    for (i = 0; i < max_iterations; i++) {
+        dfx = df(x);
+        if (dfx == 0) {
+            if (prev_dfx == 0) {
+                // error
+                throw new Error("newton root finding: df(x) is zero");
+                //return null;
+            }
+            else {
+                // use previous derivation value
+                dfx = prev_dfx;
+            }
+            // or move x a little?
+            //dfx = df(x != 0 ? x + x * 1e-15 : 1e-15);
+        }
+        //stepMethod = 'newton';
+        prev_dfx = dfx;
+        y = f(x);
+        x_correction = y / dfx;
+        x_new = x - x_correction;
+        if (isEnoughCorrection()) {
+            break;
+        }
+
+        if (isBounded) {
+            if (sign(y) == sign(y_atmax)) {
+                max = x;
+                y_atmax = y;
+            }
+            else if (sign(y) == sign(y_atmin)) {
+                min = x;
+                y_atmin = y;
+            }
+            else {
+                x = x_new;
+                //console.log("newton root finding: sign(y) not matched.");
+                break;
+            }
+
+            if ((x_new < min) || (x_new > max)) {
+                if (sign(y_atmin) == sign(y_atmax)) {
+                    break;
+                }
+
+                var RATIO_LIMIT = 50;
+                var AIMED_BISECT_OFFSET = 0.25; // [0, 0.5)
+                var dy = y_atmax - y_atmin;
+                var dx = max - min;
+
+                if (dy == 0) {
+                    //stepMethod = 'bisect';
+                    x_correction = x - (min + dx * 0.5);
+                }
+                else if (Math.abs(dy / Math.min(y_atmin, y_atmax)) > RATIO_LIMIT) {
+                    //stepMethod = 'aimed bisect';
+                    x_correction = x - (min + dx * (0.5 + (Math.abs(y_atmin) < Math.abs(y_atmax) ? -AIMED_BISECT_OFFSET : AIMED_BISECT_OFFSET)));
+                }
+                else {
+                    //stepMethod = 'secant'; 
+                    x_correction = x - (min - y_atmin / dy * dx);
+                }
+                x_new = x - x_correction;
+
+                if (isEnoughCorrection()) {
+                    break;
+                }
+            }
+        }
+        //details.push([stepMethod, i, x, x_new, x_correction, min, max, y]);
+        prev_x_ef_correction = x - x_new;
+        x = x_new;
+    }
+    //details.push([stepMethod, i, x, x_new, x_correction, min, max, y]);
+    //console.log(details.join('\r\n'));
+    //if (i == max_iterations)
+    //    console.log('newt: steps=' + ((i==max_iterations)? i:(i + 1)));
+    return x;
+};
+
+if (true) {
+    module.exports = Polynomial;
+}
+
+
+/***/ }),
+/* 26 */
+/***/ (function(module, exports) {
+
+module.exports = class Tool {
+  constructor(editor) {
+    this.editor = editor;
+  }
+
+  strokeStart(x, y, left, right, e) {
+    console.warn(`${this.constructor.name}#strokeStart not implemented`);
+  }
+
+  strokeMove(x, y, left, right, e) {
+    console.warn(`${this.constructor.name}#strokeMove not implemented`);
+  }
+
+  strokeEnd(x, y, left, right, e) {
+    console.warn(`${this.constructor.name}#strokeEnd not implemented`);
+  }
+};
+
+/***/ }),
+/* 27 */
+/***/ (function(module, exports, __webpack_require__) {
+
+const Canvas = __webpack_require__(28);
+const Color = __webpack_require__(4);
+const Image = __webpack_require__(10);
+const Layer = __webpack_require__(7);
+const Transform = __webpack_require__(14);
+const Path = __webpack_require__(5);
+const Editor = __webpack_require__(100);
 
 const graphein = {
   Canvas,
@@ -3714,11 +5607,11 @@ const graphein = {
 module.exports = window.graphein = graphein;
 
 /***/ }),
-/* 15 */
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Image = __webpack_require__(5);
-const shaders = __webpack_require__(21);
+const Image = __webpack_require__(10);
+const shaders = __webpack_require__(34);
 
 class Canvas extends window.HTMLElement {
   constructor() {
@@ -3786,7 +5679,7 @@ window.customElements.define('graphein-canvas', Canvas);
 module.exports = Canvas;
 
 /***/ }),
-/* 16 */
+/* 29 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -4256,7 +6149,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 17 */
+/* 30 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -4758,7 +6651,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 18 */
+/* 31 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -6496,7 +8389,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 19 */
+/* 32 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -6517,9 +8410,9 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony export (immutable) */ __webpack_exports__["fromEuler"] = fromEuler;
 /* harmony export (immutable) */ __webpack_exports__["str"] = str;
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__mat3__ = __webpack_require__(6);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__vec3__ = __webpack_require__(7);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__vec4__ = __webpack_require__(8);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__mat3__ = __webpack_require__(11);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__vec3__ = __webpack_require__(12);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__vec4__ = __webpack_require__(13);
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -7187,7 +9080,7 @@ const setAxes = (function() {
 
 
 /***/ }),
-/* 20 */
+/* 33 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -7830,10 +9723,10 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 21 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const createShader = __webpack_require__(22);
+const createShader = __webpack_require__(15);
 
 module.exports = function (gl) {
   return {
@@ -7921,285 +9814,14 @@ void main() {
 };
 
 /***/ }),
-/* 22 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var createUniformWrapper   = __webpack_require__(23)
-var createAttributeWrapper = __webpack_require__(24)
-var makeReflect            = __webpack_require__(11)
-var shaderCache            = __webpack_require__(25)
-var runtime                = __webpack_require__(43)
-var GLError                = __webpack_require__(1)
-
-//Shader object
-function Shader(gl) {
-  this.gl         = gl
-  this.gl.lastAttribCount = 0  // fixme where else should we store info, safe but not nice on the gl object
-
-  //Default initialize these to null
-  this._vref      =
-  this._fref      =
-  this._relink    =
-  this.vertShader =
-  this.fragShader =
-  this.program    =
-  this.attributes =
-  this.uniforms   =
-  this.types      = null
-}
-
-var proto = Shader.prototype
-
-proto.bind = function() {
-  if(!this.program) {
-    this._relink()
-  }
-
-  // ensuring that we have the right number of enabled vertex attributes
-  var i
-  var newAttribCount = this.gl.getProgramParameter(this.program, this.gl.ACTIVE_ATTRIBUTES) // more robust approach
-  //var newAttribCount = Object.keys(this.attributes).length // avoids the probably immaterial introspection slowdown
-  var oldAttribCount = this.gl.lastAttribCount
-  if(newAttribCount > oldAttribCount) {
-    for(i = oldAttribCount; i < newAttribCount; i++) {
-      this.gl.enableVertexAttribArray(i)
-    }
-  } else if(oldAttribCount > newAttribCount) {
-    for(i = newAttribCount; i < oldAttribCount; i++) {
-      this.gl.disableVertexAttribArray(i)
-    }
-  }
-
-  this.gl.lastAttribCount = newAttribCount
-
-  this.gl.useProgram(this.program)
-}
-
-proto.dispose = function() {
-
-  // disabling vertex attributes so new shader starts with zero
-  // and it's also useful if all shaders are disposed but the
-  // gl context is reused for subsequent replotting
-  var oldAttribCount = this.gl.lastAttribCount
-  for (var i = 0; i < oldAttribCount; i++) {
-    this.gl.disableVertexAttribArray(i)
-  }
-  this.gl.lastAttribCount = 0
-
-  if(this._fref) {
-    this._fref.dispose()
-  }
-  if(this._vref) {
-    this._vref.dispose()
-  }
-  this.attributes =
-  this.types      =
-  this.vertShader =
-  this.fragShader =
-  this.program    =
-  this._relink    =
-  this._fref      =
-  this._vref      = null
-}
-
-function compareAttributes(a, b) {
-  if(a.name < b.name) {
-    return -1
-  }
-  return 1
-}
-
-//Update export hook for glslify-live
-proto.update = function(
-    vertSource
-  , fragSource
-  , uniforms
-  , attributes) {
-
-  //If only one object passed, assume glslify style output
-  if(!fragSource || arguments.length === 1) {
-    var obj = vertSource
-    vertSource = obj.vertex
-    fragSource = obj.fragment
-    uniforms   = obj.uniforms
-    attributes = obj.attributes
-  }
-
-  var wrapper = this
-  var gl      = wrapper.gl
-
-  //Compile vertex and fragment shaders
-  var pvref = wrapper._vref
-  wrapper._vref = shaderCache.shader(gl, gl.VERTEX_SHADER, vertSource)
-  if(pvref) {
-    pvref.dispose()
-  }
-  wrapper.vertShader = wrapper._vref.shader
-  var pfref = this._fref
-  wrapper._fref = shaderCache.shader(gl, gl.FRAGMENT_SHADER, fragSource)
-  if(pfref) {
-    pfref.dispose()
-  }
-  wrapper.fragShader = wrapper._fref.shader
-
-  //If uniforms/attributes is not specified, use RT reflection
-  if(!uniforms || !attributes) {
-
-    //Create initial test program
-    var testProgram = gl.createProgram()
-    gl.attachShader(testProgram, wrapper.fragShader)
-    gl.attachShader(testProgram, wrapper.vertShader)
-    gl.linkProgram(testProgram)
-    if(!gl.getProgramParameter(testProgram, gl.LINK_STATUS)) {
-      var errLog = gl.getProgramInfoLog(testProgram)
-      throw new GLError(errLog, 'Error linking program:' + errLog)
-    }
-
-    //Load data from runtime
-    uniforms   = uniforms   || runtime.uniforms(gl, testProgram)
-    attributes = attributes || runtime.attributes(gl, testProgram)
-
-    //Release test program
-    gl.deleteProgram(testProgram)
-  }
-
-  //Sort attributes lexicographically
-  // overrides undefined WebGL behavior for attribute locations
-  attributes = attributes.slice()
-  attributes.sort(compareAttributes)
-
-  //Convert attribute types, read out locations
-  var attributeUnpacked  = []
-  var attributeNames     = []
-  var attributeLocations = []
-  var i
-  for(i=0; i<attributes.length; ++i) {
-    var attr = attributes[i]
-    if(attr.type.indexOf('mat') >= 0) {
-      var size = attr.type.charAt(attr.type.length-1)|0
-      var locVector = new Array(size)
-      for(var j=0; j<size; ++j) {
-        locVector[j] = attributeLocations.length
-        attributeNames.push(attr.name + '[' + j + ']')
-        if(typeof attr.location === 'number') {
-          attributeLocations.push(attr.location + j)
-        } else if(Array.isArray(attr.location) &&
-                  attr.location.length === size &&
-                  typeof attr.location[j] === 'number') {
-          attributeLocations.push(attr.location[j]|0)
-        } else {
-          attributeLocations.push(-1)
-        }
-      }
-      attributeUnpacked.push({
-        name: attr.name,
-        type: attr.type,
-        locations: locVector
-      })
-    } else {
-      attributeUnpacked.push({
-        name: attr.name,
-        type: attr.type,
-        locations: [ attributeLocations.length ]
-      })
-      attributeNames.push(attr.name)
-      if(typeof attr.location === 'number') {
-        attributeLocations.push(attr.location|0)
-      } else {
-        attributeLocations.push(-1)
-      }
-    }
-  }
-
-  //For all unspecified attributes, assign them lexicographically min attribute
-  var curLocation = 0
-  for(i=0; i<attributeLocations.length; ++i) {
-    if(attributeLocations[i] < 0) {
-      while(attributeLocations.indexOf(curLocation) >= 0) {
-        curLocation += 1
-      }
-      attributeLocations[i] = curLocation
-    }
-  }
-
-  //Rebuild program and recompute all uniform locations
-  var uniformLocations = new Array(uniforms.length)
-  function relink() {
-    wrapper.program = shaderCache.program(
-        gl
-      , wrapper._vref
-      , wrapper._fref
-      , attributeNames
-      , attributeLocations)
-
-    for(var i=0; i<uniforms.length; ++i) {
-      uniformLocations[i] = gl.getUniformLocation(
-          wrapper.program
-        , uniforms[i].name)
-    }
-  }
-
-  //Perform initial linking, reuse program used for reflection
-  relink()
-
-  //Save relinking procedure, defer until runtime
-  wrapper._relink = relink
-
-  //Generate type info
-  wrapper.types = {
-    uniforms:   makeReflect(uniforms),
-    attributes: makeReflect(attributes)
-  }
-
-  //Generate attribute wrappers
-  wrapper.attributes = createAttributeWrapper(
-      gl
-    , wrapper
-    , attributeUnpacked
-    , attributeLocations)
-
-  //Generate uniform wrappers
-  Object.defineProperty(wrapper, 'uniforms', createUniformWrapper(
-      gl
-    , wrapper
-    , uniforms
-    , uniformLocations))
-}
-
-//Compiles and links a shader program with the given attribute and vertex list
-function createShader(
-    gl
-  , vertSource
-  , fragSource
-  , uniforms
-  , attributes) {
-
-  var shader = new Shader(gl)
-
-  shader.update(
-      vertSource
-    , fragSource
-    , uniforms
-    , attributes)
-
-  return shader
-}
-
-module.exports = createShader
-
-
-/***/ }),
-/* 23 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var coallesceUniforms = __webpack_require__(11)
-var GLError = __webpack_require__(1)
+var coallesceUniforms = __webpack_require__(16)
+var GLError = __webpack_require__(3)
 
 module.exports = createUniformWrapper
 
@@ -8390,7 +10012,7 @@ function createUniformWrapper(gl, wrapper, uniforms, locations) {
 
 
 /***/ }),
-/* 24 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -8398,7 +10020,7 @@ function createUniformWrapper(gl, wrapper, uniforms, locations) {
 
 module.exports = createAttributeWrapper
 
-var GLError = __webpack_require__(1)
+var GLError = __webpack_require__(3)
 
 function ShaderAttribute(
     gl
@@ -8660,7 +10282,7 @@ function createAttributeWrapper(
 
 
 /***/ }),
-/* 25 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -8669,10 +10291,10 @@ function createAttributeWrapper(
 exports.shader   = getShaderReference
 exports.program  = createProgram
 
-var GLError = __webpack_require__(1)
-var formatCompilerError = __webpack_require__(26);
+var GLError = __webpack_require__(3)
+var formatCompilerError = __webpack_require__(38);
 
-var weakMap = typeof WeakMap === 'undefined' ? __webpack_require__(40) : WeakMap
+var weakMap = typeof WeakMap === 'undefined' ? __webpack_require__(52) : WeakMap
 var CACHE = new weakMap()
 
 var SHADER_COUNTER = 0
@@ -8803,14 +10425,14 @@ function createProgram(gl, vref, fref, attribs, locations) {
 
 
 /***/ }),
-/* 26 */
+/* 38 */
 /***/ (function(module, exports, __webpack_require__) {
 
 
-var sprintf = __webpack_require__(27).sprintf;
-var glConstants = __webpack_require__(28);
-var shaderName = __webpack_require__(30);
-var addLineNumbers = __webpack_require__(37);
+var sprintf = __webpack_require__(39).sprintf;
+var glConstants = __webpack_require__(40);
+var shaderName = __webpack_require__(42);
+var addLineNumbers = __webpack_require__(49);
 
 module.exports = formatCompilerError;
 
@@ -8862,7 +10484,7 @@ function formatCompilerError(errLog, src, type) {
 
 
 /***/ }),
-/* 27 */
+/* 39 */
 /***/ (function(module, exports, __webpack_require__) {
 
 (function(window) {
@@ -9076,10 +10698,10 @@ function formatCompilerError(errLog, src, type) {
 
 
 /***/ }),
-/* 28 */
+/* 40 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var gl10 = __webpack_require__(29)
+var gl10 = __webpack_require__(41)
 
 module.exports = function lookupConstant (number) {
   return gl10[number]
@@ -9087,7 +10709,7 @@ module.exports = function lookupConstant (number) {
 
 
 /***/ }),
-/* 29 */
+/* 41 */
 /***/ (function(module, exports) {
 
 module.exports = {
@@ -9391,11 +11013,11 @@ module.exports = {
 
 
 /***/ }),
-/* 30 */
+/* 42 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var tokenize = __webpack_require__(31)
-var atob     = __webpack_require__(36)
+var tokenize = __webpack_require__(43)
+var atob     = __webpack_require__(48)
 
 module.exports = getName
 
@@ -9420,10 +11042,10 @@ function getName(src) {
 
 
 /***/ }),
-/* 31 */
+/* 43 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var tokenize = __webpack_require__(32)
+var tokenize = __webpack_require__(44)
 
 module.exports = tokenizeString
 
@@ -9439,16 +11061,16 @@ function tokenizeString(str, opt) {
 
 
 /***/ }),
-/* 32 */
+/* 44 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = tokenize
 
-var literals100 = __webpack_require__(12)
-  , operators = __webpack_require__(33)
-  , builtins100 = __webpack_require__(13)
-  , literals300es = __webpack_require__(34)
-  , builtins300es = __webpack_require__(35)
+var literals100 = __webpack_require__(17)
+  , operators = __webpack_require__(45)
+  , builtins100 = __webpack_require__(18)
+  , literals300es = __webpack_require__(46)
+  , builtins300es = __webpack_require__(47)
 
 var NORMAL = 999          // <-- never emitted
   , TOKEN = 9999          // <-- never emitted
@@ -9807,7 +11429,7 @@ function tokenize(opt) {
 
 
 /***/ }),
-/* 33 */
+/* 45 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -9860,10 +11482,10 @@ module.exports = [
 
 
 /***/ }),
-/* 34 */
+/* 46 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var v100 = __webpack_require__(12)
+var v100 = __webpack_require__(17)
 
 module.exports = v100.slice().concat([
    'layout'
@@ -9954,11 +11576,11 @@ module.exports = v100.slice().concat([
 
 
 /***/ }),
-/* 35 */
+/* 47 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // 300es builtins/reserved words that were previously valid in v100
-var v100 = __webpack_require__(13)
+var v100 = __webpack_require__(18)
 
 // The texture2D|Cube functions have been removed
 // And the gl_ features are updated
@@ -10029,7 +11651,7 @@ module.exports = v100.concat([
 
 
 /***/ }),
-/* 36 */
+/* 48 */
 /***/ (function(module, exports) {
 
 module.exports = function _atob(str) {
@@ -10038,10 +11660,10 @@ module.exports = function _atob(str) {
 
 
 /***/ }),
-/* 37 */
+/* 49 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var padLeft = __webpack_require__(38)
+var padLeft = __webpack_require__(50)
 
 module.exports = addLineNumbers
 function addLineNumbers (string, start, delim) {
@@ -10060,7 +11682,7 @@ function addLineNumbers (string, start, delim) {
 
 
 /***/ }),
-/* 38 */
+/* 50 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10073,7 +11695,7 @@ function addLineNumbers (string, start, delim) {
 
 
 
-var repeat = __webpack_require__(39);
+var repeat = __webpack_require__(51);
 
 module.exports = function padLeft(str, num, ch) {
   ch = typeof ch !== 'undefined' ? (ch + '') : ' ';
@@ -10081,7 +11703,7 @@ module.exports = function padLeft(str, num, ch) {
 };
 
 /***/ }),
-/* 39 */
+/* 51 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10158,14 +11780,14 @@ function repeat(str, num) {
 
 
 /***/ }),
-/* 40 */
+/* 52 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // Original - @Gozola.
 // https://gist.github.com/Gozala/1269991
 // This is a reimplemented version (with a few bug fixes).
 
-var createStore = __webpack_require__(41);
+var createStore = __webpack_require__(53);
 
 module.exports = weakMap;
 
@@ -10193,10 +11815,10 @@ function weakMap() {
 
 
 /***/ }),
-/* 41 */
+/* 53 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var hiddenStore = __webpack_require__(42);
+var hiddenStore = __webpack_require__(54);
 
 module.exports = createStore;
 
@@ -10218,7 +11840,7 @@ function createStore() {
 
 
 /***/ }),
-/* 42 */
+/* 54 */
 /***/ (function(module, exports) {
 
 module.exports = hiddenStore;
@@ -10240,7 +11862,7 @@ function hiddenStore(obj, key) {
 
 
 /***/ }),
-/* 43 */
+/* 55 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10323,1361 +11945,6 @@ function runtimeAttributes(gl, program) {
   return result
 }
 
-
-/***/ }),
-/* 44 */
-/***/ (function(module, exports, __webpack_require__) {
-
-const arc = __webpack_require__(45);
-const Path = __webpack_require__(4);
-const Color = __webpack_require__(3);
-const Brush = __webpack_require__(46);
-const Select = __webpack_require__(104);
-
-module.exports = class Editor {
-  constructor(canvas) {
-    this.onPointerDown = e => {
-      this.down = 'pointer';
-
-      this.cursorSize = e.pointerType === 'pen' && e.button === 5 ? 30 : 10;
-      this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY);
-
-      this.erasing = e.pointerType === 'pen' && e.button === 5;
-
-      if (this.erasing) {
-        // TEMP: selection!
-        this.tool = this.tools.select;
-      } else this.tool = this.tools.brush;
-
-      this.previewStrokes = [];
-      this.createPreviewStroke();
-
-      let left = e.pressure * this.previewMaxWidth / 2;
-      let right = e.pressure * this.previewMaxWidth / 2;
-      this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right, true);
-
-      this.lastPoint = [e.offsetX, e.offsetY];
-
-      this.tool.strokeStart(e.offsetX, e.offsetY, left, right, e);
-      this.canvas.render();
-    };
-
-    this.onPointerMove = e => {
-      let events = [e];
-      if (e.getCoalescedEvents) events.unshift(...e.getCoalescedEvents());
-
-      for (let event of events) this.handleSinglePointerMove(event);
-
-      this.canvas.render();
-    };
-
-    this.onPointerUp = e => {
-      if (this.down !== 'pointer') return;
-      this.down = null;
-      let left = e.pressure * this.previewMaxWidth / 2;
-      let right = e.pressure * this.previewMaxWidth / 2;
-
-      for (let stroke of this.previewStrokes) {
-        stroke.parentNode.removeChild(stroke);
-      }
-
-      this.previewStroke = null;
-      this.previewStrokes = [];
-
-      this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY);
-      this.tool.strokeEnd(e.offsetX, e.offsetY, left, right, e);
-      this.canvas.render();
-    };
-
-    this.onPointerOut = e => {
-      this.renderCursor(-1, -1, 0, 0, 0);
-      this.onPointerUp(e);
-    };
-
-    this.onMouseDown = e => {
-      this.onPointerDown({
-        offsetX: e.offsetX,
-        offsetY: e.offsetY,
-        pressure: 0, // taper ends
-        tiltX: 0,
-        tiltY: 0
-      });
-    };
-
-    this.onMouseMove = e => {
-      this.onPointerMove({
-        offsetX: e.offsetX,
-        offsetY: e.offsetY,
-        pressure: 1,
-        tiltX: 0,
-        tiltY: 0
-      });
-    };
-
-    this.onMouseUp = e => {
-      this.onPointerUp({
-        offsetX: e.offsetX,
-        offsetY: e.offsetY,
-        pressure: 0, // taper ends
-        tiltX: 0,
-        tiltY: 0
-      });
-    };
-
-    this.canvas = canvas;
-
-    this.down = false;
-    this.previewMaxWidth = null;
-    this.previewStrokes = [];
-    this.previewStroke = null;
-    this.lastPoint = null;
-
-    this.tools = {
-      brush: new Brush(this),
-      select: new Select(this)
-    };
-
-    this.tool = this.tools.brush;
-
-    this.currentLayer = canvas.image.children[0];
-    this.cursorSize = 10;
-    this.tiltAmount = 0.3;
-    this.erasing = false;
-
-    this.canvas.addEventListener('image-change', e => {
-      this.currentLayer = canvas.image.children[0];
-    });
-
-    this.canvas.style.cursor = 'none';
-
-    if (typeof this.canvas.onpointermove !== 'undefined') {
-      this.canvas.addEventListener('pointerdown', this.onPointerDown);
-      this.canvas.addEventListener('pointermove', this.onPointerMove);
-      this.canvas.addEventListener('pointerup', this.onPointerUp);
-      this.canvas.addEventListener('pointerout', this.onPointerOut);
-    } else {
-      this.canvas.addEventListener('mousedown', this.onMouseDown);
-      this.canvas.addEventListener('mousemove', this.onMouseMove);
-      this.canvas.addEventListener('mouseup', this.onMouseUp);
-      this.canvas.addEventListener('mouseout', this.onMouseUp);
-
-      // TODO: touch
-    }
-  }
-
-  get selection() {
-    return this.canvas.context.selection;
-  }
-
-  set selection(v) {
-    this.canvas.context.selection = v;
-  }
-
-  updateImage() {
-    this.currentLayer = canvas.image.children[0];
-  }
-
-  renderCursor(x, y, p, dx, dy) {
-    const ctx = this.canvas.overlayCtx;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, this.canvas.overlay.width, this.canvas.overlay.height);
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-
-    if (x < 0 || y < 0) return;
-    if (!this.down && p === 0) p = 1;
-
-    ctx.translate(x, y);
-
-    ctx.save();
-    ctx.rotate(-Math.atan2(dx, -dy));
-
-    let scaleY = 1 + Math.hypot(dx, dy) / 10;
-
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-
-    let radius = p * this.cursorSize / 4;
-    let points = arc(0, 0, radius, 0, Math.PI * 2);
-    let first = true;
-    for (let point of points) {
-      let [x, y] = point;
-
-      if (first) ctx.moveTo(x, y * scaleY + (scaleY - 1) * radius);else ctx.lineTo(x, y * scaleY + (scaleY - 1) * radius);
-
-      first = false;
-    }
-
-    ctx.stroke();
-
-    ctx.restore();
-  }
-
-  createPreviewStroke() {
-    this.previewStroke = new Path();
-    this.previewStrokes.push(this.previewStroke);
-
-    if (this.erasing) {
-      this.previewStroke.stroke = new Color(0, 1, 0, 0.5);
-      this.previewMaxWidth = 30;
-    } else {
-      this.previewStroke.stroke = new Color(1, 0, 1, 0.5);
-      this.previewMaxWidth = 10;
-    }
-
-    this.canvas.image.appendChild(this.previewStroke);
-  }
-
-  handleSinglePointerMove(e) {
-    if (!this.down) this.cursorSize = 10;
-    this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY);
-
-    if (this.down !== 'pointer') return;
-
-    // TODO: deduplicate points
-
-    let vec = [e.offsetX, e.offsetY].map((x, i) => x - this.lastPoint[i]);
-    let angle = Math.atan2(...vec);
-
-    // angles:
-    //        pi
-    // -pi/2      pi/2
-    //        0
-
-    let tiltAngle = Math.atan2(e.tiltX, -e.tiltY);
-    let tiltLength = Math.hypot(e.tiltX, e.tiltY) / 100;
-
-    // left normal vector
-    let vecLeft = [Math.cos(angle + Math.PI / 2), Math.sin(angle + Math.PI / 2)];
-    // right normal vector
-    let vecRight = [Math.cos(angle - Math.PI / 2), Math.sin(angle - Math.PI / 2)];
-
-    let tiltVector = [Math.cos(tiltAngle), Math.sin(tiltAngle)];
-
-    let left = e.pressure * this.previewMaxWidth / 2;
-    let right = e.pressure * this.previewMaxWidth / 2;
-
-    // dot left normal with tilt vector to get amount
-    left += this.tiltAmount * Math.abs(vecLeft.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength);
-    right += this.tiltAmount * Math.abs(vecRight.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength);
-
-    this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right);
-
-    if (this.previewStroke.roughLength > 400) {
-      // split stroke to prevent lag
-      this.createPreviewStroke();
-      this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right, true);
-    }
-
-    this.lastPoint = [e.offsetX, e.offsetY];
-
-    this.tool.strokeMove(e.offsetX, e.offsetY, left, right, e);
-  }
-
-};
-
-/***/ }),
-/* 45 */
-/***/ (function(module, exports) {
-
-//if 'steps' is not specified, we'll just approximate it
-module.exports = function arc(x, y, radius, start, end, clockwise, steps, path) {
-    if (!path)
-        path = []
-
-    x = x||0
-    y = y||0
-    radius = radius||0
-    start = start||0
-    end = end||0
-
-    //determine distance between the two angles
-    //...probably a nicer way of writing this
-    var dist = Math.abs(start-end)
-    if (!clockwise && start > end)
-        dist = 2*Math.PI - dist
-    else if (clockwise && end > start)
-        dist = 2*Math.PI - dist
-
-    //approximate the # of steps using the cube root of the radius
-    if (typeof steps !== 'number') 
-        steps = Math.max(6, Math.floor(6 * Math.pow(radius, 1/3) * (dist / (Math.PI))))
-
-    //ensure we have at least 3 steps..
-    steps = Math.max(steps, 3)
-    
-    var f = dist / (steps),
-        t = start
-
-    //modify direction
-    f *= clockwise ? -1 : 1
-
-    for (var i=0; i<steps+1; i++) {
-        var cs = Math.cos(t),
-            sn = Math.sin(t)
-
-        var nx = x + cs*radius,
-            ny = y + sn*radius
-
-        path.push([ nx, ny ])
-
-        t += f
-    }
-    return path
-}
-
-/***/ }),
-/* 46 */
-/***/ (function(module, exports, __webpack_require__) {
-
-const Tool = __webpack_require__(47);
-const PathFitter = __webpack_require__(48);
-const Path = __webpack_require__(4);
-const Color = __webpack_require__(3);
-
-module.exports = class Brush extends Tool {
-  constructor(...args) {
-    super(...args);
-
-    this.color = new Color(0, 0, 0, 1);
-
-    this.points = [];
-  }
-
-  fitPath(points, error = 2) {
-    let pathFitter = new PathFitter(points);
-    let segments = pathFitter.fit(error); // TODO: weighted by time?
-
-    let commands = [];
-    let lastSegment = null;
-    for (let segment of segments) {
-      if ((!lastSegment || !lastSegment.handleOutLength()) && !segment.handleInLength()) {
-        // line from last segment to this one is straight
-        commands.push([0x20, ...segment.point]);
-      } else if (lastSegment) {
-        // cubic bezier curve
-
-        // get absolute handle out & in
-        let handleOut = lastSegment.handleOut.map((x, i) => x + lastSegment.point[i]);
-        let handleIn = segment.handleIn.map((x, i) => x + segment.point[i]);
-
-        commands.push([0x30, ...handleOut, ...handleIn, ...segment.point]);
-      } else {
-        commands.push([0x10, ...segment.point]);
-      }
-
-      lastSegment = segment;
-    }
-
-    return commands;
-  }
-
-  stroke() {
-    let path = new Path();
-    path.stroke = this.color.clone();
-
-    let centerLine = this.fitPath(this.points.map(p => [p.x, p.y]));
-    let weightLeft = this.fitPath(this.points.map(p => [p.length, p.left]), 3);
-    let weightRight = this.fitPath(this.points.map(p => [p.length, p.right]), 3);
-
-    path.data.push(...centerLine.map(command => new Path.Command(...command)));
-
-    // TODO: don't do the following
-    // copy width data to simplified path
-    for (let point of this.points) {
-      path.data.push(new Path.Command(0x60, point.length, point.left, point.right));
-    }
-
-    this.editor.currentLayer.appendChild(path);
-  }
-
-  strokeStart(x, y, left, right) {
-    this.points = [];
-    this.points.push({ x, y, left, right, length: 0 });
-  }
-
-  strokeMove(x, y, left, right) {
-    let lastPoint = this.points[this.points.length - 1];
-    if (lastPoint.x === x && lastPoint.y === y) {
-      Object.assign(lastPoint, { left, right });
-    } else {
-      let lastLength = lastPoint.length;
-      let partLength = Math.hypot(x - lastPoint.x, y - lastPoint.y);
-      let length = partLength + lastLength;
-      this.points.push({ x, y, left, right, length });
-    }
-  }
-
-  strokeEnd(x, y, left, right) {
-    this.strokeMove(x, y, left, right);
-
-    this.stroke();
-  }
-};
-
-/***/ }),
-/* 47 */
-/***/ (function(module, exports) {
-
-module.exports = class Tool {
-  constructor(editor) {
-    this.editor = editor;
-  }
-
-  strokeStart(x, y, left, right, e) {
-    console.warn(`${this.constructor.name}#strokeStart not implemented`);
-  }
-
-  strokeMove(x, y, left, right, e) {
-    console.warn(`${this.constructor.name}#strokeMove not implemented`);
-  }
-
-  strokeEnd(x, y, left, right, e) {
-    console.warn(`${this.constructor.name}#strokeEnd not implemented`);
-  }
-};
-
-/***/ }),
-/* 48 */
-/***/ (function(module, exports) {
-
-/*
- * paper.js PathFitter modified for Graphein
- */
-
-/*
- * Paper.js - The Swiss Army Knife of Vector Graphics Scripting.
- * http://paperjs.org/
- *
- * Copyright (c) 2011 - 2016, Juerg Lehni & Jonathan Puckey
- * http://scratchdisk.com/ & http://jonathanpuckey.com/
- *
- * Distributed under the MIT license. See LICENSE file for details.
- *
- * All rights reserved.
- */
-
-// An Algorithm for Automatically Fitting Digitized Curves
-// by Philip J. Schneider
-// from "Graphics Gems", Academic Press, 1990
-// Modifications and optimizations of original algorithm by Juerg Lehni.
-
-// paperjs shim
-
-// Numerical.EPSILON
-const EPSILON = 1e-12;
-
-// Numerical.isZero
-const isZero = x => Math.abs(x) <= EPSILON;
-
-// Point methods
-const add = function (b) {
-  return this.map((x, i) => x + b[i]);
-};
-const subtract = function (b) {
-  return this.map((x, i) => x - b[i]);
-};
-const getDistance = function (b) {
-  return Math.hypot(...subtract.call(this, b));
-};
-const normalize = function (length = 1) {
-  let scale = length / Math.hypot(...this);
-  if (!Number.isFinite(scale)) scale = 0;
-  return this.map(x => x * scale);
-};
-const negate = function () {
-  return this.map(x => -x);
-};
-const multiply = function (b) {
-  return this.map(x => x * b);
-};
-const dot = function (b) {
-  return this.map((x, i) => x * b[i]).reduce((a, b) => a + b, 0);
-};
-
-// simple Segment implementation
-class Segment {
-  constructor(point = [0, 0], handleIn = [0, 0], handleOut = [0, 0]) {
-    this.point = point;
-    this.handleIn = handleIn;
-    this.handleOut = handleOut;
-  }
-
-  setHandleOut(point) {
-    this.handleOut = point;
-  }
-
-  // additional utilities not required by path fitter
-
-  handleInLength() {
-    return Math.hypot(...this.handleIn);
-  }
-
-  handleOutLength() {
-    return Math.hypot(...this.handleOut);
-  }
-}
-
-/**
- * @name PathFitter
- * @class
- * @private
- */
-module.exports = class PathFitter {
-  constructor(pathPoints, closed = false) {
-    let points = this.points = pathPoints;
-
-    // We need to duplicate the first and last segment when simplifying a
-    // closed path.
-    if (closed) {
-      points.unshift(points[points.length - 1]);
-      points.push(points[1]); // The point previously at index 0 is now 1.
-    }
-
-    this.closed = closed;
-  }
-
-  fit(error) {
-    let points = this.points;
-    let length = points.length;
-    let segments = null;
-
-    if (length > 0) {
-      // To support reducing paths with multiple points in the same place
-      // to one segment:
-      segments = [new Segment(points[0])];
-
-      if (length > 1) {
-        var _context;
-
-        this.fitCubic(segments, error, 0, length - 1,
-        // Left Tangent
-        (_context = points[1], subtract).call(_context, points[0]),
-        // Right Tangent
-        (_context = points[length - 2], subtract).call(_context, points[length - 1]));
-
-        // Remove the duplicated segments for closed paths again.
-        if (this.closed) {
-          segments.shift();
-          segments.pop();
-        }
-      }
-    }
-
-    return segments;
-  }
-
-  // Fit a Bezier curve to a (sub)set of digitized points
-  fitCubic(segments, error, first, last, tan1, tan2) {
-    var _context2;
-
-    let points = this.points;
-
-    // Use heuristic if region only has two points in it
-    if (last - first === 1) {
-      let pt1 = points[first];
-      let pt2 = points[last];
-      let dist = getDistance.call(pt1, pt2) / 3;
-
-      this.addCurve(segments, [pt1, add.call(pt1, normalize.call(tan1, dist)), add.call(pt2, normalize.call(tan2, dist)), pt2]);
-      return;
-    }
-
-    // Parameterize points, and attempt to fit curve
-    let uPrime = this.chordLengthParameterize(first, last);
-    let maxError = Math.max(error, error * error);
-    let split;
-    let parametersInOrder = true;
-
-    // Try 4 iterations
-    for (let i = 0; i <= 4; i++) {
-      let curve = this.generateBezier(first, last, uPrime, tan1, tan2);
-
-      // Find max deviation of points to fitted curve
-      let max = this.findMaxError(first, last, curve, uPrime);
-      if (max.error < error && parametersInOrder) {
-        this.addCurve(segments, curve);
-        return;
-      }
-      split = max.index;
-
-      // If error not too large, try reparameterization and iteration
-      if (max.error >= maxError) {
-        break;
-      }
-      parametersInOrder = this.reparameterize(first, last, uPrime, curve);
-      maxError = max.error;
-    }
-
-    // Fitting failed -- split at max error point and fit recursively
-    let tanCenter = (_context2 = points[split - 1], subtract).call(_context2, points[split + 1]);
-    this.fitCubic(segments, error, first, split, tan1, tanCenter);
-    this.fitCubic(segments, error, split, last, negate.call(tanCenter), tan2);
-  }
-
-  addCurve(segments, curve) {
-    var _context3;
-
-    let prev = segments[segments.length - 1];
-    prev.setHandleOut((_context3 = curve[1], subtract).call(_context3, curve[0]));
-    segments.push(new Segment(curve[3], (_context3 = curve[2], subtract).call(_context3, curve[3])));
-  }
-
-  // Use least-squares method to find Bezier control points for region.
-  generateBezier(first, last, uPrime, tan1, tan2) {
-    let epsilon = /* #= */EPSILON;
-    let abs = Math.abs;
-    let points = this.points;
-    let pt1 = points[first];
-    let pt2 = points[last];
-
-    // Create the C and X matrices
-    let C = [[0, 0], [0, 0]];
-    let X = [0, 0];
-
-    for (let i = 0, l = last - first + 1; i < l; i++) {
-      var _context4;
-
-      let u = uPrime[i];
-      let t = 1 - u;
-      let b = 3 * u * t;
-      let b0 = t * t * t;
-      let b1 = b * t;
-      let b2 = b * u;
-      let b3 = u * u * u;
-      let a1 = normalize.call(tan1, b1);
-      let a2 = normalize.call(tan2, b2);
-      let tmp = (_context4 = (_context4 = points[first + i], subtract).call(_context4, multiply.call(pt1, b0 + b1)), subtract).call(_context4, multiply.call(pt2, b2 + b3));
-
-      C[0][0] += dot.call(a1, a1);
-      C[0][1] += dot.call(a1, a2);
-      // C[1][0] += a1.dot(a2);
-      C[1][0] = C[0][1];
-      C[1][1] += dot.call(a2, a2);
-      X[0] += dot.call(a1, tmp);
-      X[1] += dot.call(a2, tmp);
-    }
-
-    // Compute the determinants of C and X
-    let detC0C1 = C[0][0] * C[1][1] - C[1][0] * C[0][1];
-    let alpha1;
-    let alpha2;
-
-    if (abs(detC0C1) > epsilon) {
-      // Kramer's rule
-      let detC0X = C[0][0] * X[1] - C[1][0] * X[0];
-      let detXC1 = X[0] * C[1][1] - X[1] * C[0][1];
-
-      // Derive alpha values
-      alpha1 = detXC1 / detC0C1;
-      alpha2 = detC0X / detC0C1;
-    } else {
-      // Matrix is under-determined, try assuming alpha1 == alpha2
-      let c0 = C[0][0] + C[0][1];
-      let c1 = C[1][0] + C[1][1];
-
-      alpha1 = alpha2 = abs(c0) > epsilon ? X[0] / c0 : abs(c1) > epsilon ? X[1] / c1 : 0;
-    }
-
-    // If alpha negative, use the Wu/Barsky heuristic (see text)
-    // (if alpha is 0, you get coincident control points that lead to
-    // divide by zero in any subsequent NewtonRaphsonRootFind() call.
-    let segLength = getDistance.call(pt2, pt1);
-    let eps = epsilon * segLength;
-    let handle1;
-    let handle2;
-
-    if (alpha1 < eps || alpha2 < eps) {
-      // fall back on standard (probably inaccurate) formula,
-      // and subdivide further if needed.
-      alpha1 = alpha2 = segLength / 3;
-    } else {
-      var _context5;
-
-      // Check if the found control points are in the right order when
-      // projected onto the line through pt1 and pt2.
-      let line = subtract.call(pt2, pt1);
-      // Control points 1 and 2 are positioned an alpha distance out
-      // on the tangent vectors, left and right, respectively
-      handle1 = normalize.call(tan1, alpha1);
-      handle2 = normalize.call(tan2, alpha2);
-      if ((_context5 = handle1, dot).call(_context5, line) - (_context5 = handle2, dot).call(_context5, line) > segLength * segLength) {
-        // Fall back to the Wu/Barsky heuristic above.
-        alpha1 = alpha2 = segLength / 3;
-        handle1 = handle2 = null; // Force recalculation
-      }
-    }
-
-    // First and last control points of the Bezier curve are
-    // positioned exactly at the first and last data points
-    return [pt1, add.call(pt1, handle1 || normalize.call(tan1, alpha1)), add.call(pt2, handle2 || normalize.call(tan2, alpha2)), pt2];
-  }
-
-  // Given set of points and their parameterization, try to find
-  // a better parameterization.
-  reparameterize(first, last, u, curve) {
-    for (let i = first; i <= last; i++) {
-      u[i - first] = this.findRoot(curve, this.points[i], u[i - first]);
-    }
-
-    // Detect if the new parameterization has reordered the points.
-    // In that case, we would fit the points of the path in the wrong order.
-    for (let i = 1, l = u.length; i < l; i++) {
-      if (u[i] <= u[i - 1]) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  // Use Newton-Raphson iteration to find better root.
-  findRoot(curve, point, u) {
-    let curve1 = [];
-    let curve2 = [];
-
-    // Generate control vertices for Q'
-    for (let i = 0; i <= 2; i++) {
-      var _context6;
-
-      curve1[i] = (_context6 = (_context6 = curve[i + 1], subtract).call(_context6, curve[i]), multiply).call(_context6, 3);
-    }
-
-    // Generate control vertices for Q''
-    for (let i = 0; i <= 1; i++) {
-      var _context7;
-
-      curve2[i] = (_context7 = (_context7 = curve1[i + 1], subtract).call(_context7, curve1[i]), multiply).call(_context7, 2);
-    }
-
-    // Compute Q(u), Q'(u) and Q''(u)
-    let pt = this.evaluate(3, curve, u);
-    let pt1 = this.evaluate(2, curve1, u);
-    let pt2 = this.evaluate(1, curve2, u);
-    let diff = subtract.call(pt, point);
-    let df = dot.call(pt1, pt1) + dot.call(diff, pt2);
-
-    // u = u - f(u) / f'(u)
-    return isZero(df) ? u : u - dot.call(diff, pt1) / df;
-  }
-
-  // Evaluate a bezier curve at a particular parameter value
-  evaluate(degree, curve, t) {
-    // Copy array
-    let tmp = curve.slice();
-
-    // Triangle computation
-    for (let i = 1; i <= degree; i++) {
-      for (let j = 0; j <= degree - i; j++) {
-        var _context8;
-
-        tmp[j] = (_context8 = (_context8 = tmp[j], multiply).call(_context8, 1 - t), add).call(_context8, (_context8 = tmp[j + 1], multiply).call(_context8, t));
-      }
-    }
-    return tmp[0];
-  }
-
-  // Assign parameter values to digitized points
-  // using relative distances between points.
-  chordLengthParameterize(first, last) {
-    let u = [0];
-    for (let i = first + 1; i <= last; i++) {
-      var _context9;
-
-      u[i - first] = u[i - first - 1] + (_context9 = this.points[i], getDistance).call(_context9, this.points[i - 1]);
-    }
-    for (let i = 1, m = last - first; i <= m; i++) {
-      u[i] /= u[m];
-    }
-    return u;
-  }
-
-  // Find the maximum squared distance of digitized points to fitted curve.
-  findMaxError(first, last, curve, u) {
-    let index = Math.floor((last - first + 1) / 2);
-    let maxDist = 0;
-
-    for (let i = first + 1; i < last; i++) {
-      let P = this.evaluate(3, curve, u[i - first]);
-      let v = subtract.call(P, this.points[i]);
-      // let dist = v.x * v.x + v.y * v.y // squared
-      let dist = v[0] * v[0] + v[1] * v[1];
-      if (dist >= maxDist) {
-        maxDist = dist;
-        index = i;
-      }
-    }
-
-    return {
-      error: maxDist,
-      index: index
-    };
-  }
-};
-
-/***/ }),
-/* 49 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-function compileSearch(funcName, predicate, reversed, extraArgs, earlyOut) {
-  var code = [
-    "function ", funcName, "(a,l,h,", extraArgs.join(","),  "){",
-earlyOut ? "" : "var i=", (reversed ? "l-1" : "h+1"),
-";while(l<=h){\
-var m=(l+h)>>>1,x=a[m]"]
-  if(earlyOut) {
-    if(predicate.indexOf("c") < 0) {
-      code.push(";if(x===y){return m}else if(x<=y){")
-    } else {
-      code.push(";var p=c(x,y);if(p===0){return m}else if(p<=0){")
-    }
-  } else {
-    code.push(";if(", predicate, "){i=m;")
-  }
-  if(reversed) {
-    code.push("l=m+1}else{h=m-1}")
-  } else {
-    code.push("h=m-1}else{l=m+1}")
-  }
-  code.push("}")
-  if(earlyOut) {
-    code.push("return -1};")
-  } else {
-    code.push("return i};")
-  }
-  return code.join("")
-}
-
-function compileBoundsSearch(predicate, reversed, suffix, earlyOut) {
-  var result = new Function([
-  compileSearch("A", "x" + predicate + "y", reversed, ["y"], earlyOut),
-  compileSearch("P", "c(x,y)" + predicate + "0", reversed, ["y", "c"], earlyOut),
-"function dispatchBsearch", suffix, "(a,y,c,l,h){\
-if(typeof(c)==='function'){\
-return P(a,(l===void 0)?0:l|0,(h===void 0)?a.length-1:h|0,y,c)\
-}else{\
-return A(a,(c===void 0)?0:c|0,(l===void 0)?a.length-1:l|0,y)\
-}}\
-return dispatchBsearch", suffix].join(""))
-  return result()
-}
-
-module.exports = {
-  ge: compileBoundsSearch(">=", false, "GE"),
-  gt: compileBoundsSearch(">", false, "GT"),
-  lt: compileBoundsSearch("<", true, "LT"),
-  le: compileBoundsSearch("<=", true, "LE"),
-  eq: compileBoundsSearch("-", true, "EQ", true)
-}
-
-
-/***/ }),
-/* 50 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = twoProduct
-
-var SPLITTER = +(Math.pow(2, 27) + 1.0)
-
-function twoProduct(a, b, result) {
-  var x = a * b
-
-  var c = SPLITTER * a
-  var abig = c - a
-  var ahi = c - abig
-  var alo = a - ahi
-
-  var d = SPLITTER * b
-  var bbig = d - b
-  var bhi = d - bbig
-  var blo = b - bhi
-
-  var err1 = x - (ahi * bhi)
-  var err2 = err1 - (alo * bhi)
-  var err3 = err2 - (ahi * blo)
-
-  var y = alo * blo - err3
-
-  if(result) {
-    result[0] = y
-    result[1] = x
-    return result
-  }
-
-  return [ y, x ]
-}
-
-/***/ }),
-/* 51 */
-/***/ (function(module, exports) {
-
-var g;
-
-// This works in non-strict mode
-g = (function() {
-	return this;
-})();
-
-try {
-	// This works if eval is allowed (see CSP)
-	g = g || Function("return this")() || (1,eval)("this");
-} catch(e) {
-	// This works if the window reference is available
-	if(typeof window === "object")
-		g = window;
-}
-
-// g can still be undefined, but nothing to do about it...
-// We return undefined, instead of nothing here, so it's
-// easier to handle this case. if(!global) { ...}
-
-module.exports = g;
-
-
-/***/ }),
-/* 52 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-function doBind(gl, elements, attributes) {
-  if(elements) {
-    elements.bind()
-  } else {
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null)
-  }
-  var nattribs = gl.getParameter(gl.MAX_VERTEX_ATTRIBS)|0
-  if(attributes) {
-    if(attributes.length > nattribs) {
-      throw new Error("gl-vao: Too many vertex attributes")
-    }
-    for(var i=0; i<attributes.length; ++i) {
-      var attrib = attributes[i]
-      if(attrib.buffer) {
-        var buffer = attrib.buffer
-        var size = attrib.size || 4
-        var type = attrib.type || gl.FLOAT
-        var normalized = !!attrib.normalized
-        var stride = attrib.stride || 0
-        var offset = attrib.offset || 0
-        buffer.bind()
-        gl.enableVertexAttribArray(i)
-        gl.vertexAttribPointer(i, size, type, normalized, stride, offset)
-      } else {
-        if(typeof attrib === "number") {
-          gl.vertexAttrib1f(i, attrib)
-        } else if(attrib.length === 1) {
-          gl.vertexAttrib1f(i, attrib[0])
-        } else if(attrib.length === 2) {
-          gl.vertexAttrib2f(i, attrib[0], attrib[1])
-        } else if(attrib.length === 3) {
-          gl.vertexAttrib3f(i, attrib[0], attrib[1], attrib[2])
-        } else if(attrib.length === 4) {
-          gl.vertexAttrib4f(i, attrib[0], attrib[1], attrib[2], attrib[3])
-        } else {
-          throw new Error("gl-vao: Invalid vertex attribute")
-        }
-        gl.disableVertexAttribArray(i)
-      }
-    }
-    for(; i<nattribs; ++i) {
-      gl.disableVertexAttribArray(i)
-    }
-  } else {
-    gl.bindBuffer(gl.ARRAY_BUFFER, null)
-    for(var i=0; i<nattribs; ++i) {
-      gl.disableVertexAttribArray(i)
-    }
-  }
-}
-
-module.exports = doBind
-
-/***/ }),
-/* 53 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = linearExpansionSum
-
-//Easy case: Add two scalars
-function scalarScalar(a, b) {
-  var x = a + b
-  var bv = x - a
-  var av = x - bv
-  var br = b - bv
-  var ar = a - av
-  var y = ar + br
-  if(y) {
-    return [y, x]
-  }
-  return [x]
-}
-
-function linearExpansionSum(e, f) {
-  var ne = e.length|0
-  var nf = f.length|0
-  if(ne === 1 && nf === 1) {
-    return scalarScalar(e[0], f[0])
-  }
-  var n = ne + nf
-  var g = new Array(n)
-  var count = 0
-  var eptr = 0
-  var fptr = 0
-  var abs = Math.abs
-  var ei = e[eptr]
-  var ea = abs(ei)
-  var fi = f[fptr]
-  var fa = abs(fi)
-  var a, b
-  if(ea < fa) {
-    b = ei
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-      ea = abs(ei)
-    }
-  } else {
-    b = fi
-    fptr += 1
-    if(fptr < nf) {
-      fi = f[fptr]
-      fa = abs(fi)
-    }
-  }
-  if((eptr < ne && ea < fa) || (fptr >= nf)) {
-    a = ei
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-      ea = abs(ei)
-    }
-  } else {
-    a = fi
-    fptr += 1
-    if(fptr < nf) {
-      fi = f[fptr]
-      fa = abs(fi)
-    }
-  }
-  var x = a + b
-  var bv = x - a
-  var y = b - bv
-  var q0 = y
-  var q1 = x
-  var _x, _bv, _av, _br, _ar
-  while(eptr < ne && fptr < nf) {
-    if(ea < fa) {
-      a = ei
-      eptr += 1
-      if(eptr < ne) {
-        ei = e[eptr]
-        ea = abs(ei)
-      }
-    } else {
-      a = fi
-      fptr += 1
-      if(fptr < nf) {
-        fi = f[fptr]
-        fa = abs(fi)
-      }
-    }
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    }
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-  }
-  while(eptr < ne) {
-    a = ei
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    }
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-    }
-  }
-  while(fptr < nf) {
-    a = fi
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    } 
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-    fptr += 1
-    if(fptr < nf) {
-      fi = f[fptr]
-    }
-  }
-  if(q0) {
-    g[count++] = q0
-  }
-  if(q1) {
-    g[count++] = q1
-  }
-  if(!count) {
-    g[count++] = 0.0  
-  }
-  g.length = count
-  return g
-}
-
-/***/ }),
-/* 54 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var twoProduct = __webpack_require__(50)
-var twoSum = __webpack_require__(87)
-
-module.exports = scaleLinearExpansion
-
-function scaleLinearExpansion(e, scale) {
-  var n = e.length
-  if(n === 1) {
-    var ts = twoProduct(e[0], scale)
-    if(ts[0]) {
-      return ts
-    }
-    return [ ts[1] ]
-  }
-  var g = new Array(2 * n)
-  var q = [0.1, 0.1]
-  var t = [0.1, 0.1]
-  var count = 0
-  twoProduct(e[0], scale, q)
-  if(q[0]) {
-    g[count++] = q[0]
-  }
-  for(var i=1; i<n; ++i) {
-    twoProduct(e[i], scale, t)
-    var pq = q[1]
-    twoSum(pq, t[0], q)
-    if(q[0]) {
-      g[count++] = q[0]
-    }
-    var a = t[1]
-    var b = q[1]
-    var x = a + b
-    var bv = x - a
-    var y = b - bv
-    q[1] = x
-    if(y) {
-      g[count++] = y
-    }
-  }
-  if(q[1]) {
-    g[count++] = q[1]
-  }
-  if(count === 0) {
-    g[count++] = 0.0
-  }
-  g.length = count
-  return g
-}
-
-/***/ }),
-/* 55 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = robustSubtract
-
-//Easy case: Add two scalars
-function scalarScalar(a, b) {
-  var x = a + b
-  var bv = x - a
-  var av = x - bv
-  var br = b - bv
-  var ar = a - av
-  var y = ar + br
-  if(y) {
-    return [y, x]
-  }
-  return [x]
-}
-
-function robustSubtract(e, f) {
-  var ne = e.length|0
-  var nf = f.length|0
-  if(ne === 1 && nf === 1) {
-    return scalarScalar(e[0], -f[0])
-  }
-  var n = ne + nf
-  var g = new Array(n)
-  var count = 0
-  var eptr = 0
-  var fptr = 0
-  var abs = Math.abs
-  var ei = e[eptr]
-  var ea = abs(ei)
-  var fi = -f[fptr]
-  var fa = abs(fi)
-  var a, b
-  if(ea < fa) {
-    b = ei
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-      ea = abs(ei)
-    }
-  } else {
-    b = fi
-    fptr += 1
-    if(fptr < nf) {
-      fi = -f[fptr]
-      fa = abs(fi)
-    }
-  }
-  if((eptr < ne && ea < fa) || (fptr >= nf)) {
-    a = ei
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-      ea = abs(ei)
-    }
-  } else {
-    a = fi
-    fptr += 1
-    if(fptr < nf) {
-      fi = -f[fptr]
-      fa = abs(fi)
-    }
-  }
-  var x = a + b
-  var bv = x - a
-  var y = b - bv
-  var q0 = y
-  var q1 = x
-  var _x, _bv, _av, _br, _ar
-  while(eptr < ne && fptr < nf) {
-    if(ea < fa) {
-      a = ei
-      eptr += 1
-      if(eptr < ne) {
-        ei = e[eptr]
-        ea = abs(ei)
-      }
-    } else {
-      a = fi
-      fptr += 1
-      if(fptr < nf) {
-        fi = -f[fptr]
-        fa = abs(fi)
-      }
-    }
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    }
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-  }
-  while(eptr < ne) {
-    a = ei
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    }
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-    }
-  }
-  while(fptr < nf) {
-    a = fi
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    } 
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-    fptr += 1
-    if(fptr < nf) {
-      fi = -f[fptr]
-    }
-  }
-  if(q0) {
-    g[count++] = q0
-  }
-  if(q1) {
-    g[count++] = q1
-  }
-  if(!count) {
-    g[count++] = 0.0  
-  }
-  g.length = count
-  return g
-}
 
 /***/ }),
 /* 56 */
@@ -12479,7 +12746,7 @@ exports.clearCache = function clearCache() {
     BUFFER[i].length = 0
   }
 }
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(51), __webpack_require__(67).Buffer))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(19), __webpack_require__(67).Buffer))
 
 /***/ }),
 /* 67 */
@@ -14276,7 +14543,7 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(51)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(19)))
 
 /***/ }),
 /* 68 */
@@ -16306,7 +16573,7 @@ module.exports = createVAO
 "use strict";
 
 
-var bindAttribs = __webpack_require__(52)
+var bindAttribs = __webpack_require__(20)
 
 function VertexAttribute(location, dimension, a, b, c, d) {
   this.location = location
@@ -16399,7 +16666,7 @@ module.exports = createVAONative
 "use strict";
 
 
-var bindAttribs = __webpack_require__(52)
+var bindAttribs = __webpack_require__(20)
 
 function VAOEmulated(gl) {
   this.gl = gl
@@ -16444,97 +16711,8 @@ module.exports = createVAOEmulated
 "use strict";
 
 
-var monotoneTriangulate = __webpack_require__(85)
-var makeIndex = __webpack_require__(88)
-var delaunayFlip = __webpack_require__(89)
-var filterTriangulation = __webpack_require__(91)
-
-module.exports = cdt2d
-
-function canonicalizeEdge(e) {
-  return [Math.min(e[0], e[1]), Math.max(e[0], e[1])]
-}
-
-function compareEdge(a, b) {
-  return a[0]-b[0] || a[1]-b[1]
-}
-
-function canonicalizeEdges(edges) {
-  return edges.map(canonicalizeEdge).sort(compareEdge)
-}
-
-function getDefault(options, property, dflt) {
-  if(property in options) {
-    return options[property]
-  }
-  return dflt
-}
-
-function cdt2d(points, edges, options) {
-
-  if(!Array.isArray(edges)) {
-    options = edges || {}
-    edges = []
-  } else {
-    options = options || {}
-    edges = edges || []
-  }
-
-  //Parse out options
-  var delaunay = !!getDefault(options, 'delaunay', true)
-  var interior = !!getDefault(options, 'interior', true)
-  var exterior = !!getDefault(options, 'exterior', true)
-  var infinity = !!getDefault(options, 'infinity', false)
-
-  //Handle trivial case
-  if((!interior && !exterior) || points.length === 0) {
-    return []
-  }
-
-  //Construct initial triangulation
-  var cells = monotoneTriangulate(points, edges)
-
-  //If delaunay refinement needed, then improve quality by edge flipping
-  if(delaunay || interior !== exterior || infinity) {
-
-    //Index all of the cells to support fast neighborhood queries
-    var triangulation = makeIndex(points.length, canonicalizeEdges(edges))
-    for(var i=0; i<cells.length; ++i) {
-      var f = cells[i]
-      triangulation.addTriangle(f[0], f[1], f[2])
-    }
-
-    //Run edge flipping
-    if(delaunay) {
-      delaunayFlip(points, triangulation)
-    }
-
-    //Filter points
-    if(!exterior) {
-      return filterTriangulation(triangulation, -1)
-    } else if(!interior) {
-      return filterTriangulation(triangulation,  1, infinity)
-    } else if(infinity) {
-      return filterTriangulation(triangulation, 0, infinity)
-    } else {
-      return triangulation.cells()
-    }
-    
-  } else {
-    return cells
-  }
-}
-
-
-/***/ }),
-/* 85 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var bsearch = __webpack_require__(49)
-var orient = __webpack_require__(86)[3]
+var bsearch = __webpack_require__(6)
+var orient = __webpack_require__(85)[3]
 
 var EVENT_POINT = 0
 var EVENT_END   = 1
@@ -16721,16 +16899,16 @@ function monotoneTriangulate(points, edges) {
 
 
 /***/ }),
-/* 86 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var twoProduct = __webpack_require__(50)
-var robustSum = __webpack_require__(53)
-var robustScale = __webpack_require__(54)
-var robustSubtract = __webpack_require__(55)
+var twoProduct = __webpack_require__(8)
+var robustSum = __webpack_require__(22)
+var robustScale = __webpack_require__(23)
+var robustSubtract = __webpack_require__(24)
 
 var NUM_EXPAND = 5
 
@@ -16917,7 +17095,7 @@ function generateOrientationProc() {
 generateOrientationProc()
 
 /***/ }),
-/* 87 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16940,13 +17118,13 @@ function fastTwoSum(a, b, result) {
 }
 
 /***/ }),
-/* 88 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bsearch = __webpack_require__(49)
+var bsearch = __webpack_require__(6)
 
 module.exports = createTriangulation
 
@@ -17051,14 +17229,14 @@ function createTriangulation(numVerts, edges) {
 
 
 /***/ }),
-/* 89 */
+/* 88 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var inCircle = __webpack_require__(90)[4]
-var bsearch = __webpack_require__(49)
+var inCircle = __webpack_require__(89)[4]
+var bsearch = __webpack_require__(6)
 
 module.exports = delaunayRefine
 
@@ -17173,16 +17351,16 @@ function delaunayRefine(points, triangulation) {
 
 
 /***/ }),
-/* 90 */
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var twoProduct = __webpack_require__(50)
-var robustSum = __webpack_require__(53)
-var robustDiff = __webpack_require__(55)
-var robustScale = __webpack_require__(54)
+var twoProduct = __webpack_require__(8)
+var robustSum = __webpack_require__(22)
+var robustDiff = __webpack_require__(24)
+var robustScale = __webpack_require__(23)
 
 var NUM_EXPAND = 6
 
@@ -17346,13 +17524,13 @@ function generateInSphereTest() {
 generateInSphereTest()
 
 /***/ }),
-/* 91 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bsearch = __webpack_require__(49)
+var bsearch = __webpack_require__(6)
 
 module.exports = classifyFaces
 
@@ -17533,969 +17711,23 @@ function classifyFaces(triangulation, target, infinity) {
 
 
 /***/ }),
-/* 92 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// expose classes
-
-exports.Point2D = __webpack_require__(97);
-exports.Vector2D = __webpack_require__(98);
-exports.Matrix2D = __webpack_require__(99);
-
-
-/***/ }),
-/* 93 */
-/***/ (function(module, exports, __webpack_require__) {
-
-/**
- *
- *   IntersectionArgs.js
- *
- *   @copyright 2002, Kevin Lindsey
- *
- */
-
-/**
- *  IntersectionArgs
- *
- *  @param {String} name
- *  @param {Array<Point2D} args
- *  @returns {IntersectionArgs}
- */
-function IntersectionArgs(name, args) {
-    this.init(name, args);
-}
-
-
-/**
- *  init
- *
- *  @param {String} name
- *  @param {Array<Point2D>} args
- */
-IntersectionArgs.prototype.init = function(name, args) {
-    this.name   = name;
-    this.args = args;
-};
-
-if (true) {
-    module.exports = IntersectionArgs;
-}
-
-
-/***/ }),
-/* 94 */
-/***/ (function(module, exports, __webpack_require__) {
-
-/**
- *
- *   Polynomial.js
- *
- *   copyright 2002, 2013 Kevin Lindsey
- * 
- *   contribution {@link http://github.com/Quazistax/kld-polynomial}
- *       @copyright 2015 Robert Benko (Quazistax) <quazistax@gmail.com>
- *       @license MIT
- */
-
-Polynomial.TOLERANCE = 1e-6;
-Polynomial.ACCURACY  = 15;
-
-
-/**
- *  interpolate
- *
- *  Based on code from "Numerical Recipes in C, 2nd Edition"
- *  Section 3.1, pages 109-110
- *
- *  @param {Array<Number>} xs
- *  @param {Array<Number>} ys
- *  @param {Number} n
- *  @param {Number} offset
- *  @param {Number} x
- *
- *  @returns {y:Number, dy:Number}
- */
-Polynomial.interpolate = function(xs, ys, n, offset, x) {
-    if ( xs.constructor !== Array || ys.constructor !== Array )
-        throw new Error("Polynomial.interpolate: xs and ys must be arrays");
-    if ( isNaN(n) || isNaN(offset) || isNaN(x) )
-        throw new Error("Polynomial.interpolate: n, offset, and x must be numbers");
-
-    var y  = 0;
-    var dy = 0;
-    var c = new Array(n);
-    var d = new Array(n);
-    var ns = 0;
-
-    var diff = Math.abs(x - xs[offset]);
-    for ( var i = 0; i < n; i++ ) {
-        var dift = Math.abs(x - xs[offset+i]);
-
-        if ( dift < diff ) {
-            ns = i;
-            diff = dift;
-        }
-        c[i] = d[i] = ys[offset+i];
-    }
-    y = ys[offset+ns];
-    ns--;
-
-    for ( var m = 1; m < n; m++ ) {
-        for ( var i = 0; i < n-m; i++ ) {
-            var ho = xs[offset+i] - x;
-            var hp = xs[offset+i+m] - x;
-            var w = c[i+1]-d[i];
-            var den = ho - hp;
-
-            if ( den == 0.0 ) {
-                throw new Error("Unable to interpolate polynomial. Two numbers in n were identical (to within roundoff)");
-            }
-
-            den = w / den;
-            d[i] = hp*den;
-            c[i] = ho*den;
-        }
-        dy = (2*(ns+1) < (n-m)) ? c[ns+1] : d[ns--];
-        y += dy;
-    }
-
-    return { y: y, dy: dy };
-};
-
-
-/**
- *  Polynomial
- *
- *  @returns {Polynomial}
- */
-function Polynomial() {
-    this.init( arguments );
-}
-
-
-/**
- *  init
- */
-Polynomial.prototype.init = function(coefs) {
-    this.coefs = new Array();
-
-    for ( var i = coefs.length - 1; i >= 0; i-- )
-        this.coefs.push( coefs[i] );
-
-    this._variable = "t";
-    this._s = 0;
-};
-
-
-/**
- *  eval
- */
-Polynomial.prototype.eval = function(x) {
-    if ( isNaN(x) )
-        throw new Error("Polynomial.eval: parameter must be a number");
-
-    var result = 0;
-
-    for ( var i = this.coefs.length - 1; i >= 0; i-- )
-        result = result * x + this.coefs[i];
-
-    return result;
-};
-
-
-/**
- *  add
- */
-Polynomial.prototype.add = function(that) {
-    var result = new Polynomial();
-    var d1 = this.getDegree();
-    var d2 = that.getDegree();
-    var dmax = Math.max(d1,d2);
-
-    for ( var i = 0; i <= dmax; i++ ) {
-        var v1 = (i <= d1) ? this.coefs[i] : 0;
-        var v2 = (i <= d2) ? that.coefs[i] : 0;
-
-        result.coefs[i] = v1 + v2;
-    }
-
-    return result;
-};
-
-
-/**
- *  multiply
- */
-Polynomial.prototype.multiply = function(that) {
-    var result = new Polynomial();
-
-    for ( var i = 0; i <= this.getDegree() + that.getDegree(); i++ )
-        result.coefs.push(0);
-
-    for ( var i = 0; i <= this.getDegree(); i++ )
-        for ( var j = 0; j <= that.getDegree(); j++ )
-            result.coefs[i+j] += this.coefs[i] * that.coefs[j];
-
-    return result;
-};
-
-
-/**
- *  divide_scalar
- */
-Polynomial.prototype.divide_scalar = function(scalar) {
-    for ( var i = 0; i < this.coefs.length; i++ )
-        this.coefs[i] /= scalar;
-};
-
-
-/**
- *  simplify
- */
-Polynomial.prototype.simplify = function() {
-    var TOLERANCE = 1e-15;
-    for ( var i = this.getDegree(); i >= 0; i-- ) {
-        if ( Math.abs( this.coefs[i] ) <= TOLERANCE )
-            this.coefs.pop();
-        else
-            break;
-    }
-};
-
-
-/**
- *  bisection
- */
-Polynomial.prototype.bisection = function(min, max) {
-    var minValue = this.eval(min);
-    var maxValue = this.eval(max);
-    var result;
-
-    if ( Math.abs(minValue) <= Polynomial.TOLERANCE )
-        result = min;
-    else if ( Math.abs(maxValue) <= Polynomial.TOLERANCE )
-        result = max;
-    else if ( minValue * maxValue <= 0 ) {
-        var tmp1  = Math.log(max - min);
-        var tmp2  = Math.LN10 * Polynomial.ACCURACY;
-        var iters = Math.ceil( (tmp1+tmp2) / Math.LN2 );
-
-        for ( var i = 0; i < iters; i++ ) {
-            result = 0.5 * (min + max);
-            var value = this.eval(result);
-
-            if ( Math.abs(value) <= Polynomial.TOLERANCE ) {
-                break;
-            }
-
-            if ( value * minValue < 0 ) {
-                max = result;
-                maxValue = value;
-            } else {
-                min = result;
-                minValue = value;
-            }
-        }
-    }
-
-    return result;
-};
-
-
-/**
- *  toString
- */
-Polynomial.prototype.toString = function() {
-    var coefs = new Array();
-    var signs = new Array();
-
-    for ( var i = this.coefs.length - 1; i >= 0; i-- ) {
-        var value = Math.round(this.coefs[i]*1000)/1000;
-        //var value = this.coefs[i];
-
-        if ( value != 0 ) {
-            var sign = ( value < 0 ) ? " - " : " + ";
-
-            value = Math.abs(value);
-            if ( i > 0 )
-                if ( value == 1 )
-                    value = this._variable;
-                else
-                    value += this._variable;
-            if ( i > 1 ) value += "^" + i;
-
-            signs.push( sign );
-            coefs.push( value );
-        }
-    }
-
-    signs[0] = ( signs[0] == " + " ) ? "" : "-";
-
-    var result = "";
-    for ( var i = 0; i < coefs.length; i++ )
-        result += signs[i] + coefs[i];
-
-    return result;
-};
-
-
-/**
- *  trapezoid
- *  Based on trapzd in "Numerical Recipes in C", page 137
- */
-Polynomial.prototype.trapezoid = function(min, max, n) {
-    if ( isNaN(min) || isNaN(max) || isNaN(n) )
-        throw new Error("Polynomial.trapezoid: parameters must be numbers");
-
-    var range = max - min;
-    var TOLERANCE = 1e-7;
-
-    if ( n == 1 ) {
-        var minValue = this.eval(min);
-        var maxValue = this.eval(max);
-        this._s = 0.5*range*( minValue + maxValue );
-    } else {
-        var it = 1 << (n-2);
-        var delta = range / it;
-        var x = min + 0.5*delta;
-        var sum = 0;
-
-        for ( var i = 0; i < it; i++ ) {
-            sum += this.eval(x);
-            x += delta;
-        }
-        this._s = 0.5*(this._s + range*sum/it);
-    }
-
-    if ( isNaN(this._s) )
-        throw new Error("Polynomial.trapezoid: this._s is NaN");
-
-    return this._s;
-};
-
-
-/**
- *  simpson
- *  Based on trapzd in "Numerical Recipes in C", page 139
- */
-Polynomial.prototype.simpson = function(min, max) {
-    if ( isNaN(min) || isNaN(max) )
-        throw new Error("Polynomial.simpson: parameters must be numbers");
-
-    var range = max - min;
-    var st = 0.5 * range * ( this.eval(min) + this.eval(max) );
-    var t = st;
-    var s = 4.0*st/3.0;
-    var os = s;
-    var ost = st;
-    var TOLERANCE = 1e-7;
-
-    var it = 1;
-    for ( var n = 2; n <= 20; n++ ) {
-        var delta = range / it;
-        var x     = min + 0.5*delta;
-        var sum   = 0;
-
-        for ( var i = 1; i <= it; i++ ) {
-            sum += this.eval(x);
-            x += delta;
-        }
-
-        t = 0.5 * (t + range * sum / it);
-        st = t;
-        s = (4.0*st - ost)/3.0;
-
-        if ( Math.abs(s-os) < TOLERANCE*Math.abs(os) )
-            break;
-
-        os = s;
-        ost = st;
-        it <<= 1;
-    }
-
-    return s;
-};
-
-
-/**
- *  romberg
- */
-Polynomial.prototype.romberg = function(min, max) {
-    if ( isNaN(min) || isNaN(max) )
-        throw new Error("Polynomial.romberg: parameters must be numbers");
-
-    var MAX = 20;
-    var K = 3;
-    var TOLERANCE = 1e-6;
-    var s = new Array(MAX+1);
-    var h = new Array(MAX+1);
-    var result = { y: 0, dy: 0 };
-
-    h[0] = 1.0;
-    for ( var j = 1; j <= MAX; j++ ) {
-        s[j-1] = this.trapezoid(min, max, j);
-        if ( j >= K ) {
-            result = Polynomial.interpolate(h, s, K, j-K, 0.0);
-            if ( Math.abs(result.dy) <= TOLERANCE*result.y) break;
-        }
-        s[j] = s[j-1];
-        h[j] = 0.25 * h[j-1];
-    }
-
-    return result.y;
-};
-
-// getters and setters
-
-/**
- *  get degree
- */
-Polynomial.prototype.getDegree = function() {
-    return this.coefs.length - 1;
-};
-
-
-/**
- *  getDerivative
- */
-Polynomial.prototype.getDerivative = function() {
-    var derivative = new Polynomial();
-
-    for ( var i = 1; i < this.coefs.length; i++ ) {
-        derivative.coefs.push(i*this.coefs[i]);
-    }
-
-    return derivative;
-};
-
-
-/**
- *  getRoots
- */
-Polynomial.prototype.getRoots = function() {
-    var result;
-
-    this.simplify();
-    switch ( this.getDegree() ) {
-        case 0: result = new Array();              break;
-        case 1: result = this.getLinearRoot();     break;
-        case 2: result = this.getQuadraticRoots(); break;
-        case 3: result = this.getCubicRoots();     break;
-        case 4: result = this.getQuarticRoots();   break;
-        default:
-            result = new Array();
-            // should try Newton's method and/or bisection
-    }
-
-    return result;
-};
-
-
-/**
- *  getRootsInInterval
- */
-Polynomial.prototype.getRootsInInterval = function(min, max) {
-    var roots = new Array();
-    var root;
-
-    if ( this.getDegree() == 1 ) {
-        root = this.bisection(min, max);
-        if ( root != null ) roots.push(root);
-    } else {
-        // get roots of derivative
-        var deriv  = this.getDerivative();
-        var droots = deriv.getRootsInInterval(min, max);
-
-        if ( droots.length > 0 ) {
-            // find root on [min, droots[0]]
-            root = this.bisection(min, droots[0]);
-            if ( root != null ) roots.push(root);
-
-            // find root on [droots[i],droots[i+1]] for 0 <= i <= count-2
-            for ( i = 0; i <= droots.length-2; i++ ) {
-                root = this.bisection(droots[i], droots[i+1]);
-                if ( root != null ) roots.push(root);
-            }
-
-            // find root on [droots[count-1],xmax]
-            root = this.bisection(droots[droots.length-1], max);
-            if ( root != null ) roots.push(root);
-        } else {
-            // polynomial is monotone on [min,max], has at most one root
-            root = this.bisection(min, max);
-            if ( root != null ) roots.push(root);
-        }
-    }
-
-    return roots;
-};
-
-
-/**
- *  getLinearRoot
- */
-Polynomial.prototype.getLinearRoot = function() {
-    var result = new Array();
-    var a = this.coefs[1];
-
-    if ( a != 0 )
-        result.push( -this.coefs[0] / a );
-
-    return result;
-};
-
-
-/**
- *  getQuadraticRoots
- */
-Polynomial.prototype.getQuadraticRoots = function() {
-    var results = new Array();
-
-    if ( this.getDegree() == 2 ) {
-        var a = this.coefs[2];
-        var b = this.coefs[1] / a;
-        var c = this.coefs[0] / a;
-        var d = b*b - 4*c;
-
-        if ( d > 0 ) {
-            var e = Math.sqrt(d);
-
-            results.push( 0.5 * (-b + e) );
-            results.push( 0.5 * (-b - e) );
-        } else if ( d == 0 ) {
-            // really two roots with same value, but we only return one
-            results.push( 0.5 * -b );
-        }
-    }
-
-    return results;
-};
-
-
-/**
- *  getCubicRoots
- *
- *  This code is based on MgcPolynomial.cpp written by David Eberly.  His
- *  code along with many other excellent examples are avaiable at his site:
- *  http://www.geometrictools.com
- */
-Polynomial.prototype.getCubicRoots = function() {
-    var results = new Array();
-
-    if ( this.getDegree() == 3 ) {
-        var c3 = this.coefs[3];
-        var c2 = this.coefs[2] / c3;
-        var c1 = this.coefs[1] / c3;
-        var c0 = this.coefs[0] / c3;
-
-        var a       = (3*c1 - c2*c2) / 3;
-        var b       = (2*c2*c2*c2 - 9*c1*c2 + 27*c0) / 27;
-        var offset  = c2 / 3;
-        var discrim = b*b/4 + a*a*a/27;
-        var halfB   = b / 2;
-
-        var ZEROepsilon = this.zeroErrorEstimate();
-        if (Math.abs(discrim) <= ZEROepsilon) discrim = 0;
-
-        if ( discrim > 0 ) {
-            var e = Math.sqrt(discrim);
-            var tmp;
-            var root;
-
-            tmp = -halfB + e;
-            if ( tmp >= 0 )
-                root = Math.pow(tmp, 1/3);
-            else
-                root = -Math.pow(-tmp, 1/3);
-
-            tmp = -halfB - e;
-            if ( tmp >= 0 )
-                root += Math.pow(tmp, 1/3);
-            else
-                root -= Math.pow(-tmp, 1/3);
-
-            results.push( root - offset );
-        } else if ( discrim < 0 ) {
-            var distance = Math.sqrt(-a/3);
-            var angle    = Math.atan2( Math.sqrt(-discrim), -halfB) / 3;
-            var cos      = Math.cos(angle);
-            var sin      = Math.sin(angle);
-            var sqrt3    = Math.sqrt(3);
-
-            results.push( 2*distance*cos - offset );
-            results.push( -distance * (cos + sqrt3 * sin) - offset);
-            results.push( -distance * (cos - sqrt3 * sin) - offset);
-        } else {
-            var tmp;
-
-            if ( halfB >= 0 )
-                tmp = -Math.pow(halfB, 1/3);
-            else
-                tmp = Math.pow(-halfB, 1/3);
-
-            results.push( 2*tmp - offset );
-            // really should return next root twice, but we return only one
-            results.push( -tmp - offset );
-        }
-    }
-
-    return results;
-};
-
-/**
-    Sign of a number (+1, -1, +0, -0).
- */
-var sign = function (x) {
-    return typeof x === 'number' ? x ? x < 0 ? -1 : 1 : x === x ? x : NaN : NaN;
-};
-
-
-///////////////////////////////////////////////////////////////////
-/**
-    Calculates roots of quartic polynomial. <br/>
-    First, derivative roots are found, then used to split quartic polynomial 
-    into segments, each containing one root of quartic polynomial.
-    Segments are then passed to newton's method to find roots.
-
-    @returns {Array<Number>} roots
-*/
-Polynomial.prototype.getQuarticRoots = function () {
-    var results = [];
-
-    var n = this.getDegree();
-    if (n == 4) {
-
-        var poly = new Polynomial();
-        poly.coefs = this.coefs.slice();
-        poly.divide_scalar(poly.coefs[n]);
-        var ERRF = 1e-15;
-        if (Math.abs(poly.coefs[0]) < 10 * ERRF * Math.abs(poly.coefs[3]))
-            poly.coefs[0] = 0;
-        var poly_d = poly.getDerivative();
-        var derrt = poly_d.getRoots().sort(function (a, b) { return a - b; });
-        var dery = [];
-        var nr = derrt.length - 1;
-        var i;
-        var rb = this.bounds();
-        maxabsX = Math.max(Math.abs(rb.minX), Math.abs(rb.maxX));
-        var ZEROepsilon = this.zeroErrorEstimate(maxabsX);
-        
-        for (i = 0; i <= nr; i++) {
-            dery.push(poly.eval(derrt[i]));
-        }
-
-        for (i = 0; i <= nr; i++) {
-            if (Math.abs(dery[i]) < ZEROepsilon)
-                dery[i] = 0;
-        }
-
-        i = 0;
-        var dx = Math.max(0.1 * (rb.maxX - rb.minX) / n, ERRF);
-        var guesses = [];
-        var minmax = [];
-        if (nr > -1) {
-            if (dery[0] != 0) {
-                if (sign(dery[0]) != sign(poly.eval(derrt[0] - dx) - dery[0])) {
-                    guesses.push(derrt[0] - dx);
-                    minmax.push([rb.minX, derrt[0]]);
-                }
-            }
-            else {
-                results.push(derrt[0], derrt[0]);
-                i++;
-            }
-
-            for (; i < nr; i++) {
-                if (dery[i + 1] == 0) {
-                    results.push(derrt[i + 1], derrt[i + 1]);
-                    i++;
-                }
-                else if (sign(dery[i]) != sign(dery[i + 1])) {
-                    guesses.push((derrt[i] + derrt[i + 1]) / 2);
-                    minmax.push([derrt[i], derrt[i + 1]]);
-                }
-            }
-            if (dery[nr] != 0 && sign(dery[nr]) != sign(poly.eval(derrt[nr] + dx) - dery[nr])) {
-                guesses.push(derrt[nr] + dx);
-                minmax.push([derrt[nr], rb.maxX]);
-            }
-        }
-
-        var f = function (x) { return poly.eval(x); };
-        var df = function (x) { return poly_d.eval(x); };
-        if (guesses.length > 0) {
-            for (i = 0; i < guesses.length; i++) {
-                guesses[i] = Polynomial.newton_secant_bisection(guesses[i], f, df, 32, minmax[i][0], minmax[i][1]);
-            }
-        }
-
-        results = results.concat(guesses);
-    }
-    return results;
-};
-
-///////////////////////////////////////////////////////////////////
-/**
-    Estimate what is the maximum polynomial evaluation error value under which polynomial evaluation could be in fact 0.
-    
-    @returns {Number} 
-*/
-Polynomial.prototype.zeroErrorEstimate = function (maxabsX) {
-    var poly = this;
-    var ERRF = 1e-15;
-    if (typeof maxabsX === 'undefined') {
-        var rb = poly.bounds();
-        maxabsX = Math.max(Math.abs(rb.minX), Math.abs(rb.maxX));
-    }
-    if (maxabsX < 0.001) {
-        return 2*Math.abs(poly.eval(ERRF));
-    }
-    var n = poly.coefs.length - 1;
-    var an = poly.coefs[n];
-    return 10 * ERRF * poly.coefs.reduce(function (m, v, i) {
-        var nm = v / an * Math.pow(maxabsX, i);
-        return nm > m ? nm : m;
-    }, 0);
-}
-
-///////////////////////////////////////////////////////////////////
-/**
-    Calculates upper Real roots bounds. <br/>
-    Real roots are in interval [negX, posX]. Determined by Fujiwara method.
-    @see {@link http://en.wikipedia.org/wiki/Properties_of_polynomial_roots}
-
-    @returns {{ negX: Number, posX: Number }}
-*/
-Polynomial.prototype.bounds_UpperReal_Fujiwara = function () {
-    var a = this.coefs;
-    var n = a.length - 1;
-    var an = a[n];
-    if (an != 1) {
-        a = this.coefs.map(function (v) { return v / an; });
-    }
-    var b = a.map(function (v, i) { return (i < n) ? Math.pow(Math.abs((i == 0) ? v / 2 : v), 1 / (n - i)) : v; });
-
-    var coefSelectionFunc;
-    var find2Max = function (acc, bi, i) {
-        if (coefSelectionFunc(i)) {
-            if (acc.max < bi) {
-                acc.nearmax = acc.max;
-                acc.max = bi;
-            }
-            else if (acc.nearmax < bi) {
-                acc.nearmax = bi;
-            }
-        }
-        return acc;
-    };
-
-    coefSelectionFunc = function (i) { return i < n && a[i] < 0; };
-    var max_nearmax_pos = b.reduce(find2Max, { max: 0, nearmax: 0 });
-
-    coefSelectionFunc = function (i) { return i < n && ((n % 2 == i % 2) ? a[i] < 0 : a[i] > 0); };
-    var max_nearmax_neg = b.reduce(find2Max, { max: 0, nearmax: 0 });
-
-    return {
-        negX: -2 * max_nearmax_neg.max,
-        posX: 2 * max_nearmax_pos.max
-    };
-};
-
-
-///////////////////////////////////////////////////////////////////
-/** 
-    Calculates lower Real roots bounds. <br/>
-    There are no Real roots in interval <negX, posX>. Determined by Fujiwara method.
-    @see {@link http://en.wikipedia.org/wiki/Properties_of_polynomial_roots}
-
-    @returns {{ negX: Number, posX: Number }}
-*/
-Polynomial.prototype.bounds_LowerReal_Fujiwara = function () {
-    var poly = new Polynomial();
-    poly.coefs = this.coefs.slice().reverse();
-    var res = poly.bounds_UpperReal_Fujiwara();
-    res.negX = 1 / res.negX;
-    res.posX = 1 / res.posX;
-    return res;
-};
-
-
-///////////////////////////////////////////////////////////////////
-/** 
-    Calculates left and right Real roots bounds. <br/>
-    Real roots are in interval [minX, maxX]. Combines Fujiwara lower and upper bounds to get minimal interval.
-    @see {@link http://en.wikipedia.org/wiki/Properties_of_polynomial_roots}
-
-    @returns {{ minX: Number, maxX: Number }}
-*/
-Polynomial.prototype.bounds = function () {
-    var urb = this.bounds_UpperReal_Fujiwara();
-    var rb = { minX: urb.negX, maxX: urb.posX };
-    if (urb.negX === 0 && urb.posX === 0)
-        return rb;
-    if (urb.negX === 0) {
-        rb.minX = this.bounds_LowerReal_Fujiwara().posX;
-    }
-    else if (urb.posX === 0) {
-        rb.maxX = this.bounds_LowerReal_Fujiwara().negX;
-    }
-    if (rb.minX > rb.maxX) {
-        //console.log('Polynomial.prototype.bounds: poly has no real roots? or floating point error?');
-        rb.minX = rb.maxX = 0;
-    }
-    return rb;
-    // TODO: if sure that there are no complex roots 
-    // (maybe by using Sturm's theorem) use:
-    //return this.bounds_Real_Laguerre();
-};
-
-
-/////////////////////////////////////////////////////////////////// 
-/**
-    Newton's (Newton-Raphson) method for finding Real roots on univariate function. <br/>
-    When using bounds, algorithm falls back to secant if newton goes out of range.
-    Bisection is fallback for secant when determined secant is not efficient enough.
-    @see {@link http://en.wikipedia.org/wiki/Newton%27s_method}
-    @see {@link http://en.wikipedia.org/wiki/Secant_method}
-    @see {@link http://en.wikipedia.org/wiki/Bisection_method}
-
-    @param {Number} x0 - Inital root guess
-    @param {function(x)} f - Function which root we are trying to find
-    @param {function(x)} df - Derivative of function f
-    @param {Number} max_iterations - Maximum number of algorithm iterations
-    @param {Number} [min_x] - Left bound value
-    @param {Number} [max_x] - Right bound value
-    @returns {Number} - root
-*/
-Polynomial.newton_secant_bisection = function (x0, f, df, max_iterations, min, max) {
-    var x, prev_dfx = 0, dfx, prev_x_ef_correction = 0, x_correction, x_new;
-    var v, y_atmin, y_atmax;
-    x = x0;
-    var ACCURACY = 14;
-    var min_correction_factor = Math.pow(10, -ACCURACY);
-    var isBounded = (typeof min === 'number' && typeof max === 'number');
-    if (isBounded) {
-        if (min > max)
-            throw new Error("newton root finding: min must be greater than max");
-        y_atmin = f(min);
-        y_atmax = f(max);
-        if (sign(y_atmin) ==  sign(y_atmax))
-            throw new Error("newton root finding: y values of bounds must be of opposite sign");
-    }
-
-    var isEnoughCorrection = function () {
-        // stop if correction is too small
-        // or if correction is in simple loop
-        return (Math.abs(x_correction) <= min_correction_factor * Math.abs(x))
-            || (prev_x_ef_correction == (x - x_correction) - x);
-    };
-
-    var i;
-    //var stepMethod;
-    //var details = [];
-    for (i = 0; i < max_iterations; i++) {
-        dfx = df(x);
-        if (dfx == 0) {
-            if (prev_dfx == 0) {
-                // error
-                throw new Error("newton root finding: df(x) is zero");
-                //return null;
-            }
-            else {
-                // use previous derivation value
-                dfx = prev_dfx;
-            }
-            // or move x a little?
-            //dfx = df(x != 0 ? x + x * 1e-15 : 1e-15);
-        }
-        //stepMethod = 'newton';
-        prev_dfx = dfx;
-        y = f(x);
-        x_correction = y / dfx;
-        x_new = x - x_correction;
-        if (isEnoughCorrection()) {
-            break;
-        }
-
-        if (isBounded) {
-            if (sign(y) == sign(y_atmax)) {
-                max = x;
-                y_atmax = y;
-            }
-            else if (sign(y) == sign(y_atmin)) {
-                min = x;
-                y_atmin = y;
-            }
-            else {
-                x = x_new;
-                //console.log("newton root finding: sign(y) not matched.");
-                break;
-            }
-
-            if ((x_new < min) || (x_new > max)) {
-                if (sign(y_atmin) == sign(y_atmax)) {
-                    break;
-                }
-
-                var RATIO_LIMIT = 50;
-                var AIMED_BISECT_OFFSET = 0.25; // [0, 0.5)
-                var dy = y_atmax - y_atmin;
-                var dx = max - min;
-
-                if (dy == 0) {
-                    //stepMethod = 'bisect';
-                    x_correction = x - (min + dx * 0.5);
-                }
-                else if (Math.abs(dy / Math.min(y_atmin, y_atmax)) > RATIO_LIMIT) {
-                    //stepMethod = 'aimed bisect';
-                    x_correction = x - (min + dx * (0.5 + (Math.abs(y_atmin) < Math.abs(y_atmax) ? -AIMED_BISECT_OFFSET : AIMED_BISECT_OFFSET)));
-                }
-                else {
-                    //stepMethod = 'secant'; 
-                    x_correction = x - (min - y_atmin / dy * dx);
-                }
-                x_new = x - x_correction;
-
-                if (isEnoughCorrection()) {
-                    break;
-                }
-            }
-        }
-        //details.push([stepMethod, i, x, x_new, x_correction, min, max, y]);
-        prev_x_ef_correction = x - x_new;
-        x = x_new;
-    }
-    //details.push([stepMethod, i, x, x_new, x_correction, min, max, y]);
-    //console.log(details.join('\r\n'));
-    //if (i == max_iterations)
-    //    console.log('newt: steps=' + ((i==max_iterations)? i:(i + 1)));
-    return x;
-};
-
-if (true) {
-    module.exports = Polynomial;
-}
-
-
-/***/ }),
-/* 95 */
+/* 91 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // expose module classes
-exports.Intersection = __webpack_require__(96);
-exports.IntersectionArgs = __webpack_require__(93);
-exports.Shapes = __webpack_require__(102);
-exports.AffineShapes = __webpack_require__(103);
+exports.Intersection = __webpack_require__(92);
+exports.IntersectionArgs = __webpack_require__(9);
+exports.Shapes = __webpack_require__(98);
+exports.AffineShapes = __webpack_require__(99);
 
 // expose affine module classes
-exports.Point2D = __webpack_require__(92).Point2D;
-exports.Vector2D = __webpack_require__(92).Vector2D;
-exports.Matrix2D = __webpack_require__(92).Matrix2D;
+exports.Point2D = __webpack_require__(1).Point2D;
+exports.Vector2D = __webpack_require__(1).Vector2D;
+exports.Matrix2D = __webpack_require__(1).Matrix2D;
 
 
 /***/ }),
-/* 96 */
+/* 92 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -18507,9 +17739,9 @@ exports.Matrix2D = __webpack_require__(92).Matrix2D;
  */
 
 if (true) {
-    var Point2D = __webpack_require__(92).Point2D,
-        Vector2D = __webpack_require__(92).Vector2D,
-        Polynomial = __webpack_require__(100).Polynomial;
+    var Point2D = __webpack_require__(1).Point2D,
+        Vector2D = __webpack_require__(1).Vector2D,
+        Polynomial = __webpack_require__(96).Polynomial;
 }
 
 /**
@@ -20469,7 +19701,7 @@ if (true) {
 
 
 /***/ }),
-/* 97 */
+/* 93 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -20662,7 +19894,7 @@ if (true) {
 
 
 /***/ }),
-/* 98 */
+/* 94 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -20909,7 +20141,7 @@ if (true) {
 
 
 /***/ }),
-/* 99 */
+/* 95 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -21547,17 +20779,17 @@ if (true) {
 
 
 /***/ }),
-/* 100 */
+/* 96 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // expose classes
 
-exports.Polynomial = __webpack_require__(94);
-exports.SqrtPolynomial = __webpack_require__(101);
+exports.Polynomial = __webpack_require__(25);
+exports.SqrtPolynomial = __webpack_require__(97);
 
 
 /***/ }),
-/* 101 */
+/* 97 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -21569,7 +20801,7 @@ exports.SqrtPolynomial = __webpack_require__(101);
  */
 
 if (true) {
-    var Polynomial = __webpack_require__(94);
+    var Polynomial = __webpack_require__(25);
 }
 
 /**
@@ -21623,7 +20855,7 @@ if (true) {
 
 
 /***/ }),
-/* 102 */
+/* 98 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -21634,8 +20866,8 @@ if (true) {
 
 
 if (true) {
-    var Point2D = __webpack_require__(92).Point2D,
-        IntersectionArgs = __webpack_require__(93);
+    var Point2D = __webpack_require__(1).Point2D,
+        IntersectionArgs = __webpack_require__(9);
 }
 
 
@@ -21804,7 +21036,7 @@ if (true) {
 
 
 /***/ }),
-/* 103 */
+/* 99 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -21814,8 +21046,8 @@ if (true) {
  */
 
 if (true) {
-    var Point2D = __webpack_require__(92).Point2D,
-        IntersectionArgs = __webpack_require__(93);
+    var Point2D = __webpack_require__(1).Point2D,
+        IntersectionArgs = __webpack_require__(9);
 }
 
 
@@ -21937,12 +21169,780 @@ if (true) {
 
 
 /***/ }),
+/* 100 */
+/***/ (function(module, exports, __webpack_require__) {
+
+const arc = __webpack_require__(101);
+const Path = __webpack_require__(5);
+const Color = __webpack_require__(4);
+const Brush = __webpack_require__(102);
+const Select = __webpack_require__(104);
+
+module.exports = class Editor {
+  constructor(canvas) {
+    this.onPointerDown = e => {
+      this.down = 'pointer';
+
+      this.cursorSize = e.pointerType === 'pen' && e.button === 5 ? 30 : 10;
+      this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY);
+
+      this.erasing = e.pointerType === 'pen' && e.button === 5;
+
+      if (this.erasing) {
+        // TEMP: selection!
+        this.tool = this.tools.select;
+      } else this.tool = this.tools.brush;
+
+      this.previewStrokes = [];
+      this.createPreviewStroke();
+
+      let left = e.pressure * this.previewMaxWidth / 2;
+      let right = e.pressure * this.previewMaxWidth / 2;
+      this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right, true);
+
+      this.lastPoint = [e.offsetX, e.offsetY];
+
+      this.tool.strokeStart(e.offsetX, e.offsetY, left, right, e);
+      this.canvas.render();
+    };
+
+    this.onPointerMove = e => {
+      let events = [e];
+      if (e.getCoalescedEvents) events.unshift(...e.getCoalescedEvents());
+
+      for (let event of events) this.handleSinglePointerMove(event);
+
+      this.canvas.render();
+    };
+
+    this.onPointerUp = e => {
+      if (this.down !== 'pointer') return;
+      this.down = null;
+      let left = e.pressure * this.previewMaxWidth / 2;
+      let right = e.pressure * this.previewMaxWidth / 2;
+
+      for (let stroke of this.previewStrokes) {
+        stroke.parentNode.removeChild(stroke);
+      }
+
+      this.previewStroke = null;
+      this.previewStrokes = [];
+
+      this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY);
+      this.tool.strokeEnd(e.offsetX, e.offsetY, left, right, e);
+      this.canvas.render();
+    };
+
+    this.onPointerOut = e => {
+      this.renderCursor(-1, -1, 0, 0, 0);
+      this.onPointerUp(e);
+    };
+
+    this.onMouseDown = e => {
+      this.onPointerDown({
+        offsetX: e.offsetX,
+        offsetY: e.offsetY,
+        pressure: 0, // taper ends
+        tiltX: 0,
+        tiltY: 0
+      });
+    };
+
+    this.onMouseMove = e => {
+      this.onPointerMove({
+        offsetX: e.offsetX,
+        offsetY: e.offsetY,
+        pressure: 1,
+        tiltX: 0,
+        tiltY: 0
+      });
+    };
+
+    this.onMouseUp = e => {
+      this.onPointerUp({
+        offsetX: e.offsetX,
+        offsetY: e.offsetY,
+        pressure: 0, // taper ends
+        tiltX: 0,
+        tiltY: 0
+      });
+    };
+
+    this.canvas = canvas;
+
+    this.down = false;
+    this.previewMaxWidth = null;
+    this.previewStrokes = [];
+    this.previewStroke = null;
+    this.lastPoint = null;
+
+    this.tools = {
+      brush: new Brush(this),
+      select: new Select(this)
+    };
+
+    this.tool = this.tools.brush;
+
+    this.currentLayer = canvas.image.children[0];
+    this.cursorSize = 10;
+    this.tiltAmount = 0.3;
+    this.erasing = false;
+
+    this.canvas.addEventListener('image-change', e => {
+      this.currentLayer = canvas.image.children[0];
+    });
+
+    this.canvas.style.cursor = 'none';
+
+    if (typeof this.canvas.onpointermove !== 'undefined') {
+      this.canvas.addEventListener('pointerdown', this.onPointerDown);
+      this.canvas.addEventListener('pointermove', this.onPointerMove);
+      this.canvas.addEventListener('pointerup', this.onPointerUp);
+      this.canvas.addEventListener('pointerout', this.onPointerOut);
+    } else {
+      this.canvas.addEventListener('mousedown', this.onMouseDown);
+      this.canvas.addEventListener('mousemove', this.onMouseMove);
+      this.canvas.addEventListener('mouseup', this.onMouseUp);
+      this.canvas.addEventListener('mouseout', this.onMouseUp);
+
+      // TODO: touch
+    }
+  }
+
+  get selection() {
+    return this.canvas.context.selection;
+  }
+
+  set selection(v) {
+    this.canvas.context.selection = v;
+  }
+
+  updateImage() {
+    this.currentLayer = canvas.image.children[0];
+  }
+
+  renderCursor(x, y, p, dx, dy) {
+    const ctx = this.canvas.overlayCtx;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, this.canvas.overlay.width, this.canvas.overlay.height);
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+    if (x < 0 || y < 0) return;
+    if (!this.down && p === 0) p = 1;
+
+    ctx.translate(x, y);
+
+    ctx.save();
+    ctx.rotate(-Math.atan2(dx, -dy));
+
+    let scaleY = 1 + Math.hypot(dx, dy) / 10;
+
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    let radius = p * this.cursorSize / 4;
+    let points = arc(0, 0, radius, 0, Math.PI * 2);
+    let first = true;
+    for (let point of points) {
+      let [x, y] = point;
+
+      if (first) ctx.moveTo(x, y * scaleY + (scaleY - 1) * radius);else ctx.lineTo(x, y * scaleY + (scaleY - 1) * radius);
+
+      first = false;
+    }
+
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  createPreviewStroke() {
+    this.previewStroke = new Path();
+    this.previewStrokes.push(this.previewStroke);
+
+    if (this.erasing) {
+      this.previewStroke.stroke = new Color(0, 1, 0, 0.5);
+      this.previewMaxWidth = 30;
+    } else {
+      this.previewStroke.stroke = new Color(1, 0, 1, 0.5);
+      this.previewMaxWidth = 10;
+    }
+
+    this.canvas.image.appendChild(this.previewStroke);
+  }
+
+  handleSinglePointerMove(e) {
+    if (!this.down) this.cursorSize = 10;
+    this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY);
+
+    if (this.down !== 'pointer') return;
+
+    // TODO: deduplicate points
+
+    let vec = [e.offsetX, e.offsetY].map((x, i) => x - this.lastPoint[i]);
+    let angle = Math.atan2(...vec);
+
+    // angles:
+    //        pi
+    // -pi/2      pi/2
+    //        0
+
+    let tiltAngle = Math.atan2(e.tiltX, -e.tiltY);
+    let tiltLength = Math.hypot(e.tiltX, e.tiltY) / 100;
+
+    // left normal vector
+    let vecLeft = [Math.cos(angle + Math.PI / 2), Math.sin(angle + Math.PI / 2)];
+    // right normal vector
+    let vecRight = [Math.cos(angle - Math.PI / 2), Math.sin(angle - Math.PI / 2)];
+
+    let tiltVector = [Math.cos(tiltAngle), Math.sin(tiltAngle)];
+
+    let left = e.pressure * this.previewMaxWidth / 2;
+    let right = e.pressure * this.previewMaxWidth / 2;
+
+    // dot left normal with tilt vector to get amount
+    left += this.tiltAmount * Math.abs(vecLeft.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength);
+    right += this.tiltAmount * Math.abs(vecRight.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength);
+
+    this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right);
+
+    if (this.previewStroke.roughLength > 400) {
+      // split stroke to prevent lag
+      this.createPreviewStroke();
+      this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right, true);
+    }
+
+    this.lastPoint = [e.offsetX, e.offsetY];
+
+    this.tool.strokeMove(e.offsetX, e.offsetY, left, right, e);
+  }
+
+};
+
+/***/ }),
+/* 101 */
+/***/ (function(module, exports) {
+
+//if 'steps' is not specified, we'll just approximate it
+module.exports = function arc(x, y, radius, start, end, clockwise, steps, path) {
+    if (!path)
+        path = []
+
+    x = x||0
+    y = y||0
+    radius = radius||0
+    start = start||0
+    end = end||0
+
+    //determine distance between the two angles
+    //...probably a nicer way of writing this
+    var dist = Math.abs(start-end)
+    if (!clockwise && start > end)
+        dist = 2*Math.PI - dist
+    else if (clockwise && end > start)
+        dist = 2*Math.PI - dist
+
+    //approximate the # of steps using the cube root of the radius
+    if (typeof steps !== 'number') 
+        steps = Math.max(6, Math.floor(6 * Math.pow(radius, 1/3) * (dist / (Math.PI))))
+
+    //ensure we have at least 3 steps..
+    steps = Math.max(steps, 3)
+    
+    var f = dist / (steps),
+        t = start
+
+    //modify direction
+    f *= clockwise ? -1 : 1
+
+    for (var i=0; i<steps+1; i++) {
+        var cs = Math.cos(t),
+            sn = Math.sin(t)
+
+        var nx = x + cs*radius,
+            ny = y + sn*radius
+
+        path.push([ nx, ny ])
+
+        t += f
+    }
+    return path
+}
+
+/***/ }),
+/* 102 */
+/***/ (function(module, exports, __webpack_require__) {
+
+const Tool = __webpack_require__(26);
+const PathFitter = __webpack_require__(103);
+const Path = __webpack_require__(5);
+const Color = __webpack_require__(4);
+
+module.exports = class Brush extends Tool {
+  constructor(...args) {
+    super(...args);
+
+    this.color = new Color(0, 0, 0, 1);
+
+    this.points = [];
+  }
+
+  fitPath(points, error = 2) {
+    let pathFitter = new PathFitter(points);
+    let segments = pathFitter.fit(error); // TODO: weighted by time?
+
+    let commands = [];
+    let lastSegment = null;
+    for (let segment of segments) {
+      if ((!lastSegment || !lastSegment.handleOutLength()) && !segment.handleInLength()) {
+        // line from last segment to this one is straight
+        commands.push([0x20, ...segment.point]);
+      } else if (lastSegment) {
+        // cubic bezier curve
+
+        // get absolute handle out & in
+        let handleOut = lastSegment.handleOut.map((x, i) => x + lastSegment.point[i]);
+        let handleIn = segment.handleIn.map((x, i) => x + segment.point[i]);
+
+        commands.push([0x30, ...handleOut, ...handleIn, ...segment.point]);
+      } else {
+        commands.push([0x10, ...segment.point]);
+      }
+
+      lastSegment = segment;
+    }
+
+    return commands;
+  }
+
+  stroke() {
+    let path = new Path();
+    path.stroke = this.color.clone();
+
+    let centerLine = this.fitPath(this.points.map(p => [p.x, p.y]));
+    let weightLeft = this.fitPath(this.points.map(p => [p.length, p.left]), 3);
+    let weightRight = this.fitPath(this.points.map(p => [p.length, p.right]), 3);
+
+    path.data.push(...centerLine.map(command => new Path.Command(...command)));
+
+    // TODO: don't do the following
+    // copy width data to simplified path
+    for (let point of this.points) {
+      path.data.push(new Path.Command(0x60, point.length, point.left, point.right));
+    }
+
+    this.editor.currentLayer.appendChild(path);
+  }
+
+  strokeStart(x, y, left, right) {
+    this.points = [];
+    this.points.push({ x, y, left, right, length: 0 });
+  }
+
+  strokeMove(x, y, left, right) {
+    let lastPoint = this.points[this.points.length - 1];
+    if (lastPoint.x === x && lastPoint.y === y) {
+      Object.assign(lastPoint, { left, right });
+    } else {
+      let lastLength = lastPoint.length;
+      let partLength = Math.hypot(x - lastPoint.x, y - lastPoint.y);
+      let length = partLength + lastLength;
+      this.points.push({ x, y, left, right, length });
+    }
+  }
+
+  strokeEnd(x, y, left, right) {
+    this.strokeMove(x, y, left, right);
+
+    this.stroke();
+  }
+};
+
+/***/ }),
+/* 103 */
+/***/ (function(module, exports) {
+
+/*
+ * paper.js PathFitter modified for Graphein
+ */
+
+/*
+ * Paper.js - The Swiss Army Knife of Vector Graphics Scripting.
+ * http://paperjs.org/
+ *
+ * Copyright (c) 2011 - 2016, Juerg Lehni & Jonathan Puckey
+ * http://scratchdisk.com/ & http://jonathanpuckey.com/
+ *
+ * Distributed under the MIT license. See LICENSE file for details.
+ *
+ * All rights reserved.
+ */
+
+// An Algorithm for Automatically Fitting Digitized Curves
+// by Philip J. Schneider
+// from "Graphics Gems", Academic Press, 1990
+// Modifications and optimizations of original algorithm by Juerg Lehni.
+
+// paperjs shim
+
+// Numerical.EPSILON
+const EPSILON = 1e-12;
+
+// Numerical.isZero
+const isZero = x => Math.abs(x) <= EPSILON;
+
+// Point methods
+const add = function (b) {
+  return this.map((x, i) => x + b[i]);
+};
+const subtract = function (b) {
+  return this.map((x, i) => x - b[i]);
+};
+const getDistance = function (b) {
+  return Math.hypot(...subtract.call(this, b));
+};
+const normalize = function (length = 1) {
+  let scale = length / Math.hypot(...this);
+  if (!Number.isFinite(scale)) scale = 0;
+  return this.map(x => x * scale);
+};
+const negate = function () {
+  return this.map(x => -x);
+};
+const multiply = function (b) {
+  return this.map(x => x * b);
+};
+const dot = function (b) {
+  return this.map((x, i) => x * b[i]).reduce((a, b) => a + b, 0);
+};
+
+// simple Segment implementation
+class Segment {
+  constructor(point = [0, 0], handleIn = [0, 0], handleOut = [0, 0]) {
+    this.point = point;
+    this.handleIn = handleIn;
+    this.handleOut = handleOut;
+  }
+
+  setHandleOut(point) {
+    this.handleOut = point;
+  }
+
+  // additional utilities not required by path fitter
+
+  handleInLength() {
+    return Math.hypot(...this.handleIn);
+  }
+
+  handleOutLength() {
+    return Math.hypot(...this.handleOut);
+  }
+}
+
+/**
+ * @name PathFitter
+ * @class
+ * @private
+ */
+module.exports = class PathFitter {
+  constructor(pathPoints, closed = false) {
+    let points = this.points = pathPoints;
+
+    // We need to duplicate the first and last segment when simplifying a
+    // closed path.
+    if (closed) {
+      points.unshift(points[points.length - 1]);
+      points.push(points[1]); // The point previously at index 0 is now 1.
+    }
+
+    this.closed = closed;
+  }
+
+  fit(error) {
+    let points = this.points;
+    let length = points.length;
+    let segments = null;
+
+    if (length > 0) {
+      // To support reducing paths with multiple points in the same place
+      // to one segment:
+      segments = [new Segment(points[0])];
+
+      if (length > 1) {
+        var _context;
+
+        this.fitCubic(segments, error, 0, length - 1,
+        // Left Tangent
+        (_context = points[1], subtract).call(_context, points[0]),
+        // Right Tangent
+        (_context = points[length - 2], subtract).call(_context, points[length - 1]));
+
+        // Remove the duplicated segments for closed paths again.
+        if (this.closed) {
+          segments.shift();
+          segments.pop();
+        }
+      }
+    }
+
+    return segments;
+  }
+
+  // Fit a Bezier curve to a (sub)set of digitized points
+  fitCubic(segments, error, first, last, tan1, tan2) {
+    var _context2;
+
+    let points = this.points;
+
+    // Use heuristic if region only has two points in it
+    if (last - first === 1) {
+      let pt1 = points[first];
+      let pt2 = points[last];
+      let dist = getDistance.call(pt1, pt2) / 3;
+
+      this.addCurve(segments, [pt1, add.call(pt1, normalize.call(tan1, dist)), add.call(pt2, normalize.call(tan2, dist)), pt2]);
+      return;
+    }
+
+    // Parameterize points, and attempt to fit curve
+    let uPrime = this.chordLengthParameterize(first, last);
+    let maxError = Math.max(error, error * error);
+    let split;
+    let parametersInOrder = true;
+
+    // Try 4 iterations
+    for (let i = 0; i <= 4; i++) {
+      let curve = this.generateBezier(first, last, uPrime, tan1, tan2);
+
+      // Find max deviation of points to fitted curve
+      let max = this.findMaxError(first, last, curve, uPrime);
+      if (max.error < error && parametersInOrder) {
+        this.addCurve(segments, curve);
+        return;
+      }
+      split = max.index;
+
+      // If error not too large, try reparameterization and iteration
+      if (max.error >= maxError) {
+        break;
+      }
+      parametersInOrder = this.reparameterize(first, last, uPrime, curve);
+      maxError = max.error;
+    }
+
+    // Fitting failed -- split at max error point and fit recursively
+    let tanCenter = (_context2 = points[split - 1], subtract).call(_context2, points[split + 1]);
+    this.fitCubic(segments, error, first, split, tan1, tanCenter);
+    this.fitCubic(segments, error, split, last, negate.call(tanCenter), tan2);
+  }
+
+  addCurve(segments, curve) {
+    var _context3;
+
+    let prev = segments[segments.length - 1];
+    prev.setHandleOut((_context3 = curve[1], subtract).call(_context3, curve[0]));
+    segments.push(new Segment(curve[3], (_context3 = curve[2], subtract).call(_context3, curve[3])));
+  }
+
+  // Use least-squares method to find Bezier control points for region.
+  generateBezier(first, last, uPrime, tan1, tan2) {
+    let epsilon = /* #= */EPSILON;
+    let abs = Math.abs;
+    let points = this.points;
+    let pt1 = points[first];
+    let pt2 = points[last];
+
+    // Create the C and X matrices
+    let C = [[0, 0], [0, 0]];
+    let X = [0, 0];
+
+    for (let i = 0, l = last - first + 1; i < l; i++) {
+      var _context4;
+
+      let u = uPrime[i];
+      let t = 1 - u;
+      let b = 3 * u * t;
+      let b0 = t * t * t;
+      let b1 = b * t;
+      let b2 = b * u;
+      let b3 = u * u * u;
+      let a1 = normalize.call(tan1, b1);
+      let a2 = normalize.call(tan2, b2);
+      let tmp = (_context4 = (_context4 = points[first + i], subtract).call(_context4, multiply.call(pt1, b0 + b1)), subtract).call(_context4, multiply.call(pt2, b2 + b3));
+
+      C[0][0] += dot.call(a1, a1);
+      C[0][1] += dot.call(a1, a2);
+      // C[1][0] += a1.dot(a2);
+      C[1][0] = C[0][1];
+      C[1][1] += dot.call(a2, a2);
+      X[0] += dot.call(a1, tmp);
+      X[1] += dot.call(a2, tmp);
+    }
+
+    // Compute the determinants of C and X
+    let detC0C1 = C[0][0] * C[1][1] - C[1][0] * C[0][1];
+    let alpha1;
+    let alpha2;
+
+    if (abs(detC0C1) > epsilon) {
+      // Kramer's rule
+      let detC0X = C[0][0] * X[1] - C[1][0] * X[0];
+      let detXC1 = X[0] * C[1][1] - X[1] * C[0][1];
+
+      // Derive alpha values
+      alpha1 = detXC1 / detC0C1;
+      alpha2 = detC0X / detC0C1;
+    } else {
+      // Matrix is under-determined, try assuming alpha1 == alpha2
+      let c0 = C[0][0] + C[0][1];
+      let c1 = C[1][0] + C[1][1];
+
+      alpha1 = alpha2 = abs(c0) > epsilon ? X[0] / c0 : abs(c1) > epsilon ? X[1] / c1 : 0;
+    }
+
+    // If alpha negative, use the Wu/Barsky heuristic (see text)
+    // (if alpha is 0, you get coincident control points that lead to
+    // divide by zero in any subsequent NewtonRaphsonRootFind() call.
+    let segLength = getDistance.call(pt2, pt1);
+    let eps = epsilon * segLength;
+    let handle1;
+    let handle2;
+
+    if (alpha1 < eps || alpha2 < eps) {
+      // fall back on standard (probably inaccurate) formula,
+      // and subdivide further if needed.
+      alpha1 = alpha2 = segLength / 3;
+    } else {
+      var _context5;
+
+      // Check if the found control points are in the right order when
+      // projected onto the line through pt1 and pt2.
+      let line = subtract.call(pt2, pt1);
+      // Control points 1 and 2 are positioned an alpha distance out
+      // on the tangent vectors, left and right, respectively
+      handle1 = normalize.call(tan1, alpha1);
+      handle2 = normalize.call(tan2, alpha2);
+      if ((_context5 = handle1, dot).call(_context5, line) - (_context5 = handle2, dot).call(_context5, line) > segLength * segLength) {
+        // Fall back to the Wu/Barsky heuristic above.
+        alpha1 = alpha2 = segLength / 3;
+        handle1 = handle2 = null; // Force recalculation
+      }
+    }
+
+    // First and last control points of the Bezier curve are
+    // positioned exactly at the first and last data points
+    return [pt1, add.call(pt1, handle1 || normalize.call(tan1, alpha1)), add.call(pt2, handle2 || normalize.call(tan2, alpha2)), pt2];
+  }
+
+  // Given set of points and their parameterization, try to find
+  // a better parameterization.
+  reparameterize(first, last, u, curve) {
+    for (let i = first; i <= last; i++) {
+      u[i - first] = this.findRoot(curve, this.points[i], u[i - first]);
+    }
+
+    // Detect if the new parameterization has reordered the points.
+    // In that case, we would fit the points of the path in the wrong order.
+    for (let i = 1, l = u.length; i < l; i++) {
+      if (u[i] <= u[i - 1]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Use Newton-Raphson iteration to find better root.
+  findRoot(curve, point, u) {
+    let curve1 = [];
+    let curve2 = [];
+
+    // Generate control vertices for Q'
+    for (let i = 0; i <= 2; i++) {
+      var _context6;
+
+      curve1[i] = (_context6 = (_context6 = curve[i + 1], subtract).call(_context6, curve[i]), multiply).call(_context6, 3);
+    }
+
+    // Generate control vertices for Q''
+    for (let i = 0; i <= 1; i++) {
+      var _context7;
+
+      curve2[i] = (_context7 = (_context7 = curve1[i + 1], subtract).call(_context7, curve1[i]), multiply).call(_context7, 2);
+    }
+
+    // Compute Q(u), Q'(u) and Q''(u)
+    let pt = this.evaluate(3, curve, u);
+    let pt1 = this.evaluate(2, curve1, u);
+    let pt2 = this.evaluate(1, curve2, u);
+    let diff = subtract.call(pt, point);
+    let df = dot.call(pt1, pt1) + dot.call(diff, pt2);
+
+    // u = u - f(u) / f'(u)
+    return isZero(df) ? u : u - dot.call(diff, pt1) / df;
+  }
+
+  // Evaluate a bezier curve at a particular parameter value
+  evaluate(degree, curve, t) {
+    // Copy array
+    let tmp = curve.slice();
+
+    // Triangle computation
+    for (let i = 1; i <= degree; i++) {
+      for (let j = 0; j <= degree - i; j++) {
+        var _context8;
+
+        tmp[j] = (_context8 = (_context8 = tmp[j], multiply).call(_context8, 1 - t), add).call(_context8, (_context8 = tmp[j + 1], multiply).call(_context8, t));
+      }
+    }
+    return tmp[0];
+  }
+
+  // Assign parameter values to digitized points
+  // using relative distances between points.
+  chordLengthParameterize(first, last) {
+    let u = [0];
+    for (let i = first + 1; i <= last; i++) {
+      var _context9;
+
+      u[i - first] = u[i - first - 1] + (_context9 = this.points[i], getDistance).call(_context9, this.points[i - 1]);
+    }
+    for (let i = 1, m = last - first; i <= m; i++) {
+      u[i] /= u[m];
+    }
+    return u;
+  }
+
+  // Find the maximum squared distance of digitized points to fitted curve.
+  findMaxError(first, last, curve, u) {
+    let index = Math.floor((last - first + 1) / 2);
+    let maxDist = 0;
+
+    for (let i = first + 1; i < last; i++) {
+      let P = this.evaluate(3, curve, u[i - first]);
+      let v = subtract.call(P, this.points[i]);
+      // let dist = v.x * v.x + v.y * v.y // squared
+      let dist = v[0] * v[0] + v[1] * v[1];
+      if (dist >= maxDist) {
+        maxDist = dist;
+        index = i;
+      }
+    }
+
+    return {
+      error: maxDist,
+      index: index
+    };
+  }
+};
+
+/***/ }),
 /* 104 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const triangulate = __webpack_require__(84);
-const Tool = __webpack_require__(47);
-const Path = __webpack_require__(4);
+const triangulate = __webpack_require__(21);
+const Tool = __webpack_require__(26);
+const Path = __webpack_require__(5);
 
 module.exports = class Select extends Tool {
   constructor(...args) {
