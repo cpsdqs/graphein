@@ -14,6 +14,17 @@ module.exports = class Color {
     return [this.red, this.green, this.blue, this.alpha]
   }
 
+  *[Symbol.iterator] () {
+    yield this.red
+    yield this.green
+    yield this.blue
+    yield this.alpha
+  }
+
+  clone () {
+    return new Color(...this)
+  }
+
   serialize () {
     let color = 255 - (this.alpha * 255) | 0
     color |= (this.red * 255) << 8

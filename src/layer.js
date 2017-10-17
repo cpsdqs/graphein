@@ -51,7 +51,7 @@ module.exports = registry.types.g = class Layer {
 
   removeChild (child) {
     if (child.parentNode === this) {
-      this.children.splice(this.children.indexOf(child, 1))
+      this.children.splice(this.children.indexOf(child), 1)
       child.parentNode = null
     }
   }

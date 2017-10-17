@@ -9,6 +9,7 @@ module.exports = class Editor {
 
     this.down = false
     this.previewMaxWidth = null
+    this.previewStrokes = []
     this.previewStroke = null
     this.lastPoint = null
 
@@ -16,6 +17,8 @@ module.exports = class Editor {
 
     this.currentLayer = canvas.image.children[0]
     this.cursorSize = 10
+    this.tiltAmount = 0.3
+    this.erasing = false
 
     this.canvas.addEventListener('image-change', e => {
       this.currentLayer = canvas.image.children[0]
@@ -79,16 +82,11 @@ module.exports = class Editor {
     ctx.restore()
   }
 
-  onPointerDown = e => {
-    this.down = 'pointer'
-
-    this.cursorSize = e.pointerType === 'pen' && e.button === 5 ? 30 : 10
-    this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY)
-
+  createPreviewStroke () {
     this.previewStroke = new Path()
+    this.previewStrokes.push(this.previewStroke)
 
-    if (e.pointerType === 'pen' && e.button === 5) {
-      // eraser
+    if (this.erasing) {
       this.previewStroke.stroke = new Color(0, 1, 0, 0.5)
       this.previewMaxWidth = 30
     } else {
@@ -97,6 +95,19 @@ module.exports = class Editor {
     }
 
     this.canvas.image.appendChild(this.previewStroke)
+  }
+
+  onPointerDown = e => {
+    this.down = 'pointer'
+
+    this.cursorSize = e.pointerType === 'pen' && e.button === 5 ? 30 : 10
+    this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY)
+
+    this.erasing = e.pointerType === 'pen' && e.button === 5
+
+    this.previewStrokes = []
+    this.createPreviewStroke()
+
     let left = e.pressure * this.previewMaxWidth / 2
     let right = e.pressure * this.previewMaxWidth / 2
     this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right, true)
@@ -137,10 +148,16 @@ module.exports = class Editor {
     let right = e.pressure * this.previewMaxWidth / 2
 
     // dot left normal with tilt vector to get amount
-    left += Math.abs(vecLeft.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength)
-    right += Math.abs(vecRight.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength)
+    left += this.tiltAmount * Math.abs(vecLeft.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength)
+    right += this.tiltAmount * Math.abs(vecRight.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength)
 
     this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right)
+
+    if (this.previewStroke.roughLength > 400) {
+      // split stroke to prevent lag
+      this.createPreviewStroke()
+      this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right, true)
+    }
 
     this.lastPoint = [e.offsetX, e.offsetY]
 
@@ -161,8 +178,13 @@ module.exports = class Editor {
     this.down = null
     let left = e.pressure * this.previewMaxWidth / 2
     let right = e.pressure * this.previewMaxWidth / 2
-    this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right)
-    this.previewStroke.parentNode.removeChild(this.previewStroke)
+
+    for (let stroke of this.previewStrokes) {
+      stroke.parentNode.removeChild(stroke)
+    }
+
+    this.previewStroke = null
+    this.previewStrokes = []
 
     this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY)
     this.tool.strokeEnd(e.offsetX, e.offsetY, left, right, e)
