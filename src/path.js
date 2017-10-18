@@ -63,11 +63,11 @@ class StrokeRenderer {
       this.paths.push(this.currentPath = [this.cursor])
     } else if (type === 0x20) {
       // lineto
-      this.currentPath.push(this.cursor = args)
+      this.currentPath.push((this.cursor = args).slice())
     } else if (type === 0x21) {
       // lineto relative
       this.cursor = this.cursor.map((x, i) => x + args[i])
-      this.currentPath.push(this.cursor)
+      this.currentPath.push(this.cursor.slice())
     } else if (type === 0x30 || type === 0x31) {
       // curveto / relative
       let c1 = args.slice(0, 2)
@@ -472,7 +472,16 @@ module.exports = class Path extends Layer {
       let ownPoints = this.toPolyline().map(point => new Point2D(...point))
       let layerPoints = layer.toPolyline().map(point => new Point2D(...point))
       let intersection = Intersection.intersectPolylinePolyline(ownPoints, layerPoints)
-      return intersection.points
+      let uniquePoints = []
+      let uniquePointNames = []
+      for (let point of intersection.points) {
+        let name = point.x + ',' + point.y
+        if (!uniquePointNames.includes(name)) {
+          uniquePointNames.push(name)
+          uniquePoints.push(point)
+        }
+      }
+      return uniquePoints
     } else throw new Error(`Intersection of Path with ${layer.constructor.name} not implemented`)
   }
 

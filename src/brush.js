@@ -12,41 +12,13 @@ module.exports = class Brush extends Tool {
     this.points = []
   }
 
-  fitPath (points, error = 2) {
-    let pathFitter = new PathFitter(points)
-    let segments = pathFitter.fit(error) // TODO: weighted by time?
-
-    let commands = []
-    let lastSegment = null
-    for (let segment of segments) {
-      if ((!lastSegment || !lastSegment.handleOutLength()) && !segment.handleInLength()) {
-        // line from last segment to this one is straight
-        commands.push([0x20, ...segment.point])
-      } else if (lastSegment) {
-        // cubic bezier curve
-
-        // get absolute handle out & in
-        let handleOut = lastSegment.handleOut.map((x, i) => x + lastSegment.point[i])
-        let handleIn = segment.handleIn.map((x, i) => x + segment.point[i])
-
-        commands.push([0x30, ...handleOut, ...handleIn, ...segment.point])
-      } else {
-        commands.push([0x10, ...segment.point])
-      }
-
-      lastSegment = segment
-    }
-
-    return commands
-  }
-
   stroke () {
     let path = new Path()
     path.stroke = this.color.clone()
 
-    let centerLine = this.fitPath(this.points.map(p => [p.x, p.y]))
-    let weightLeft = this.fitPath(this.points.map(p => [p.length, p.left]), 3)
-    let weightRight = this.fitPath(this.points.map(p => [p.length, p.right]), 3)
+    let centerLine = PathFitter.fitPath(this.points.map(p => [p.x, p.y]))
+    let weightLeft = PathFitter.fitPath(this.points.map(p => [p.length, p.left]), 3)
+    let weightRight = PathFitter.fitPath(this.points.map(p => [p.length, p.right]), 3)
 
     path.data.push(...centerLine.map(command => new Path.Command(...command)))
 

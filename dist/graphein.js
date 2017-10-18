@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 27);
+/******/ 	return __webpack_require__(__webpack_require__.s = 28);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -147,155 +147,27 @@ function equals(a, b) {
 
 // expose classes
 
-exports.Point2D = __webpack_require__(93);
-exports.Vector2D = __webpack_require__(94);
-exports.Matrix2D = __webpack_require__(95);
+exports.Point2D = __webpack_require__(94);
+exports.Vector2D = __webpack_require__(95);
+exports.Matrix2D = __webpack_require__(96);
 
 
 /***/ }),
 /* 2 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__ = __webpack_require__(29);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__ = __webpack_require__(30);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__ = __webpack_require__(11);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__ = __webpack_require__(31);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__ = __webpack_require__(32);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__ = __webpack_require__(33);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__ = __webpack_require__(12);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__ = __webpack_require__(13);
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "glMatrix", function() { return __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__; });
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat2", function() { return __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__; });
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat2d", function() { return __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__; });
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat3", function() { return __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__; });
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat4", function() { return __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__; });
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "quat", function() { return __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__; });
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "vec2", function() { return __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__; });
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "vec3", function() { return __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__; });
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "vec4", function() { return __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__; });
-/**
- * @fileoverview gl-matrix - High performance matrix and vector operations
- * @author Brandon Jones
- * @author Colin MacKenzie IV
- * @version 2.4.0
- */
-
-/* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-// END HEADER
-
-
-
-
-
-
-
-
-
-
-
-
-
-/***/ }),
-/* 3 */
-/***/ (function(module, exports) {
-
-function GLError (rawError, shortMessage, longMessage) {
-    this.shortMessage = shortMessage || ''
-    this.longMessage = longMessage || ''
-    this.rawError = rawError || ''
-    this.message =
-      'gl-shader: ' + (shortMessage || rawError || '') +
-      (longMessage ? '\n'+longMessage : '')
-    this.stack = (new Error()).stack
-}
-GLError.prototype = new Error
-GLError.prototype.name = 'GLError'
-GLError.prototype.constructor = GLError
-module.exports = GLError
-
-
-/***/ }),
-/* 4 */
-/***/ (function(module, exports) {
-
-module.exports = class Color {
-  constructor(r = 0, g = 0, b = 0, a = 1) {
-    this.alpha = a;
-    this.red = r;
-    this.green = g;
-    this.blue = b;
-  }
-
-  toCSS() {
-    return `rgba(${this.red * 255}, ${this.green * 255}, ${this.blue * 255}, ${this.alpha})`;
-  }
-
-  toVec4() {
-    return [this.red, this.green, this.blue, this.alpha];
-  }
-
-  *[Symbol.iterator]() {
-    yield this.red;
-    yield this.green;
-    yield this.blue;
-    yield this.alpha;
-  }
-
-  clone() {
-    return new Color(...this);
-  }
-
-  serialize() {
-    let color = 255 - this.alpha * 255 | 0;
-    color |= this.red * 255 << 8;
-    color |= this.green * 255 << 8;
-    color |= this.blue * 255 << 8;
-    return color;
-  }
-
-  static deserialize(color) {
-    if (color === null || color === undefined) return null;
-    return new Color((color >> 8 & 0xFF) / 255, (color >> 16 & 0xFF) / 255, (color >> 24) / 255, 1 - (color & 0xFF) / 255);
-  }
-};
-
-/***/ }),
-/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var _class, _temp;
 
-const { mat4 } = __webpack_require__(2);
-const bezier = __webpack_require__(56);
-const getNormals = __webpack_require__(58);
-const createBuffer = __webpack_require__(65);
-const createShader = __webpack_require__(15);
-const createVAO = __webpack_require__(81);
-const triangulate = __webpack_require__(21);
-const { Intersection, Point2D } = __webpack_require__(91);
+const { mat4 } = __webpack_require__(3);
+const bezier = __webpack_require__(57);
+const getNormals = __webpack_require__(59);
+const createBuffer = __webpack_require__(66);
+const createShader = __webpack_require__(16);
+const createVAO = __webpack_require__(82);
+const triangulate = __webpack_require__(22);
+const { Intersection, Point2D } = __webpack_require__(92);
 const Layer = __webpack_require__(7);
-const Color = __webpack_require__(4);
+const Color = __webpack_require__(5);
 
 class StrokeRenderer {
   constructor(gl, transform, context, stroke, fill) {
@@ -351,11 +223,11 @@ class StrokeRenderer {
       this.paths.push(this.currentPath = [this.cursor]);
     } else if (type === 0x20) {
       // lineto
-      this.currentPath.push(this.cursor = args);
+      this.currentPath.push((this.cursor = args).slice());
     } else if (type === 0x21) {
       // lineto relative
       this.cursor = this.cursor.map((x, i) => x + args[i]);
-      this.currentPath.push(this.cursor);
+      this.currentPath.push(this.cursor.slice());
     } else if (type === 0x30 || type === 0x31) {
       // curveto / relative
       let c1 = args.slice(0, 2);
@@ -751,7 +623,16 @@ module.exports = (_temp = _class = class Path extends Layer {
       let ownPoints = this.toPolyline().map(point => new Point2D(...point));
       let layerPoints = layer.toPolyline().map(point => new Point2D(...point));
       let intersection = Intersection.intersectPolylinePolyline(ownPoints, layerPoints);
-      return intersection.points;
+      let uniquePoints = [];
+      let uniquePointNames = [];
+      for (let point of intersection.points) {
+        let name = point.x + ',' + point.y;
+        if (!uniquePointNames.includes(name)) {
+          uniquePointNames.push(name);
+          uniquePoints.push(point);
+        }
+      }
+      return uniquePoints;
     } else throw new Error(`Intersection of Path with ${layer.constructor.name} not implemented`);
   }
 
@@ -801,6 +682,134 @@ module.exports = (_temp = _class = class Path extends Layer {
 }, _class.Command = PathCommand, _temp);
 
 Layer.registry.define('p', module.exports);
+
+/***/ }),
+/* 3 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__ = __webpack_require__(0);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__ = __webpack_require__(30);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__ = __webpack_require__(31);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__ = __webpack_require__(12);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__ = __webpack_require__(32);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__ = __webpack_require__(33);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__ = __webpack_require__(34);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__ = __webpack_require__(13);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__ = __webpack_require__(14);
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "glMatrix", function() { return __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__; });
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat2", function() { return __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__; });
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat2d", function() { return __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__; });
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat3", function() { return __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__; });
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat4", function() { return __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__; });
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "quat", function() { return __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__; });
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "vec2", function() { return __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__; });
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "vec3", function() { return __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__; });
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "vec4", function() { return __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__; });
+/**
+ * @fileoverview gl-matrix - High performance matrix and vector operations
+ * @author Brandon Jones
+ * @author Colin MacKenzie IV
+ * @version 2.4.0
+ */
+
+/* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+// END HEADER
+
+
+
+
+
+
+
+
+
+
+
+
+
+/***/ }),
+/* 4 */
+/***/ (function(module, exports) {
+
+function GLError (rawError, shortMessage, longMessage) {
+    this.shortMessage = shortMessage || ''
+    this.longMessage = longMessage || ''
+    this.rawError = rawError || ''
+    this.message =
+      'gl-shader: ' + (shortMessage || rawError || '') +
+      (longMessage ? '\n'+longMessage : '')
+    this.stack = (new Error()).stack
+}
+GLError.prototype = new Error
+GLError.prototype.name = 'GLError'
+GLError.prototype.constructor = GLError
+module.exports = GLError
+
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports) {
+
+module.exports = class Color {
+  constructor(r = 0, g = 0, b = 0, a = 1) {
+    this.alpha = a;
+    this.red = r;
+    this.green = g;
+    this.blue = b;
+  }
+
+  toCSS() {
+    return `rgba(${this.red * 255}, ${this.green * 255}, ${this.blue * 255}, ${this.alpha})`;
+  }
+
+  toVec4() {
+    return [this.red, this.green, this.blue, this.alpha];
+  }
+
+  *[Symbol.iterator]() {
+    yield this.red;
+    yield this.green;
+    yield this.blue;
+    yield this.alpha;
+  }
+
+  clone() {
+    return new Color(...this);
+  }
+
+  serialize() {
+    let color = 255 - this.alpha * 255 | 0;
+    color |= this.red * 255 << 8;
+    color |= this.green * 255 << 8;
+    color |= this.blue * 255 << 8;
+    return color;
+  }
+
+  static deserialize(color) {
+    if (color === null || color === undefined) return null;
+    return new Color((color >> 8 & 0xFF) / 255, (color >> 16 & 0xFF) / 255, (color >> 24) / 255, 1 - (color & 0xFF) / 255);
+  }
+};
 
 /***/ }),
 /* 6 */
@@ -867,8 +876,8 @@ module.exports = {
 
 var _class, _temp;
 
-const Transform = __webpack_require__(14);
-const { mat4 } = __webpack_require__(2);
+const Transform = __webpack_require__(15);
+const { mat4 } = __webpack_require__(3);
 
 const registry = {
   types: {},
@@ -1064,9 +1073,31 @@ if (true) {
 
 /***/ }),
 /* 10 */
+/***/ (function(module, exports) {
+
+module.exports = class Tool {
+  constructor(editor) {
+    this.editor = editor;
+  }
+
+  strokeStart(x, y, left, right, e) {
+    console.warn(`${this.constructor.name}#strokeStart not implemented`);
+  }
+
+  strokeMove(x, y, left, right, e) {
+    console.warn(`${this.constructor.name}#strokeMove not implemented`);
+  }
+
+  strokeEnd(x, y, left, right, e) {
+    console.warn(`${this.constructor.name}#strokeEnd not implemented`);
+  }
+};
+
+/***/ }),
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const { mat4 } = __webpack_require__(2);
+const { mat4 } = __webpack_require__(3);
 const Layer = __webpack_require__(7);
 
 const version = '0.0.0';
@@ -1150,7 +1181,7 @@ module.exports = class Image extends Layer {
 };
 
 /***/ }),
-/* 11 */
+/* 12 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1958,7 +1989,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 12 */
+/* 13 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -2798,7 +2829,7 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 13 */
+/* 14 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -3460,12 +3491,12 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 14 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var _class, _temp;
 
-const { mat4 } = __webpack_require__(2);
+const { mat4 } = __webpack_require__(3);
 
 module.exports = (_temp = _class = class Transform {
   constructor() {
@@ -3521,18 +3552,18 @@ module.exports = (_temp = _class = class Transform {
 }, _temp);
 
 /***/ }),
-/* 15 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var createUniformWrapper   = __webpack_require__(35)
-var createAttributeWrapper = __webpack_require__(36)
-var makeReflect            = __webpack_require__(16)
-var shaderCache            = __webpack_require__(37)
-var runtime                = __webpack_require__(55)
-var GLError                = __webpack_require__(3)
+var createUniformWrapper   = __webpack_require__(36)
+var createAttributeWrapper = __webpack_require__(37)
+var makeReflect            = __webpack_require__(17)
+var shaderCache            = __webpack_require__(38)
+var runtime                = __webpack_require__(56)
+var GLError                = __webpack_require__(4)
 
 //Shader object
 function Shader(gl) {
@@ -3792,7 +3823,7 @@ module.exports = createShader
 
 
 /***/ }),
-/* 16 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3855,7 +3886,7 @@ function makeReflectTypes(uniforms, useIndex) {
 }
 
 /***/ }),
-/* 17 */
+/* 18 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -3954,7 +3985,7 @@ module.exports = [
 
 
 /***/ }),
-/* 18 */
+/* 19 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -4110,7 +4141,7 @@ module.exports = [
 
 
 /***/ }),
-/* 19 */
+/* 20 */
 /***/ (function(module, exports) {
 
 var g;
@@ -4137,7 +4168,7 @@ module.exports = g;
 
 
 /***/ }),
-/* 20 */
+/* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4197,16 +4228,16 @@ function doBind(gl, elements, attributes) {
 module.exports = doBind
 
 /***/ }),
-/* 21 */
+/* 22 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var monotoneTriangulate = __webpack_require__(84)
-var makeIndex = __webpack_require__(87)
-var delaunayFlip = __webpack_require__(88)
-var filterTriangulation = __webpack_require__(90)
+var monotoneTriangulate = __webpack_require__(85)
+var makeIndex = __webpack_require__(88)
+var delaunayFlip = __webpack_require__(89)
+var filterTriangulation = __webpack_require__(91)
 
 module.exports = cdt2d
 
@@ -4286,7 +4317,7 @@ function cdt2d(points, edges, options) {
 
 
 /***/ }),
-/* 22 */
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4448,14 +4479,14 @@ function linearExpansionSum(e, f) {
 }
 
 /***/ }),
-/* 23 */
+/* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
 var twoProduct = __webpack_require__(8)
-var twoSum = __webpack_require__(86)
+var twoSum = __webpack_require__(87)
 
 module.exports = scaleLinearExpansion
 
@@ -4504,7 +4535,7 @@ function scaleLinearExpansion(e, scale) {
 }
 
 /***/ }),
-/* 24 */
+/* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4666,7 +4697,7 @@ function robustSubtract(e, f) {
 }
 
 /***/ }),
-/* 25 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -5561,38 +5592,421 @@ if (true) {
 
 
 /***/ }),
-/* 26 */
+/* 27 */
 /***/ (function(module, exports) {
 
-module.exports = class Tool {
-  constructor(editor) {
-    this.editor = editor;
+/*
+ * paper.js PathFitter modified for Graphein
+ */
+
+/*
+ * Paper.js - The Swiss Army Knife of Vector Graphics Scripting.
+ * http://paperjs.org/
+ *
+ * Copyright (c) 2011 - 2016, Juerg Lehni & Jonathan Puckey
+ * http://scratchdisk.com/ & http://jonathanpuckey.com/
+ *
+ * Distributed under the MIT license. See LICENSE file for details.
+ *
+ * All rights reserved.
+ */
+
+// An Algorithm for Automatically Fitting Digitized Curves
+// by Philip J. Schneider
+// from "Graphics Gems", Academic Press, 1990
+// Modifications and optimizations of original algorithm by Juerg Lehni.
+
+// paperjs shim
+
+// Numerical.EPSILON
+const EPSILON = 1e-12;
+
+// Numerical.isZero
+const isZero = x => Math.abs(x) <= EPSILON;
+
+// Point methods
+const add = function (b) {
+  return this.map((x, i) => x + b[i]);
+};
+const subtract = function (b) {
+  return this.map((x, i) => x - b[i]);
+};
+const getDistance = function (b) {
+  return Math.hypot(...subtract.call(this, b));
+};
+const normalize = function (length = 1) {
+  let scale = length / Math.hypot(...this);
+  if (!Number.isFinite(scale)) scale = 0;
+  return this.map(x => x * scale);
+};
+const negate = function () {
+  return this.map(x => -x);
+};
+const multiply = function (b) {
+  return this.map(x => x * b);
+};
+const dot = function (b) {
+  return this.map((x, i) => x * b[i]).reduce((a, b) => a + b, 0);
+};
+
+// simple Segment implementation
+class Segment {
+  constructor(point = [0, 0], handleIn = [0, 0], handleOut = [0, 0]) {
+    this.point = point;
+    this.handleIn = handleIn;
+    this.handleOut = handleOut;
   }
 
-  strokeStart(x, y, left, right, e) {
-    console.warn(`${this.constructor.name}#strokeStart not implemented`);
+  setHandleOut(point) {
+    this.handleOut = point;
   }
 
-  strokeMove(x, y, left, right, e) {
-    console.warn(`${this.constructor.name}#strokeMove not implemented`);
+  // additional utilities not required by path fitter
+
+  handleInLength() {
+    return Math.hypot(...this.handleIn);
   }
 
-  strokeEnd(x, y, left, right, e) {
-    console.warn(`${this.constructor.name}#strokeEnd not implemented`);
+  handleOutLength() {
+    return Math.hypot(...this.handleOut);
+  }
+}
+
+/**
+ * @name PathFitter
+ * @class
+ * @private
+ */
+module.exports = class PathFitter {
+  constructor(pathPoints, closed = false) {
+    let points = this.points = pathPoints;
+
+    // We need to duplicate the first and last segment when simplifying a
+    // closed path.
+    if (closed) {
+      points.unshift(points[points.length - 1]);
+      points.push(points[1]); // The point previously at index 0 is now 1.
+    }
+
+    this.closed = closed;
+  }
+
+  fit(error) {
+    let points = this.points;
+    let length = points.length;
+    let segments = null;
+
+    if (length > 0) {
+      // To support reducing paths with multiple points in the same place
+      // to one segment:
+      segments = [new Segment(points[0])];
+
+      if (length > 1) {
+        var _context;
+
+        this.fitCubic(segments, error, 0, length - 1,
+        // Left Tangent
+        (_context = points[1], subtract).call(_context, points[0]),
+        // Right Tangent
+        (_context = points[length - 2], subtract).call(_context, points[length - 1]));
+
+        // Remove the duplicated segments for closed paths again.
+        if (this.closed) {
+          segments.shift();
+          segments.pop();
+        }
+      }
+    }
+
+    return segments;
+  }
+
+  // Fit a Bezier curve to a (sub)set of digitized points
+  fitCubic(segments, error, first, last, tan1, tan2) {
+    var _context2;
+
+    let points = this.points;
+
+    // Use heuristic if region only has two points in it
+    if (last - first === 1) {
+      let pt1 = points[first];
+      let pt2 = points[last];
+      let dist = getDistance.call(pt1, pt2) / 3;
+
+      this.addCurve(segments, [pt1, add.call(pt1, normalize.call(tan1, dist)), add.call(pt2, normalize.call(tan2, dist)), pt2]);
+      return;
+    }
+
+    // Parameterize points, and attempt to fit curve
+    let uPrime = this.chordLengthParameterize(first, last);
+    let maxError = Math.max(error, error * error);
+    let split;
+    let parametersInOrder = true;
+
+    // Try 4 iterations
+    for (let i = 0; i <= 4; i++) {
+      let curve = this.generateBezier(first, last, uPrime, tan1, tan2);
+
+      // Find max deviation of points to fitted curve
+      let max = this.findMaxError(first, last, curve, uPrime);
+      if (max.error < error && parametersInOrder) {
+        this.addCurve(segments, curve);
+        return;
+      }
+      split = max.index;
+
+      // If error not too large, try reparameterization and iteration
+      if (max.error >= maxError) {
+        break;
+      }
+      parametersInOrder = this.reparameterize(first, last, uPrime, curve);
+      maxError = max.error;
+    }
+
+    // Fitting failed -- split at max error point and fit recursively
+    let tanCenter = (_context2 = points[split - 1], subtract).call(_context2, points[split + 1]);
+    this.fitCubic(segments, error, first, split, tan1, tanCenter);
+    this.fitCubic(segments, error, split, last, negate.call(tanCenter), tan2);
+  }
+
+  addCurve(segments, curve) {
+    var _context3;
+
+    let prev = segments[segments.length - 1];
+    prev.setHandleOut((_context3 = curve[1], subtract).call(_context3, curve[0]));
+    segments.push(new Segment(curve[3], (_context3 = curve[2], subtract).call(_context3, curve[3])));
+  }
+
+  // Use least-squares method to find Bezier control points for region.
+  generateBezier(first, last, uPrime, tan1, tan2) {
+    let epsilon = /* #= */EPSILON;
+    let abs = Math.abs;
+    let points = this.points;
+    let pt1 = points[first];
+    let pt2 = points[last];
+
+    // Create the C and X matrices
+    let C = [[0, 0], [0, 0]];
+    let X = [0, 0];
+
+    for (let i = 0, l = last - first + 1; i < l; i++) {
+      var _context4;
+
+      let u = uPrime[i];
+      let t = 1 - u;
+      let b = 3 * u * t;
+      let b0 = t * t * t;
+      let b1 = b * t;
+      let b2 = b * u;
+      let b3 = u * u * u;
+      let a1 = normalize.call(tan1, b1);
+      let a2 = normalize.call(tan2, b2);
+      let tmp = (_context4 = (_context4 = points[first + i], subtract).call(_context4, multiply.call(pt1, b0 + b1)), subtract).call(_context4, multiply.call(pt2, b2 + b3));
+
+      C[0][0] += dot.call(a1, a1);
+      C[0][1] += dot.call(a1, a2);
+      // C[1][0] += a1.dot(a2);
+      C[1][0] = C[0][1];
+      C[1][1] += dot.call(a2, a2);
+      X[0] += dot.call(a1, tmp);
+      X[1] += dot.call(a2, tmp);
+    }
+
+    // Compute the determinants of C and X
+    let detC0C1 = C[0][0] * C[1][1] - C[1][0] * C[0][1];
+    let alpha1;
+    let alpha2;
+
+    if (abs(detC0C1) > epsilon) {
+      // Kramer's rule
+      let detC0X = C[0][0] * X[1] - C[1][0] * X[0];
+      let detXC1 = X[0] * C[1][1] - X[1] * C[0][1];
+
+      // Derive alpha values
+      alpha1 = detXC1 / detC0C1;
+      alpha2 = detC0X / detC0C1;
+    } else {
+      // Matrix is under-determined, try assuming alpha1 == alpha2
+      let c0 = C[0][0] + C[0][1];
+      let c1 = C[1][0] + C[1][1];
+
+      alpha1 = alpha2 = abs(c0) > epsilon ? X[0] / c0 : abs(c1) > epsilon ? X[1] / c1 : 0;
+    }
+
+    // If alpha negative, use the Wu/Barsky heuristic (see text)
+    // (if alpha is 0, you get coincident control points that lead to
+    // divide by zero in any subsequent NewtonRaphsonRootFind() call.
+    let segLength = getDistance.call(pt2, pt1);
+    let eps = epsilon * segLength;
+    let handle1;
+    let handle2;
+
+    if (alpha1 < eps || alpha2 < eps) {
+      // fall back on standard (probably inaccurate) formula,
+      // and subdivide further if needed.
+      alpha1 = alpha2 = segLength / 3;
+    } else {
+      var _context5;
+
+      // Check if the found control points are in the right order when
+      // projected onto the line through pt1 and pt2.
+      let line = subtract.call(pt2, pt1);
+      // Control points 1 and 2 are positioned an alpha distance out
+      // on the tangent vectors, left and right, respectively
+      handle1 = normalize.call(tan1, alpha1);
+      handle2 = normalize.call(tan2, alpha2);
+      if ((_context5 = handle1, dot).call(_context5, line) - (_context5 = handle2, dot).call(_context5, line) > segLength * segLength) {
+        // Fall back to the Wu/Barsky heuristic above.
+        alpha1 = alpha2 = segLength / 3;
+        handle1 = handle2 = null; // Force recalculation
+      }
+    }
+
+    // First and last control points of the Bezier curve are
+    // positioned exactly at the first and last data points
+    return [pt1, add.call(pt1, handle1 || normalize.call(tan1, alpha1)), add.call(pt2, handle2 || normalize.call(tan2, alpha2)), pt2];
+  }
+
+  // Given set of points and their parameterization, try to find
+  // a better parameterization.
+  reparameterize(first, last, u, curve) {
+    for (let i = first; i <= last; i++) {
+      u[i - first] = this.findRoot(curve, this.points[i], u[i - first]);
+    }
+
+    // Detect if the new parameterization has reordered the points.
+    // In that case, we would fit the points of the path in the wrong order.
+    for (let i = 1, l = u.length; i < l; i++) {
+      if (u[i] <= u[i - 1]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Use Newton-Raphson iteration to find better root.
+  findRoot(curve, point, u) {
+    let curve1 = [];
+    let curve2 = [];
+
+    // Generate control vertices for Q'
+    for (let i = 0; i <= 2; i++) {
+      var _context6;
+
+      curve1[i] = (_context6 = (_context6 = curve[i + 1], subtract).call(_context6, curve[i]), multiply).call(_context6, 3);
+    }
+
+    // Generate control vertices for Q''
+    for (let i = 0; i <= 1; i++) {
+      var _context7;
+
+      curve2[i] = (_context7 = (_context7 = curve1[i + 1], subtract).call(_context7, curve1[i]), multiply).call(_context7, 2);
+    }
+
+    // Compute Q(u), Q'(u) and Q''(u)
+    let pt = this.evaluate(3, curve, u);
+    let pt1 = this.evaluate(2, curve1, u);
+    let pt2 = this.evaluate(1, curve2, u);
+    let diff = subtract.call(pt, point);
+    let df = dot.call(pt1, pt1) + dot.call(diff, pt2);
+
+    // u = u - f(u) / f'(u)
+    return isZero(df) ? u : u - dot.call(diff, pt1) / df;
+  }
+
+  // Evaluate a bezier curve at a particular parameter value
+  evaluate(degree, curve, t) {
+    // Copy array
+    let tmp = curve.slice();
+
+    // Triangle computation
+    for (let i = 1; i <= degree; i++) {
+      for (let j = 0; j <= degree - i; j++) {
+        var _context8;
+
+        tmp[j] = (_context8 = (_context8 = tmp[j], multiply).call(_context8, 1 - t), add).call(_context8, (_context8 = tmp[j + 1], multiply).call(_context8, t));
+      }
+    }
+    return tmp[0];
+  }
+
+  // Assign parameter values to digitized points
+  // using relative distances between points.
+  chordLengthParameterize(first, last) {
+    let u = [0];
+    for (let i = first + 1; i <= last; i++) {
+      var _context9;
+
+      u[i - first] = u[i - first - 1] + (_context9 = this.points[i], getDistance).call(_context9, this.points[i - 1]);
+    }
+    for (let i = 1, m = last - first; i <= m; i++) {
+      u[i] /= u[m];
+    }
+    return u;
+  }
+
+  // Find the maximum squared distance of digitized points to fitted curve.
+  findMaxError(first, last, curve, u) {
+    let index = Math.floor((last - first + 1) / 2);
+    let maxDist = 0;
+
+    for (let i = first + 1; i < last; i++) {
+      let P = this.evaluate(3, curve, u[i - first]);
+      let v = subtract.call(P, this.points[i]);
+      // let dist = v.x * v.x + v.y * v.y // squared
+      let dist = v[0] * v[0] + v[1] * v[1];
+      if (dist >= maxDist) {
+        maxDist = dist;
+        index = i;
+      }
+    }
+
+    return {
+      error: maxDist,
+      index: index
+    };
+  }
+
+  static fitPath(points, error = 2) {
+    let pathFitter = new PathFitter(points);
+    let segments = pathFitter.fit(error); // TODO: weighted by time?
+
+    let commands = [];
+    let lastSegment = null;
+    for (let segment of segments) {
+      if ((!lastSegment || !lastSegment.handleOutLength()) && !segment.handleInLength()) {
+        // line from last segment to this one is straight
+        commands.push([0x20, ...segment.point]);
+      } else if (lastSegment) {
+        // cubic bezier curve
+
+        // get absolute handle out & in
+        let handleOut = lastSegment.handleOut.map((x, i) => x + lastSegment.point[i]);
+        let handleIn = segment.handleIn.map((x, i) => x + segment.point[i]);
+
+        commands.push([0x30, ...handleOut, ...handleIn, ...segment.point]);
+      } else {
+        commands.push([0x10, ...segment.point]);
+      }
+
+      lastSegment = segment;
+    }
+
+    return commands;
   }
 };
 
 /***/ }),
-/* 27 */
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Canvas = __webpack_require__(28);
-const Color = __webpack_require__(4);
-const Image = __webpack_require__(10);
+const Canvas = __webpack_require__(29);
+const Color = __webpack_require__(5);
+const Image = __webpack_require__(11);
 const Layer = __webpack_require__(7);
-const Transform = __webpack_require__(14);
-const Path = __webpack_require__(5);
-const Editor = __webpack_require__(100);
+const Transform = __webpack_require__(15);
+const Path = __webpack_require__(2);
+const Editor = __webpack_require__(101);
 
 const graphein = {
   Canvas,
@@ -5607,11 +6021,11 @@ const graphein = {
 module.exports = window.graphein = graphein;
 
 /***/ }),
-/* 28 */
+/* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Image = __webpack_require__(10);
-const shaders = __webpack_require__(34);
+const Image = __webpack_require__(11);
+const shaders = __webpack_require__(35);
 
 class Canvas extends window.HTMLElement {
   constructor() {
@@ -5679,7 +6093,7 @@ window.customElements.define('graphein-canvas', Canvas);
 module.exports = Canvas;
 
 /***/ }),
-/* 29 */
+/* 30 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -6149,7 +6563,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 30 */
+/* 31 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -6651,7 +7065,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 31 */
+/* 32 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -8389,7 +8803,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 32 */
+/* 33 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -8410,9 +8824,9 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony export (immutable) */ __webpack_exports__["fromEuler"] = fromEuler;
 /* harmony export (immutable) */ __webpack_exports__["str"] = str;
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__mat3__ = __webpack_require__(11);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__vec3__ = __webpack_require__(12);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__vec4__ = __webpack_require__(13);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__mat3__ = __webpack_require__(12);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__vec3__ = __webpack_require__(13);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__vec4__ = __webpack_require__(14);
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -9080,7 +9494,7 @@ const setAxes = (function() {
 
 
 /***/ }),
-/* 33 */
+/* 34 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -9723,10 +10137,10 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 34 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const createShader = __webpack_require__(15);
+const createShader = __webpack_require__(16);
 
 module.exports = function (gl) {
   return {
@@ -9814,14 +10228,14 @@ void main() {
 };
 
 /***/ }),
-/* 35 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var coallesceUniforms = __webpack_require__(16)
-var GLError = __webpack_require__(3)
+var coallesceUniforms = __webpack_require__(17)
+var GLError = __webpack_require__(4)
 
 module.exports = createUniformWrapper
 
@@ -10012,7 +10426,7 @@ function createUniformWrapper(gl, wrapper, uniforms, locations) {
 
 
 /***/ }),
-/* 36 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10020,7 +10434,7 @@ function createUniformWrapper(gl, wrapper, uniforms, locations) {
 
 module.exports = createAttributeWrapper
 
-var GLError = __webpack_require__(3)
+var GLError = __webpack_require__(4)
 
 function ShaderAttribute(
     gl
@@ -10282,7 +10696,7 @@ function createAttributeWrapper(
 
 
 /***/ }),
-/* 37 */
+/* 38 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10291,10 +10705,10 @@ function createAttributeWrapper(
 exports.shader   = getShaderReference
 exports.program  = createProgram
 
-var GLError = __webpack_require__(3)
-var formatCompilerError = __webpack_require__(38);
+var GLError = __webpack_require__(4)
+var formatCompilerError = __webpack_require__(39);
 
-var weakMap = typeof WeakMap === 'undefined' ? __webpack_require__(52) : WeakMap
+var weakMap = typeof WeakMap === 'undefined' ? __webpack_require__(53) : WeakMap
 var CACHE = new weakMap()
 
 var SHADER_COUNTER = 0
@@ -10425,14 +10839,14 @@ function createProgram(gl, vref, fref, attribs, locations) {
 
 
 /***/ }),
-/* 38 */
+/* 39 */
 /***/ (function(module, exports, __webpack_require__) {
 
 
-var sprintf = __webpack_require__(39).sprintf;
-var glConstants = __webpack_require__(40);
-var shaderName = __webpack_require__(42);
-var addLineNumbers = __webpack_require__(49);
+var sprintf = __webpack_require__(40).sprintf;
+var glConstants = __webpack_require__(41);
+var shaderName = __webpack_require__(43);
+var addLineNumbers = __webpack_require__(50);
 
 module.exports = formatCompilerError;
 
@@ -10484,7 +10898,7 @@ function formatCompilerError(errLog, src, type) {
 
 
 /***/ }),
-/* 39 */
+/* 40 */
 /***/ (function(module, exports, __webpack_require__) {
 
 (function(window) {
@@ -10698,10 +11112,10 @@ function formatCompilerError(errLog, src, type) {
 
 
 /***/ }),
-/* 40 */
+/* 41 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var gl10 = __webpack_require__(41)
+var gl10 = __webpack_require__(42)
 
 module.exports = function lookupConstant (number) {
   return gl10[number]
@@ -10709,7 +11123,7 @@ module.exports = function lookupConstant (number) {
 
 
 /***/ }),
-/* 41 */
+/* 42 */
 /***/ (function(module, exports) {
 
 module.exports = {
@@ -11013,11 +11427,11 @@ module.exports = {
 
 
 /***/ }),
-/* 42 */
+/* 43 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var tokenize = __webpack_require__(43)
-var atob     = __webpack_require__(48)
+var tokenize = __webpack_require__(44)
+var atob     = __webpack_require__(49)
 
 module.exports = getName
 
@@ -11042,10 +11456,10 @@ function getName(src) {
 
 
 /***/ }),
-/* 43 */
+/* 44 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var tokenize = __webpack_require__(44)
+var tokenize = __webpack_require__(45)
 
 module.exports = tokenizeString
 
@@ -11061,16 +11475,16 @@ function tokenizeString(str, opt) {
 
 
 /***/ }),
-/* 44 */
+/* 45 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = tokenize
 
-var literals100 = __webpack_require__(17)
-  , operators = __webpack_require__(45)
-  , builtins100 = __webpack_require__(18)
-  , literals300es = __webpack_require__(46)
-  , builtins300es = __webpack_require__(47)
+var literals100 = __webpack_require__(18)
+  , operators = __webpack_require__(46)
+  , builtins100 = __webpack_require__(19)
+  , literals300es = __webpack_require__(47)
+  , builtins300es = __webpack_require__(48)
 
 var NORMAL = 999          // <-- never emitted
   , TOKEN = 9999          // <-- never emitted
@@ -11429,7 +11843,7 @@ function tokenize(opt) {
 
 
 /***/ }),
-/* 45 */
+/* 46 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -11482,10 +11896,10 @@ module.exports = [
 
 
 /***/ }),
-/* 46 */
+/* 47 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var v100 = __webpack_require__(17)
+var v100 = __webpack_require__(18)
 
 module.exports = v100.slice().concat([
    'layout'
@@ -11576,11 +11990,11 @@ module.exports = v100.slice().concat([
 
 
 /***/ }),
-/* 47 */
+/* 48 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // 300es builtins/reserved words that were previously valid in v100
-var v100 = __webpack_require__(18)
+var v100 = __webpack_require__(19)
 
 // The texture2D|Cube functions have been removed
 // And the gl_ features are updated
@@ -11651,7 +12065,7 @@ module.exports = v100.concat([
 
 
 /***/ }),
-/* 48 */
+/* 49 */
 /***/ (function(module, exports) {
 
 module.exports = function _atob(str) {
@@ -11660,10 +12074,10 @@ module.exports = function _atob(str) {
 
 
 /***/ }),
-/* 49 */
+/* 50 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var padLeft = __webpack_require__(50)
+var padLeft = __webpack_require__(51)
 
 module.exports = addLineNumbers
 function addLineNumbers (string, start, delim) {
@@ -11682,7 +12096,7 @@ function addLineNumbers (string, start, delim) {
 
 
 /***/ }),
-/* 50 */
+/* 51 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11695,7 +12109,7 @@ function addLineNumbers (string, start, delim) {
 
 
 
-var repeat = __webpack_require__(51);
+var repeat = __webpack_require__(52);
 
 module.exports = function padLeft(str, num, ch) {
   ch = typeof ch !== 'undefined' ? (ch + '') : ' ';
@@ -11703,7 +12117,7 @@ module.exports = function padLeft(str, num, ch) {
 };
 
 /***/ }),
-/* 51 */
+/* 52 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11780,14 +12194,14 @@ function repeat(str, num) {
 
 
 /***/ }),
-/* 52 */
+/* 53 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // Original - @Gozola.
 // https://gist.github.com/Gozala/1269991
 // This is a reimplemented version (with a few bug fixes).
 
-var createStore = __webpack_require__(53);
+var createStore = __webpack_require__(54);
 
 module.exports = weakMap;
 
@@ -11815,10 +12229,10 @@ function weakMap() {
 
 
 /***/ }),
-/* 53 */
+/* 54 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var hiddenStore = __webpack_require__(54);
+var hiddenStore = __webpack_require__(55);
 
 module.exports = createStore;
 
@@ -11840,7 +12254,7 @@ function createStore() {
 
 
 /***/ }),
-/* 54 */
+/* 55 */
 /***/ (function(module, exports) {
 
 module.exports = hiddenStore;
@@ -11862,7 +12276,7 @@ function hiddenStore(obj, key) {
 
 
 /***/ }),
-/* 55 */
+/* 56 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11947,13 +12361,13 @@ function runtimeAttributes(gl, program) {
 
 
 /***/ }),
-/* 56 */
+/* 57 */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__(57)()
+module.exports = __webpack_require__(58)()
 
 /***/ }),
-/* 57 */
+/* 58 */
 /***/ (function(module, exports) {
 
 function clone(point) { //TODO: use gl-vec2 for this
@@ -12156,10 +12570,10 @@ module.exports = function createBezierBuilder(opt) {
 
 
 /***/ }),
-/* 58 */
+/* 59 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var util = __webpack_require__(59)
+var util = __webpack_require__(60)
 
 var lineA = [0, 0]
 var lineB = [0, 0]
@@ -12228,14 +12642,14 @@ function addNext(out, normal, length) {
 }
 
 /***/ }),
-/* 59 */
+/* 60 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var add = __webpack_require__(60)
-var set = __webpack_require__(61)
-var normalize = __webpack_require__(62)
-var subtract = __webpack_require__(63)
-var dot = __webpack_require__(64)
+var add = __webpack_require__(61)
+var set = __webpack_require__(62)
+var normalize = __webpack_require__(63)
+var subtract = __webpack_require__(64)
+var dot = __webpack_require__(65)
 
 var tmp = [0, 0]
 
@@ -12266,7 +12680,7 @@ module.exports.direction = function direction(out, a, b) {
 }
 
 /***/ }),
-/* 60 */
+/* 61 */
 /***/ (function(module, exports) {
 
 module.exports = add
@@ -12286,7 +12700,7 @@ function add(out, a, b) {
 }
 
 /***/ }),
-/* 61 */
+/* 62 */
 /***/ (function(module, exports) {
 
 module.exports = set
@@ -12306,7 +12720,7 @@ function set(out, x, y) {
 }
 
 /***/ }),
-/* 62 */
+/* 63 */
 /***/ (function(module, exports) {
 
 module.exports = normalize
@@ -12332,7 +12746,7 @@ function normalize(out, a) {
 }
 
 /***/ }),
-/* 63 */
+/* 64 */
 /***/ (function(module, exports) {
 
 module.exports = subtract
@@ -12352,7 +12766,7 @@ function subtract(out, a, b) {
 }
 
 /***/ }),
-/* 64 */
+/* 65 */
 /***/ (function(module, exports) {
 
 module.exports = dot
@@ -12369,15 +12783,15 @@ function dot(a, b) {
 }
 
 /***/ }),
-/* 65 */
+/* 66 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var pool = __webpack_require__(66)
-var ops = __webpack_require__(73)
-var ndarray = __webpack_require__(78)
+var pool = __webpack_require__(67)
+var ops = __webpack_require__(74)
+var ndarray = __webpack_require__(79)
 
 var SUPPORTED_TYPES = [
   "uint8",
@@ -12528,14 +12942,14 @@ module.exports = createBuffer
 
 
 /***/ }),
-/* 66 */
+/* 67 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 /* WEBPACK VAR INJECTION */(function(global, Buffer) {
 
-var bits = __webpack_require__(71)
-var dup = __webpack_require__(72)
+var bits = __webpack_require__(72)
+var dup = __webpack_require__(73)
 
 //Legacy pool support
 if(!global.__TYPEDARRAY_POOL) {
@@ -12746,10 +13160,10 @@ exports.clearCache = function clearCache() {
     BUFFER[i].length = 0
   }
 }
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(19), __webpack_require__(67).Buffer))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(20), __webpack_require__(68).Buffer))
 
 /***/ }),
-/* 67 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12763,9 +13177,9 @@ exports.clearCache = function clearCache() {
 
 
 
-var base64 = __webpack_require__(68)
-var ieee754 = __webpack_require__(69)
-var isArray = __webpack_require__(70)
+var base64 = __webpack_require__(69)
+var ieee754 = __webpack_require__(70)
+var isArray = __webpack_require__(71)
 
 exports.Buffer = Buffer
 exports.SlowBuffer = SlowBuffer
@@ -14543,10 +14957,10 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(19)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(20)))
 
 /***/ }),
-/* 68 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14667,7 +15081,7 @@ function fromByteArray (uint8) {
 
 
 /***/ }),
-/* 69 */
+/* 70 */
 /***/ (function(module, exports) {
 
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
@@ -14757,7 +15171,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
 
 /***/ }),
-/* 70 */
+/* 71 */
 /***/ (function(module, exports) {
 
 var toString = {}.toString;
@@ -14768,7 +15182,7 @@ module.exports = Array.isArray || function (arr) {
 
 
 /***/ }),
-/* 71 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14979,7 +15393,7 @@ exports.nextCombination = function(v) {
 
 
 /***/ }),
-/* 72 */
+/* 73 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15034,13 +15448,13 @@ function dupe(count, value) {
 module.exports = dupe
 
 /***/ }),
-/* 73 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var compile = __webpack_require__(74)
+var compile = __webpack_require__(75)
 
 var EmptyProc = {
   body: "",
@@ -15502,13 +15916,13 @@ exports.equals = compile({
 
 
 /***/ }),
-/* 74 */
+/* 75 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var createThunk = __webpack_require__(75)
+var createThunk = __webpack_require__(76)
 
 function Procedure() {
   this.argTypes = []
@@ -15618,7 +16032,7 @@ module.exports = compileCwise
 
 
 /***/ }),
-/* 75 */
+/* 76 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15647,7 +16061,7 @@ module.exports = compileCwise
 //   return thunk(compile.bind1(proc))
 // }
 
-var compile = __webpack_require__(76)
+var compile = __webpack_require__(77)
 
 function createThunk(proc) {
   var code = ["'use strict'", "var CACHED={}"]
@@ -15711,13 +16125,13 @@ module.exports = createThunk
 
 
 /***/ }),
-/* 76 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var uniq = __webpack_require__(77)
+var uniq = __webpack_require__(78)
 
 // This function generates very simple loops analogous to how you typically traverse arrays (the outermost loop corresponds to the slowest changing index, the innermost loop to the fastest changing index)
 // TODO: If two arrays have the same strides (and offsets) there is potential for decreasing the number of "pointers" and related variables. The drawback is that the type signature would become more specific and that there would thus be less potential for caching, but it might still be worth it, especially when dealing with large numbers of arguments.
@@ -16076,7 +16490,7 @@ module.exports = generateCWiseOp
 
 
 /***/ }),
-/* 77 */
+/* 78 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16140,11 +16554,11 @@ module.exports = unique
 
 
 /***/ }),
-/* 78 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var iota = __webpack_require__(79)
-var isBuffer = __webpack_require__(80)
+var iota = __webpack_require__(80)
+var isBuffer = __webpack_require__(81)
 
 var hasTypedArrays  = ((typeof Float64Array) !== "undefined")
 
@@ -16489,7 +16903,7 @@ module.exports = wrappedNDArrayCtor
 
 
 /***/ }),
-/* 79 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16506,7 +16920,7 @@ function iota(n) {
 module.exports = iota
 
 /***/ }),
-/* 80 */
+/* 81 */
 /***/ (function(module, exports) {
 
 /*!
@@ -16533,14 +16947,14 @@ function isSlowBuffer (obj) {
 
 
 /***/ }),
-/* 81 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var createVAONative = __webpack_require__(82)
-var createVAOEmulated = __webpack_require__(83)
+var createVAONative = __webpack_require__(83)
+var createVAOEmulated = __webpack_require__(84)
 
 function ExtensionShim (gl) {
   this.bindVertexArrayOES = gl.bindVertexArray.bind(gl)
@@ -16567,13 +16981,13 @@ module.exports = createVAO
 
 
 /***/ }),
-/* 82 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bindAttribs = __webpack_require__(20)
+var bindAttribs = __webpack_require__(21)
 
 function VertexAttribute(location, dimension, a, b, c, d) {
   this.location = location
@@ -16660,13 +17074,13 @@ function createVAONative(gl, ext) {
 module.exports = createVAONative
 
 /***/ }),
-/* 83 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bindAttribs = __webpack_require__(20)
+var bindAttribs = __webpack_require__(21)
 
 function VAOEmulated(gl) {
   this.gl = gl
@@ -16705,14 +17119,14 @@ function createVAOEmulated(gl) {
 module.exports = createVAOEmulated
 
 /***/ }),
-/* 84 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
 var bsearch = __webpack_require__(6)
-var orient = __webpack_require__(85)[3]
+var orient = __webpack_require__(86)[3]
 
 var EVENT_POINT = 0
 var EVENT_END   = 1
@@ -16899,16 +17313,16 @@ function monotoneTriangulate(points, edges) {
 
 
 /***/ }),
-/* 85 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
 var twoProduct = __webpack_require__(8)
-var robustSum = __webpack_require__(22)
-var robustScale = __webpack_require__(23)
-var robustSubtract = __webpack_require__(24)
+var robustSum = __webpack_require__(23)
+var robustScale = __webpack_require__(24)
+var robustSubtract = __webpack_require__(25)
 
 var NUM_EXPAND = 5
 
@@ -17095,7 +17509,7 @@ function generateOrientationProc() {
 generateOrientationProc()
 
 /***/ }),
-/* 86 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17118,7 +17532,7 @@ function fastTwoSum(a, b, result) {
 }
 
 /***/ }),
-/* 87 */
+/* 88 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17229,13 +17643,13 @@ function createTriangulation(numVerts, edges) {
 
 
 /***/ }),
-/* 88 */
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var inCircle = __webpack_require__(89)[4]
+var inCircle = __webpack_require__(90)[4]
 var bsearch = __webpack_require__(6)
 
 module.exports = delaunayRefine
@@ -17351,16 +17765,16 @@ function delaunayRefine(points, triangulation) {
 
 
 /***/ }),
-/* 89 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
 var twoProduct = __webpack_require__(8)
-var robustSum = __webpack_require__(22)
-var robustDiff = __webpack_require__(24)
-var robustScale = __webpack_require__(23)
+var robustSum = __webpack_require__(23)
+var robustDiff = __webpack_require__(25)
+var robustScale = __webpack_require__(24)
 
 var NUM_EXPAND = 6
 
@@ -17524,7 +17938,7 @@ function generateInSphereTest() {
 generateInSphereTest()
 
 /***/ }),
-/* 90 */
+/* 91 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -17711,14 +18125,14 @@ function classifyFaces(triangulation, target, infinity) {
 
 
 /***/ }),
-/* 91 */
+/* 92 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // expose module classes
-exports.Intersection = __webpack_require__(92);
+exports.Intersection = __webpack_require__(93);
 exports.IntersectionArgs = __webpack_require__(9);
-exports.Shapes = __webpack_require__(98);
-exports.AffineShapes = __webpack_require__(99);
+exports.Shapes = __webpack_require__(99);
+exports.AffineShapes = __webpack_require__(100);
 
 // expose affine module classes
 exports.Point2D = __webpack_require__(1).Point2D;
@@ -17727,7 +18141,7 @@ exports.Matrix2D = __webpack_require__(1).Matrix2D;
 
 
 /***/ }),
-/* 92 */
+/* 93 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -17741,7 +18155,7 @@ exports.Matrix2D = __webpack_require__(1).Matrix2D;
 if (true) {
     var Point2D = __webpack_require__(1).Point2D,
         Vector2D = __webpack_require__(1).Vector2D,
-        Polynomial = __webpack_require__(96).Polynomial;
+        Polynomial = __webpack_require__(97).Polynomial;
 }
 
 /**
@@ -19701,7 +20115,7 @@ if (true) {
 
 
 /***/ }),
-/* 93 */
+/* 94 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -19894,7 +20308,7 @@ if (true) {
 
 
 /***/ }),
-/* 94 */
+/* 95 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -20141,7 +20555,7 @@ if (true) {
 
 
 /***/ }),
-/* 95 */
+/* 96 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -20779,17 +21193,17 @@ if (true) {
 
 
 /***/ }),
-/* 96 */
+/* 97 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // expose classes
 
-exports.Polynomial = __webpack_require__(25);
-exports.SqrtPolynomial = __webpack_require__(97);
+exports.Polynomial = __webpack_require__(26);
+exports.SqrtPolynomial = __webpack_require__(98);
 
 
 /***/ }),
-/* 97 */
+/* 98 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -20801,7 +21215,7 @@ exports.SqrtPolynomial = __webpack_require__(97);
  */
 
 if (true) {
-    var Polynomial = __webpack_require__(25);
+    var Polynomial = __webpack_require__(26);
 }
 
 /**
@@ -20855,7 +21269,7 @@ if (true) {
 
 
 /***/ }),
-/* 98 */
+/* 99 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -21036,7 +21450,7 @@ if (true) {
 
 
 /***/ }),
-/* 99 */
+/* 100 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -21169,14 +21583,15 @@ if (true) {
 
 
 /***/ }),
-/* 100 */
+/* 101 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const arc = __webpack_require__(101);
-const Path = __webpack_require__(5);
-const Color = __webpack_require__(4);
-const Brush = __webpack_require__(102);
-const Select = __webpack_require__(104);
+const arc = __webpack_require__(102);
+const Path = __webpack_require__(2);
+const Color = __webpack_require__(5);
+const Brush = __webpack_require__(103);
+const Eraser = __webpack_require__(104);
+const Select = __webpack_require__(105);
 
 module.exports = class Editor {
   constructor(canvas) {
@@ -21189,8 +21604,8 @@ module.exports = class Editor {
       this.erasing = e.pointerType === 'pen' && e.button === 5;
 
       if (this.erasing) {
-        // TEMP: selection!
-        this.tool = this.tools.select;
+        // TEMP: erasing!
+        this.tool = this.tools.eraser;
       } else this.tool = this.tools.brush;
 
       this.previewStrokes = [];
@@ -21278,6 +21693,7 @@ module.exports = class Editor {
 
     this.tools = {
       brush: new Brush(this),
+      eraser: new Eraser(this),
       select: new Select(this)
     };
 
@@ -21421,7 +21837,7 @@ module.exports = class Editor {
 };
 
 /***/ }),
-/* 101 */
+/* 102 */
 /***/ (function(module, exports) {
 
 //if 'steps' is not specified, we'll just approximate it
@@ -21471,13 +21887,13 @@ module.exports = function arc(x, y, radius, start, end, clockwise, steps, path) 
 }
 
 /***/ }),
-/* 102 */
+/* 103 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Tool = __webpack_require__(26);
-const PathFitter = __webpack_require__(103);
-const Path = __webpack_require__(5);
-const Color = __webpack_require__(4);
+const Tool = __webpack_require__(10);
+const PathFitter = __webpack_require__(27);
+const Path = __webpack_require__(2);
+const Color = __webpack_require__(5);
 
 module.exports = class Brush extends Tool {
   constructor(...args) {
@@ -21488,41 +21904,13 @@ module.exports = class Brush extends Tool {
     this.points = [];
   }
 
-  fitPath(points, error = 2) {
-    let pathFitter = new PathFitter(points);
-    let segments = pathFitter.fit(error); // TODO: weighted by time?
-
-    let commands = [];
-    let lastSegment = null;
-    for (let segment of segments) {
-      if ((!lastSegment || !lastSegment.handleOutLength()) && !segment.handleInLength()) {
-        // line from last segment to this one is straight
-        commands.push([0x20, ...segment.point]);
-      } else if (lastSegment) {
-        // cubic bezier curve
-
-        // get absolute handle out & in
-        let handleOut = lastSegment.handleOut.map((x, i) => x + lastSegment.point[i]);
-        let handleIn = segment.handleIn.map((x, i) => x + segment.point[i]);
-
-        commands.push([0x30, ...handleOut, ...handleIn, ...segment.point]);
-      } else {
-        commands.push([0x10, ...segment.point]);
-      }
-
-      lastSegment = segment;
-    }
-
-    return commands;
-  }
-
   stroke() {
     let path = new Path();
     path.stroke = this.color.clone();
 
-    let centerLine = this.fitPath(this.points.map(p => [p.x, p.y]));
-    let weightLeft = this.fitPath(this.points.map(p => [p.length, p.left]), 3);
-    let weightRight = this.fitPath(this.points.map(p => [p.length, p.right]), 3);
+    let centerLine = PathFitter.fitPath(this.points.map(p => [p.x, p.y]));
+    let weightLeft = PathFitter.fitPath(this.points.map(p => [p.length, p.left]), 3);
+    let weightRight = PathFitter.fitPath(this.points.map(p => [p.length, p.right]), 3);
 
     path.data.push(...centerLine.map(command => new Path.Command(...command)));
 
@@ -21560,389 +21948,67 @@ module.exports = class Brush extends Tool {
 };
 
 /***/ }),
-/* 103 */
-/***/ (function(module, exports) {
+/* 104 */
+/***/ (function(module, exports, __webpack_require__) {
 
-/*
- * paper.js PathFitter modified for Graphein
- */
+const PathFitter = __webpack_require__(27);
+const Tool = __webpack_require__(10);
+const Path = __webpack_require__(2);
+const Color = __webpack_require__(5);
 
-/*
- * Paper.js - The Swiss Army Knife of Vector Graphics Scripting.
- * http://paperjs.org/
- *
- * Copyright (c) 2011 - 2016, Juerg Lehni & Jonathan Puckey
- * http://scratchdisk.com/ & http://jonathanpuckey.com/
- *
- * Distributed under the MIT license. See LICENSE file for details.
- *
- * All rights reserved.
- */
+module.exports = class Eraser extends Tool {
+  constructor(...args) {
+    super(...args);
 
-// An Algorithm for Automatically Fitting Digitized Curves
-// by Philip J. Schneider
-// from "Graphics Gems", Academic Press, 1990
-// Modifications and optimizations of original algorithm by Juerg Lehni.
-
-// paperjs shim
-
-// Numerical.EPSILON
-const EPSILON = 1e-12;
-
-// Numerical.isZero
-const isZero = x => Math.abs(x) <= EPSILON;
-
-// Point methods
-const add = function (b) {
-  return this.map((x, i) => x + b[i]);
-};
-const subtract = function (b) {
-  return this.map((x, i) => x - b[i]);
-};
-const getDistance = function (b) {
-  return Math.hypot(...subtract.call(this, b));
-};
-const normalize = function (length = 1) {
-  let scale = length / Math.hypot(...this);
-  if (!Number.isFinite(scale)) scale = 0;
-  return this.map(x => x * scale);
-};
-const negate = function () {
-  return this.map(x => -x);
-};
-const multiply = function (b) {
-  return this.map(x => x * b);
-};
-const dot = function (b) {
-  return this.map((x, i) => x * b[i]).reduce((a, b) => a + b, 0);
-};
-
-// simple Segment implementation
-class Segment {
-  constructor(point = [0, 0], handleIn = [0, 0], handleOut = [0, 0]) {
-    this.point = point;
-    this.handleIn = handleIn;
-    this.handleOut = handleOut;
+    this.points = [];
   }
 
-  setHandleOut(point) {
-    this.handleOut = point;
-  }
+  erase() {
+    let centerLine = PathFitter.fitPath(this.points);
+    let path = new Path();
+    path.stroke = new Color(1, 0, 0, 1);
+    path.data.push(new Path.Command(0x60, 0, 5, 5));
+    path.data.push(...centerLine.map(command => new Path.Command(...command)));
 
-  // additional utilities not required by path fitter
+    this.editor.currentLayer.appendChild(path);
 
-  handleInLength() {
-    return Math.hypot(...this.handleIn);
-  }
-
-  handleOutLength() {
-    return Math.hypot(...this.handleOut);
-  }
-}
-
-/**
- * @name PathFitter
- * @class
- * @private
- */
-module.exports = class PathFitter {
-  constructor(pathPoints, closed = false) {
-    let points = this.points = pathPoints;
-
-    // We need to duplicate the first and last segment when simplifying a
-    // closed path.
-    if (closed) {
-      points.unshift(points[points.length - 1]);
-      points.push(points[1]); // The point previously at index 0 is now 1.
-    }
-
-    this.closed = closed;
-  }
-
-  fit(error) {
-    let points = this.points;
-    let length = points.length;
-    let segments = null;
-
-    if (length > 0) {
-      // To support reducing paths with multiple points in the same place
-      // to one segment:
-      segments = [new Segment(points[0])];
-
-      if (length > 1) {
-        var _context;
-
-        this.fitCubic(segments, error, 0, length - 1,
-        // Left Tangent
-        (_context = points[1], subtract).call(_context, points[0]),
-        // Right Tangent
-        (_context = points[length - 2], subtract).call(_context, points[length - 1]));
-
-        // Remove the duplicated segments for closed paths again.
-        if (this.closed) {
-          segments.shift();
-          segments.pop();
-        }
+    let layers = this.editor.currentLayer.children;
+    let removeLayers = [];
+    for (let layer of layers) {
+      let points = path.intersect(layer);
+      if (points.length) {
+        // for (let point of points) {
+        // TODO: split paths
+        // }
+        removeLayers.push(layer);
       }
     }
 
-    return segments;
+    for (let layer of removeLayers) layer.parentNode.removeChild(layer);
   }
 
-  // Fit a Bezier curve to a (sub)set of digitized points
-  fitCubic(segments, error, first, last, tan1, tan2) {
-    var _context2;
-
-    let points = this.points;
-
-    // Use heuristic if region only has two points in it
-    if (last - first === 1) {
-      let pt1 = points[first];
-      let pt2 = points[last];
-      let dist = getDistance.call(pt1, pt2) / 3;
-
-      this.addCurve(segments, [pt1, add.call(pt1, normalize.call(tan1, dist)), add.call(pt2, normalize.call(tan2, dist)), pt2]);
-      return;
-    }
-
-    // Parameterize points, and attempt to fit curve
-    let uPrime = this.chordLengthParameterize(first, last);
-    let maxError = Math.max(error, error * error);
-    let split;
-    let parametersInOrder = true;
-
-    // Try 4 iterations
-    for (let i = 0; i <= 4; i++) {
-      let curve = this.generateBezier(first, last, uPrime, tan1, tan2);
-
-      // Find max deviation of points to fitted curve
-      let max = this.findMaxError(first, last, curve, uPrime);
-      if (max.error < error && parametersInOrder) {
-        this.addCurve(segments, curve);
-        return;
-      }
-      split = max.index;
-
-      // If error not too large, try reparameterization and iteration
-      if (max.error >= maxError) {
-        break;
-      }
-      parametersInOrder = this.reparameterize(first, last, uPrime, curve);
-      maxError = max.error;
-    }
-
-    // Fitting failed -- split at max error point and fit recursively
-    let tanCenter = (_context2 = points[split - 1], subtract).call(_context2, points[split + 1]);
-    this.fitCubic(segments, error, first, split, tan1, tanCenter);
-    this.fitCubic(segments, error, split, last, negate.call(tanCenter), tan2);
+  strokeStart(x, y) {
+    this.points = [];
+    this.points.push([x, y]);
   }
 
-  addCurve(segments, curve) {
-    var _context3;
-
-    let prev = segments[segments.length - 1];
-    prev.setHandleOut((_context3 = curve[1], subtract).call(_context3, curve[0]));
-    segments.push(new Segment(curve[3], (_context3 = curve[2], subtract).call(_context3, curve[3])));
+  strokeMove(x, y) {
+    this.points.push([x, y]);
   }
 
-  // Use least-squares method to find Bezier control points for region.
-  generateBezier(first, last, uPrime, tan1, tan2) {
-    let epsilon = /* #= */EPSILON;
-    let abs = Math.abs;
-    let points = this.points;
-    let pt1 = points[first];
-    let pt2 = points[last];
-
-    // Create the C and X matrices
-    let C = [[0, 0], [0, 0]];
-    let X = [0, 0];
-
-    for (let i = 0, l = last - first + 1; i < l; i++) {
-      var _context4;
-
-      let u = uPrime[i];
-      let t = 1 - u;
-      let b = 3 * u * t;
-      let b0 = t * t * t;
-      let b1 = b * t;
-      let b2 = b * u;
-      let b3 = u * u * u;
-      let a1 = normalize.call(tan1, b1);
-      let a2 = normalize.call(tan2, b2);
-      let tmp = (_context4 = (_context4 = points[first + i], subtract).call(_context4, multiply.call(pt1, b0 + b1)), subtract).call(_context4, multiply.call(pt2, b2 + b3));
-
-      C[0][0] += dot.call(a1, a1);
-      C[0][1] += dot.call(a1, a2);
-      // C[1][0] += a1.dot(a2);
-      C[1][0] = C[0][1];
-      C[1][1] += dot.call(a2, a2);
-      X[0] += dot.call(a1, tmp);
-      X[1] += dot.call(a2, tmp);
-    }
-
-    // Compute the determinants of C and X
-    let detC0C1 = C[0][0] * C[1][1] - C[1][0] * C[0][1];
-    let alpha1;
-    let alpha2;
-
-    if (abs(detC0C1) > epsilon) {
-      // Kramer's rule
-      let detC0X = C[0][0] * X[1] - C[1][0] * X[0];
-      let detXC1 = X[0] * C[1][1] - X[1] * C[0][1];
-
-      // Derive alpha values
-      alpha1 = detXC1 / detC0C1;
-      alpha2 = detC0X / detC0C1;
-    } else {
-      // Matrix is under-determined, try assuming alpha1 == alpha2
-      let c0 = C[0][0] + C[0][1];
-      let c1 = C[1][0] + C[1][1];
-
-      alpha1 = alpha2 = abs(c0) > epsilon ? X[0] / c0 : abs(c1) > epsilon ? X[1] / c1 : 0;
-    }
-
-    // If alpha negative, use the Wu/Barsky heuristic (see text)
-    // (if alpha is 0, you get coincident control points that lead to
-    // divide by zero in any subsequent NewtonRaphsonRootFind() call.
-    let segLength = getDistance.call(pt2, pt1);
-    let eps = epsilon * segLength;
-    let handle1;
-    let handle2;
-
-    if (alpha1 < eps || alpha2 < eps) {
-      // fall back on standard (probably inaccurate) formula,
-      // and subdivide further if needed.
-      alpha1 = alpha2 = segLength / 3;
-    } else {
-      var _context5;
-
-      // Check if the found control points are in the right order when
-      // projected onto the line through pt1 and pt2.
-      let line = subtract.call(pt2, pt1);
-      // Control points 1 and 2 are positioned an alpha distance out
-      // on the tangent vectors, left and right, respectively
-      handle1 = normalize.call(tan1, alpha1);
-      handle2 = normalize.call(tan2, alpha2);
-      if ((_context5 = handle1, dot).call(_context5, line) - (_context5 = handle2, dot).call(_context5, line) > segLength * segLength) {
-        // Fall back to the Wu/Barsky heuristic above.
-        alpha1 = alpha2 = segLength / 3;
-        handle1 = handle2 = null; // Force recalculation
-      }
-    }
-
-    // First and last control points of the Bezier curve are
-    // positioned exactly at the first and last data points
-    return [pt1, add.call(pt1, handle1 || normalize.call(tan1, alpha1)), add.call(pt2, handle2 || normalize.call(tan2, alpha2)), pt2];
-  }
-
-  // Given set of points and their parameterization, try to find
-  // a better parameterization.
-  reparameterize(first, last, u, curve) {
-    for (let i = first; i <= last; i++) {
-      u[i - first] = this.findRoot(curve, this.points[i], u[i - first]);
-    }
-
-    // Detect if the new parameterization has reordered the points.
-    // In that case, we would fit the points of the path in the wrong order.
-    for (let i = 1, l = u.length; i < l; i++) {
-      if (u[i] <= u[i - 1]) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  // Use Newton-Raphson iteration to find better root.
-  findRoot(curve, point, u) {
-    let curve1 = [];
-    let curve2 = [];
-
-    // Generate control vertices for Q'
-    for (let i = 0; i <= 2; i++) {
-      var _context6;
-
-      curve1[i] = (_context6 = (_context6 = curve[i + 1], subtract).call(_context6, curve[i]), multiply).call(_context6, 3);
-    }
-
-    // Generate control vertices for Q''
-    for (let i = 0; i <= 1; i++) {
-      var _context7;
-
-      curve2[i] = (_context7 = (_context7 = curve1[i + 1], subtract).call(_context7, curve1[i]), multiply).call(_context7, 2);
-    }
-
-    // Compute Q(u), Q'(u) and Q''(u)
-    let pt = this.evaluate(3, curve, u);
-    let pt1 = this.evaluate(2, curve1, u);
-    let pt2 = this.evaluate(1, curve2, u);
-    let diff = subtract.call(pt, point);
-    let df = dot.call(pt1, pt1) + dot.call(diff, pt2);
-
-    // u = u - f(u) / f'(u)
-    return isZero(df) ? u : u - dot.call(diff, pt1) / df;
-  }
-
-  // Evaluate a bezier curve at a particular parameter value
-  evaluate(degree, curve, t) {
-    // Copy array
-    let tmp = curve.slice();
-
-    // Triangle computation
-    for (let i = 1; i <= degree; i++) {
-      for (let j = 0; j <= degree - i; j++) {
-        var _context8;
-
-        tmp[j] = (_context8 = (_context8 = tmp[j], multiply).call(_context8, 1 - t), add).call(_context8, (_context8 = tmp[j + 1], multiply).call(_context8, t));
-      }
-    }
-    return tmp[0];
-  }
-
-  // Assign parameter values to digitized points
-  // using relative distances between points.
-  chordLengthParameterize(first, last) {
-    let u = [0];
-    for (let i = first + 1; i <= last; i++) {
-      var _context9;
-
-      u[i - first] = u[i - first - 1] + (_context9 = this.points[i], getDistance).call(_context9, this.points[i - 1]);
-    }
-    for (let i = 1, m = last - first; i <= m; i++) {
-      u[i] /= u[m];
-    }
-    return u;
-  }
-
-  // Find the maximum squared distance of digitized points to fitted curve.
-  findMaxError(first, last, curve, u) {
-    let index = Math.floor((last - first + 1) / 2);
-    let maxDist = 0;
-
-    for (let i = first + 1; i < last; i++) {
-      let P = this.evaluate(3, curve, u[i - first]);
-      let v = subtract.call(P, this.points[i]);
-      // let dist = v.x * v.x + v.y * v.y // squared
-      let dist = v[0] * v[0] + v[1] * v[1];
-      if (dist >= maxDist) {
-        maxDist = dist;
-        index = i;
-      }
-    }
-
-    return {
-      error: maxDist,
-      index: index
-    };
+  strokeEnd(x, y) {
+    this.points.push([x, y]);
+    this.erase();
   }
 };
 
 /***/ }),
-/* 104 */
+/* 105 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const triangulate = __webpack_require__(21);
-const Tool = __webpack_require__(26);
-const Path = __webpack_require__(5);
+const triangulate = __webpack_require__(22);
+const Tool = __webpack_require__(10);
+const Path = __webpack_require__(2);
 
 module.exports = class Select extends Tool {
   constructor(...args) {

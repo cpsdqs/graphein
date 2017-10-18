@@ -2,6 +2,7 @@ const arc = require('arc-to')
 const Path = require('./path')
 const Color = require('./color')
 const Brush = require('./brush')
+const Eraser = require('./eraser')
 const Select = require('./select')
 
 module.exports = class Editor {
@@ -16,6 +17,7 @@ module.exports = class Editor {
 
     this.tools = {
       brush: new Brush(this),
+      eraser: new Eraser(this),
       select: new Select(this)
     }
 
@@ -120,8 +122,8 @@ module.exports = class Editor {
     this.erasing = e.pointerType === 'pen' && e.button === 5
 
     if (this.erasing) {
-      // TEMP: selection!
-      this.tool = this.tools.select
+      // TEMP: erasing!
+      this.tool = this.tools.eraser
     } else this.tool = this.tools.brush
 
     this.previewStrokes = []
