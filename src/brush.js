@@ -48,7 +48,7 @@ module.exports = class Brush extends Tool {
     }
   }
 
-  strokeEnd (x, y, left, right ) {
+  strokeEnd (x, y, left, right) {
     this.strokeMove(x, y, left, right)
 
     this.stroke()

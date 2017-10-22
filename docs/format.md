@@ -47,7 +47,9 @@ A path draws an arbitrary path using a compact version of the SVG path `d` synta
 | ---- | -------------- | ----------- |
 | s    | color or nil   | Stroke color. See color for more info
 | f    | color or nil   | Fill color
-| d    | arr            | Data. An array of path instructions. See below
+| d    | arr            | Data for center line. An array of path instructions. See below
+| l    | arr            | Left thickness data. An array of path instructions.
+| r    | arr            | Right thickness data. An array of path instructions.
 | e    | uint8 or nil   | Line cap. `0` for butt, `1` for round, `2` for projecting. Will be inherited
 | j    | uint8 or nil   | Line join. `0` for bevel, `1` for round, `2` for miter. Will be inherited
 | m    | float32 or nil | Miter limit for miter line joins. Will be inherited
@@ -70,14 +72,11 @@ Every instruction is an array. The first entry is always the type as a uint8:
 - `0x43` Quadratic Bézier shortcut relative (t)
 - `0x50` Arc (A)
 - `0x51` Arc relative (a)
-- `0x60` Stroke width: Line (pos, value left, value right)
-- `0x61` Stroke width: Line relative (relative pos, relative value left, relative value right)
-- `0x62` Stroke width: Cubic Bézier (pos, left c1x, c1y, c2x, c2y, value, right c1x, c1y, c2x, c2y, value)
-- `0x63` Stroke width relative: Cubic Bézier (pos, left c1x, c1y, c2x, c2y, value, right c1x, c1y, c2x, c2y, value)
 
 The rest of the entries are float32s of the arguments in the order as used in SVG paths.
 
-A stroke width instruction should appear at least once in the beginning before any line is drawn, though if not, no stroke should be drawn until one does appear. The stroke width is a one-dimensional bézier or linear curve and should be interpreted as a function that maps a position on the stroke to its width.
+###### Stroke thickness
+The left and right stroke thicknesses are projected along the center line to form two lines defining the stroke's bounds, between which the stroke will be drawn, i.e. the points of the stroke thicknesses are projected onto the position on the center line at the length that is equal to the point's x position plus the normal vector at that point multiplied by the point's y value.
 
 ##### Clipping Mask `c`
 A clipping mask adds the following properties:
