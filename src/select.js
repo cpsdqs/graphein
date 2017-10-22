@@ -1,4 +1,3 @@
-const triangulate = require('cdt2d')
 const Tool = require('./tool')
 const Path = require('./path')
 
@@ -13,7 +12,8 @@ module.exports = class Select extends Tool {
     this.editor.selection = []
 
     // get objects inside selection area
-    let cells = triangulate(this.points).map(cell => cell.map(i => this.points[i]))
+    // let cells = triangulate(this.points).map(cell => cell.map(i => this.points[i]))
+    // TODO: just use Path#intersect (fill) for this
 
     // get objects intersecting selection line
     let path = Path.fromPoints(this.points)

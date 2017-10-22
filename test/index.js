@@ -13,6 +13,7 @@ const serialized = {
   version: '0.0.0',
   w: 500,
   h: 500,
+  d: 100,
   c: [
     {
       t: 'g',

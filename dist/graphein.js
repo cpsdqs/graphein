@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 28);
+/******/ 	return __webpack_require__(__webpack_require__.s = 23);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -147,9 +147,9 @@ function equals(a, b) {
 
 // expose classes
 
-exports.Point2D = __webpack_require__(87);
-exports.Vector2D = __webpack_require__(88);
-exports.Matrix2D = __webpack_require__(89);
+exports.Point2D = __webpack_require__(82);
+exports.Vector2D = __webpack_require__(83);
+exports.Matrix2D = __webpack_require__(84);
 
 
 /***/ }),
@@ -204,15 +204,15 @@ module.exports = class Color {
 var _class, _temp;
 
 const { mat4 } = __webpack_require__(4);
-const getNormals = __webpack_require__(58);
-const createBuffer = __webpack_require__(65);
-const createVAO = __webpack_require__(81);
-const libtess = __webpack_require__(84);
-const { Intersection, Point2D } = __webpack_require__(85);
-const Layer = __webpack_require__(8);
+const getNormals = __webpack_require__(53);
+const createBuffer = __webpack_require__(60);
+const createVAO = __webpack_require__(76);
+const libtess = __webpack_require__(79);
+const { Intersection, Point2D } = __webpack_require__(80);
+const Layer = __webpack_require__(7);
 const Color = __webpack_require__(2);
-const pathToPolylines = __webpack_require__(94);
-const { getPointAtLength, getPartialLengths, getInterpolationAtLength } = __webpack_require__(97);
+const pathToPolylines = __webpack_require__(89);
+const { getPointAtLength, getPartialLengths, getInterpolationAtLength } = __webpack_require__(92);
 const { add, mix, invert, scale, distanceTo } = __webpack_require__(6);
 
 module.exports = (_temp = _class = class Path extends Layer {
@@ -559,14 +559,14 @@ Layer.registry.define('p', module.exports);
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__ = __webpack_require__(30);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__ = __webpack_require__(31);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__ = __webpack_require__(13);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__ = __webpack_require__(32);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__ = __webpack_require__(33);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__ = __webpack_require__(34);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__ = __webpack_require__(14);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__ = __webpack_require__(15);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__ = __webpack_require__(25);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__ = __webpack_require__(26);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__ = __webpack_require__(11);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__ = __webpack_require__(27);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__ = __webpack_require__(28);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__ = __webpack_require__(29);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__ = __webpack_require__(12);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__ = __webpack_require__(13);
 /* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "glMatrix", function() { return __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__; });
 /* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat2", function() { return __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__; });
 /* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat2d", function() { return __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__; });
@@ -659,68 +659,9 @@ exports.distanceTo = function distanceToVector2D(b) {
 /* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
-"use strict";
-
-
-function compileSearch(funcName, predicate, reversed, extraArgs, earlyOut) {
-  var code = [
-    "function ", funcName, "(a,l,h,", extraArgs.join(","),  "){",
-earlyOut ? "" : "var i=", (reversed ? "l-1" : "h+1"),
-";while(l<=h){\
-var m=(l+h)>>>1,x=a[m]"]
-  if(earlyOut) {
-    if(predicate.indexOf("c") < 0) {
-      code.push(";if(x===y){return m}else if(x<=y){")
-    } else {
-      code.push(";var p=c(x,y);if(p===0){return m}else if(p<=0){")
-    }
-  } else {
-    code.push(";if(", predicate, "){i=m;")
-  }
-  if(reversed) {
-    code.push("l=m+1}else{h=m-1}")
-  } else {
-    code.push("h=m-1}else{l=m+1}")
-  }
-  code.push("}")
-  if(earlyOut) {
-    code.push("return -1};")
-  } else {
-    code.push("return i};")
-  }
-  return code.join("")
-}
-
-function compileBoundsSearch(predicate, reversed, suffix, earlyOut) {
-  var result = new Function([
-  compileSearch("A", "x" + predicate + "y", reversed, ["y"], earlyOut),
-  compileSearch("P", "c(x,y)" + predicate + "0", reversed, ["y", "c"], earlyOut),
-"function dispatchBsearch", suffix, "(a,y,c,l,h){\
-if(typeof(c)==='function'){\
-return P(a,(l===void 0)?0:l|0,(h===void 0)?a.length-1:h|0,y,c)\
-}else{\
-return A(a,(c===void 0)?0:c|0,(l===void 0)?a.length-1:l|0,y)\
-}}\
-return dispatchBsearch", suffix].join(""))
-  return result()
-}
-
-module.exports = {
-  ge: compileBoundsSearch(">=", false, "GE"),
-  gt: compileBoundsSearch(">", false, "GT"),
-  lt: compileBoundsSearch("<", true, "LT"),
-  le: compileBoundsSearch("<=", true, "LE"),
-  eq: compileBoundsSearch("-", true, "EQ", true)
-}
-
-
-/***/ }),
-/* 8 */
-/***/ (function(module, exports, __webpack_require__) {
-
 var _class, _temp;
 
-const Transform = __webpack_require__(16);
+const Transform = __webpack_require__(14);
 const { mat4 } = __webpack_require__(4);
 
 const registry = {
@@ -837,7 +778,7 @@ module.exports = registry.types.g = (_temp = _class = class Layer {
 }, _temp);
 
 /***/ }),
-/* 9 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -877,7 +818,7 @@ if (true) {
 
 
 /***/ }),
-/* 10 */
+/* 9 */
 /***/ (function(module, exports) {
 
 module.exports = class Tool {
@@ -899,50 +840,11 @@ module.exports = class Tool {
 };
 
 /***/ }),
-/* 11 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = twoProduct
-
-var SPLITTER = +(Math.pow(2, 27) + 1.0)
-
-function twoProduct(a, b, result) {
-  var x = a * b
-
-  var c = SPLITTER * a
-  var abig = c - a
-  var ahi = c - abig
-  var alo = a - ahi
-
-  var d = SPLITTER * b
-  var bbig = d - b
-  var bhi = d - bbig
-  var blo = b - bhi
-
-  var err1 = x - (ahi * bhi)
-  var err2 = err1 - (alo * bhi)
-  var err3 = err2 - (ahi * blo)
-
-  var y = alo * blo - err3
-
-  if(result) {
-    result[0] = y
-    result[1] = x
-    return result
-  }
-
-  return [ y, x ]
-}
-
-/***/ }),
-/* 12 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 const { mat4 } = __webpack_require__(4);
-const Layer = __webpack_require__(8);
+const Layer = __webpack_require__(7);
 
 const version = '0.0.0';
 
@@ -969,40 +871,23 @@ module.exports = class Image extends Layer {
 
   getWorldTransform() {
     let near = 0.1;
-    let far = 1000;
-    let fov = Math.PI;
+    let far = 100;
+    let fov = Math.sqrt(2) / 2;
 
     let projection = mat4.create();
+    let a = Math.tan(Math.PI / 2 - fov / 2);
+    let b = 1 / (near - far);
 
-    // copied from three.js
-    let top = near * Math.tan(fov / 2);
-    let height = 2 * top;
-    let width = this.width / this.height * height;
-    let left = -width / 2;
-    let right = left + width;
-    let bottom = top - height;
-
-    let x = 2 * near / (right - left);
-    let y = 2 * near / (top - bottom);
-    let a = (right + left) / (right - left);
-    let b = (top + bottom) / (top - bottom);
-    let c = -(far + near) / (far - near);
-    let d = -2 * far * near / (far - near);
-
-    // doesn't work for some reason
-    // TODO: look into how this actually works
-    /* projection[0] = x
-    projection[5] = y
-    projection[8] = a
-    projection[9] = b
-    projection[10] = c
-    projection[11] = -1
-    projection[14] = d
-    projection[15] = 0 */
+    projection[0] = a / b;
+    projection[5] = a;
+    projection[10] = b * (near + far);
+    projection[11] = -1;
+    projection[14] = 2 * b * near * far;
+    projection[15] = 0;
 
     let result = mat4.create();
-    mat4.scale(result, projection, [2 / this.width, -2 / this.height, 1]);
-    mat4.translate(result, result, [-this.width / 2, -this.height / 2, 0]);
+    mat4.scale(result, projection, [-1 / (this.width * 50), -2 / this.height, 1]);
+    mat4.translate(result, result, [-this.width / 2, -this.height / 2, -Math.E]);
 
     return result;
   }
@@ -1025,7 +910,7 @@ module.exports = class Image extends Layer {
 };
 
 /***/ }),
-/* 13 */
+/* 11 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1833,7 +1718,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 14 */
+/* 12 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -2673,7 +2558,7 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 15 */
+/* 13 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -3335,7 +3220,7 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 16 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var _class, _temp;
@@ -3396,7 +3281,7 @@ module.exports = (_temp = _class = class Transform {
 }, _temp);
 
 /***/ }),
-/* 17 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3459,7 +3344,7 @@ function makeReflectTypes(uniforms, useIndex) {
 }
 
 /***/ }),
-/* 18 */
+/* 16 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -3558,7 +3443,7 @@ module.exports = [
 
 
 /***/ }),
-/* 19 */
+/* 17 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -3714,7 +3599,7 @@ module.exports = [
 
 
 /***/ }),
-/* 20 */
+/* 18 */
 /***/ (function(module, exports) {
 
 var g;
@@ -3741,7 +3626,7 @@ module.exports = g;
 
 
 /***/ }),
-/* 21 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3801,7 +3686,7 @@ function doBind(gl, elements, attributes) {
 module.exports = doBind
 
 /***/ }),
-/* 22 */
+/* 20 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -4696,7 +4581,7 @@ if (true) {
 
 
 /***/ }),
-/* 23 */
+/* 21 */
 /***/ (function(module, exports) {
 
 //if 'steps' is not specified, we'll just approximate it
@@ -4746,7 +4631,7 @@ module.exports = function arc(x, y, radius, start, end, clockwise, steps, path) 
 }
 
 /***/ }),
-/* 24 */
+/* 22 */
 /***/ (function(module, exports) {
 
 /*
@@ -5151,396 +5036,16 @@ module.exports = class PathFitter {
 };
 
 /***/ }),
-/* 25 */
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
-"use strict";
-
-
-module.exports = linearExpansionSum
-
-//Easy case: Add two scalars
-function scalarScalar(a, b) {
-  var x = a + b
-  var bv = x - a
-  var av = x - bv
-  var br = b - bv
-  var ar = a - av
-  var y = ar + br
-  if(y) {
-    return [y, x]
-  }
-  return [x]
-}
-
-function linearExpansionSum(e, f) {
-  var ne = e.length|0
-  var nf = f.length|0
-  if(ne === 1 && nf === 1) {
-    return scalarScalar(e[0], f[0])
-  }
-  var n = ne + nf
-  var g = new Array(n)
-  var count = 0
-  var eptr = 0
-  var fptr = 0
-  var abs = Math.abs
-  var ei = e[eptr]
-  var ea = abs(ei)
-  var fi = f[fptr]
-  var fa = abs(fi)
-  var a, b
-  if(ea < fa) {
-    b = ei
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-      ea = abs(ei)
-    }
-  } else {
-    b = fi
-    fptr += 1
-    if(fptr < nf) {
-      fi = f[fptr]
-      fa = abs(fi)
-    }
-  }
-  if((eptr < ne && ea < fa) || (fptr >= nf)) {
-    a = ei
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-      ea = abs(ei)
-    }
-  } else {
-    a = fi
-    fptr += 1
-    if(fptr < nf) {
-      fi = f[fptr]
-      fa = abs(fi)
-    }
-  }
-  var x = a + b
-  var bv = x - a
-  var y = b - bv
-  var q0 = y
-  var q1 = x
-  var _x, _bv, _av, _br, _ar
-  while(eptr < ne && fptr < nf) {
-    if(ea < fa) {
-      a = ei
-      eptr += 1
-      if(eptr < ne) {
-        ei = e[eptr]
-        ea = abs(ei)
-      }
-    } else {
-      a = fi
-      fptr += 1
-      if(fptr < nf) {
-        fi = f[fptr]
-        fa = abs(fi)
-      }
-    }
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    }
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-  }
-  while(eptr < ne) {
-    a = ei
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    }
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-    }
-  }
-  while(fptr < nf) {
-    a = fi
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    } 
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-    fptr += 1
-    if(fptr < nf) {
-      fi = f[fptr]
-    }
-  }
-  if(q0) {
-    g[count++] = q0
-  }
-  if(q1) {
-    g[count++] = q1
-  }
-  if(!count) {
-    g[count++] = 0.0  
-  }
-  g.length = count
-  return g
-}
-
-/***/ }),
-/* 26 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var twoProduct = __webpack_require__(11)
-var twoSum = __webpack_require__(105)
-
-module.exports = scaleLinearExpansion
-
-function scaleLinearExpansion(e, scale) {
-  var n = e.length
-  if(n === 1) {
-    var ts = twoProduct(e[0], scale)
-    if(ts[0]) {
-      return ts
-    }
-    return [ ts[1] ]
-  }
-  var g = new Array(2 * n)
-  var q = [0.1, 0.1]
-  var t = [0.1, 0.1]
-  var count = 0
-  twoProduct(e[0], scale, q)
-  if(q[0]) {
-    g[count++] = q[0]
-  }
-  for(var i=1; i<n; ++i) {
-    twoProduct(e[i], scale, t)
-    var pq = q[1]
-    twoSum(pq, t[0], q)
-    if(q[0]) {
-      g[count++] = q[0]
-    }
-    var a = t[1]
-    var b = q[1]
-    var x = a + b
-    var bv = x - a
-    var y = b - bv
-    q[1] = x
-    if(y) {
-      g[count++] = y
-    }
-  }
-  if(q[1]) {
-    g[count++] = q[1]
-  }
-  if(count === 0) {
-    g[count++] = 0.0
-  }
-  g.length = count
-  return g
-}
-
-/***/ }),
-/* 27 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = robustSubtract
-
-//Easy case: Add two scalars
-function scalarScalar(a, b) {
-  var x = a + b
-  var bv = x - a
-  var av = x - bv
-  var br = b - bv
-  var ar = a - av
-  var y = ar + br
-  if(y) {
-    return [y, x]
-  }
-  return [x]
-}
-
-function robustSubtract(e, f) {
-  var ne = e.length|0
-  var nf = f.length|0
-  if(ne === 1 && nf === 1) {
-    return scalarScalar(e[0], -f[0])
-  }
-  var n = ne + nf
-  var g = new Array(n)
-  var count = 0
-  var eptr = 0
-  var fptr = 0
-  var abs = Math.abs
-  var ei = e[eptr]
-  var ea = abs(ei)
-  var fi = -f[fptr]
-  var fa = abs(fi)
-  var a, b
-  if(ea < fa) {
-    b = ei
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-      ea = abs(ei)
-    }
-  } else {
-    b = fi
-    fptr += 1
-    if(fptr < nf) {
-      fi = -f[fptr]
-      fa = abs(fi)
-    }
-  }
-  if((eptr < ne && ea < fa) || (fptr >= nf)) {
-    a = ei
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-      ea = abs(ei)
-    }
-  } else {
-    a = fi
-    fptr += 1
-    if(fptr < nf) {
-      fi = -f[fptr]
-      fa = abs(fi)
-    }
-  }
-  var x = a + b
-  var bv = x - a
-  var y = b - bv
-  var q0 = y
-  var q1 = x
-  var _x, _bv, _av, _br, _ar
-  while(eptr < ne && fptr < nf) {
-    if(ea < fa) {
-      a = ei
-      eptr += 1
-      if(eptr < ne) {
-        ei = e[eptr]
-        ea = abs(ei)
-      }
-    } else {
-      a = fi
-      fptr += 1
-      if(fptr < nf) {
-        fi = -f[fptr]
-        fa = abs(fi)
-      }
-    }
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    }
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-  }
-  while(eptr < ne) {
-    a = ei
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    }
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-    eptr += 1
-    if(eptr < ne) {
-      ei = e[eptr]
-    }
-  }
-  while(fptr < nf) {
-    a = fi
-    b = q0
-    x = a + b
-    bv = x - a
-    y = b - bv
-    if(y) {
-      g[count++] = y
-    } 
-    _x = q1 + x
-    _bv = _x - q1
-    _av = _x - _bv
-    _br = x - _bv
-    _ar = q1 - _av
-    q0 = _ar + _br
-    q1 = _x
-    fptr += 1
-    if(fptr < nf) {
-      fi = -f[fptr]
-    }
-  }
-  if(q0) {
-    g[count++] = q0
-  }
-  if(q1) {
-    g[count++] = q1
-  }
-  if(!count) {
-    g[count++] = 0.0  
-  }
-  g.length = count
-  return g
-}
-
-/***/ }),
-/* 28 */
-/***/ (function(module, exports, __webpack_require__) {
-
-const Canvas = __webpack_require__(29);
+const Canvas = __webpack_require__(24);
 const Color = __webpack_require__(2);
-const Image = __webpack_require__(12);
-const Layer = __webpack_require__(8);
-const Transform = __webpack_require__(16);
+const Image = __webpack_require__(10);
+const Layer = __webpack_require__(7);
+const Transform = __webpack_require__(14);
 const Path = __webpack_require__(3);
-const Editor = __webpack_require__(98);
+const Editor = __webpack_require__(93);
 
 const graphein = {
   Canvas,
@@ -5555,11 +5060,11 @@ const graphein = {
 module.exports = window.graphein = graphein;
 
 /***/ }),
-/* 29 */
+/* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Image = __webpack_require__(12);
-const shaders = __webpack_require__(35);
+const Image = __webpack_require__(10);
+const shaders = __webpack_require__(30);
 
 class Canvas extends window.HTMLElement {
   constructor() {
@@ -5627,7 +5132,7 @@ window.customElements.define('graphein-canvas', Canvas);
 module.exports = Canvas;
 
 /***/ }),
-/* 30 */
+/* 25 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -6097,7 +5602,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 31 */
+/* 26 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -6599,7 +6104,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 32 */
+/* 27 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -8337,7 +7842,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 33 */
+/* 28 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -8358,9 +7863,9 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony export (immutable) */ __webpack_exports__["fromEuler"] = fromEuler;
 /* harmony export (immutable) */ __webpack_exports__["str"] = str;
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__mat3__ = __webpack_require__(13);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__vec3__ = __webpack_require__(14);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__vec4__ = __webpack_require__(15);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__mat3__ = __webpack_require__(11);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__vec3__ = __webpack_require__(12);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__vec4__ = __webpack_require__(13);
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -9028,7 +8533,7 @@ const setAxes = (function() {
 
 
 /***/ }),
-/* 34 */
+/* 29 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -9671,10 +9176,10 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 35 */
+/* 30 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const createShader = __webpack_require__(36);
+const createShader = __webpack_require__(31);
 
 module.exports = function (gl) {
   return {
@@ -9744,17 +9249,17 @@ void main() {
 };
 
 /***/ }),
-/* 36 */
+/* 31 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var createUniformWrapper   = __webpack_require__(37)
-var createAttributeWrapper = __webpack_require__(38)
-var makeReflect            = __webpack_require__(17)
-var shaderCache            = __webpack_require__(39)
-var runtime                = __webpack_require__(57)
+var createUniformWrapper   = __webpack_require__(32)
+var createAttributeWrapper = __webpack_require__(33)
+var makeReflect            = __webpack_require__(15)
+var shaderCache            = __webpack_require__(34)
+var runtime                = __webpack_require__(52)
 var GLError                = __webpack_require__(5)
 
 //Shader object
@@ -10015,13 +9520,13 @@ module.exports = createShader
 
 
 /***/ }),
-/* 37 */
+/* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var coallesceUniforms = __webpack_require__(17)
+var coallesceUniforms = __webpack_require__(15)
 var GLError = __webpack_require__(5)
 
 module.exports = createUniformWrapper
@@ -10213,7 +9718,7 @@ function createUniformWrapper(gl, wrapper, uniforms, locations) {
 
 
 /***/ }),
-/* 38 */
+/* 33 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10483,7 +9988,7 @@ function createAttributeWrapper(
 
 
 /***/ }),
-/* 39 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10493,9 +9998,9 @@ exports.shader   = getShaderReference
 exports.program  = createProgram
 
 var GLError = __webpack_require__(5)
-var formatCompilerError = __webpack_require__(40);
+var formatCompilerError = __webpack_require__(35);
 
-var weakMap = typeof WeakMap === 'undefined' ? __webpack_require__(54) : WeakMap
+var weakMap = typeof WeakMap === 'undefined' ? __webpack_require__(49) : WeakMap
 var CACHE = new weakMap()
 
 var SHADER_COUNTER = 0
@@ -10626,14 +10131,14 @@ function createProgram(gl, vref, fref, attribs, locations) {
 
 
 /***/ }),
-/* 40 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 
-var sprintf = __webpack_require__(41).sprintf;
-var glConstants = __webpack_require__(42);
-var shaderName = __webpack_require__(44);
-var addLineNumbers = __webpack_require__(51);
+var sprintf = __webpack_require__(36).sprintf;
+var glConstants = __webpack_require__(37);
+var shaderName = __webpack_require__(39);
+var addLineNumbers = __webpack_require__(46);
 
 module.exports = formatCompilerError;
 
@@ -10685,7 +10190,7 @@ function formatCompilerError(errLog, src, type) {
 
 
 /***/ }),
-/* 41 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 (function(window) {
@@ -10899,10 +10404,10 @@ function formatCompilerError(errLog, src, type) {
 
 
 /***/ }),
-/* 42 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var gl10 = __webpack_require__(43)
+var gl10 = __webpack_require__(38)
 
 module.exports = function lookupConstant (number) {
   return gl10[number]
@@ -10910,7 +10415,7 @@ module.exports = function lookupConstant (number) {
 
 
 /***/ }),
-/* 43 */
+/* 38 */
 /***/ (function(module, exports) {
 
 module.exports = {
@@ -11214,11 +10719,11 @@ module.exports = {
 
 
 /***/ }),
-/* 44 */
+/* 39 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var tokenize = __webpack_require__(45)
-var atob     = __webpack_require__(50)
+var tokenize = __webpack_require__(40)
+var atob     = __webpack_require__(45)
 
 module.exports = getName
 
@@ -11243,10 +10748,10 @@ function getName(src) {
 
 
 /***/ }),
-/* 45 */
+/* 40 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var tokenize = __webpack_require__(46)
+var tokenize = __webpack_require__(41)
 
 module.exports = tokenizeString
 
@@ -11262,16 +10767,16 @@ function tokenizeString(str, opt) {
 
 
 /***/ }),
-/* 46 */
+/* 41 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = tokenize
 
-var literals100 = __webpack_require__(18)
-  , operators = __webpack_require__(47)
-  , builtins100 = __webpack_require__(19)
-  , literals300es = __webpack_require__(48)
-  , builtins300es = __webpack_require__(49)
+var literals100 = __webpack_require__(16)
+  , operators = __webpack_require__(42)
+  , builtins100 = __webpack_require__(17)
+  , literals300es = __webpack_require__(43)
+  , builtins300es = __webpack_require__(44)
 
 var NORMAL = 999          // <-- never emitted
   , TOKEN = 9999          // <-- never emitted
@@ -11630,7 +11135,7 @@ function tokenize(opt) {
 
 
 /***/ }),
-/* 47 */
+/* 42 */
 /***/ (function(module, exports) {
 
 module.exports = [
@@ -11683,10 +11188,10 @@ module.exports = [
 
 
 /***/ }),
-/* 48 */
+/* 43 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var v100 = __webpack_require__(18)
+var v100 = __webpack_require__(16)
 
 module.exports = v100.slice().concat([
    'layout'
@@ -11777,11 +11282,11 @@ module.exports = v100.slice().concat([
 
 
 /***/ }),
-/* 49 */
+/* 44 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // 300es builtins/reserved words that were previously valid in v100
-var v100 = __webpack_require__(19)
+var v100 = __webpack_require__(17)
 
 // The texture2D|Cube functions have been removed
 // And the gl_ features are updated
@@ -11852,7 +11357,7 @@ module.exports = v100.concat([
 
 
 /***/ }),
-/* 50 */
+/* 45 */
 /***/ (function(module, exports) {
 
 module.exports = function _atob(str) {
@@ -11861,10 +11366,10 @@ module.exports = function _atob(str) {
 
 
 /***/ }),
-/* 51 */
+/* 46 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var padLeft = __webpack_require__(52)
+var padLeft = __webpack_require__(47)
 
 module.exports = addLineNumbers
 function addLineNumbers (string, start, delim) {
@@ -11883,7 +11388,7 @@ function addLineNumbers (string, start, delim) {
 
 
 /***/ }),
-/* 52 */
+/* 47 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11896,7 +11401,7 @@ function addLineNumbers (string, start, delim) {
 
 
 
-var repeat = __webpack_require__(53);
+var repeat = __webpack_require__(48);
 
 module.exports = function padLeft(str, num, ch) {
   ch = typeof ch !== 'undefined' ? (ch + '') : ' ';
@@ -11904,7 +11409,7 @@ module.exports = function padLeft(str, num, ch) {
 };
 
 /***/ }),
-/* 53 */
+/* 48 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11981,14 +11486,14 @@ function repeat(str, num) {
 
 
 /***/ }),
-/* 54 */
+/* 49 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // Original - @Gozola.
 // https://gist.github.com/Gozala/1269991
 // This is a reimplemented version (with a few bug fixes).
 
-var createStore = __webpack_require__(55);
+var createStore = __webpack_require__(50);
 
 module.exports = weakMap;
 
@@ -12016,10 +11521,10 @@ function weakMap() {
 
 
 /***/ }),
-/* 55 */
+/* 50 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var hiddenStore = __webpack_require__(56);
+var hiddenStore = __webpack_require__(51);
 
 module.exports = createStore;
 
@@ -12041,7 +11546,7 @@ function createStore() {
 
 
 /***/ }),
-/* 56 */
+/* 51 */
 /***/ (function(module, exports) {
 
 module.exports = hiddenStore;
@@ -12063,7 +11568,7 @@ function hiddenStore(obj, key) {
 
 
 /***/ }),
-/* 57 */
+/* 52 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12148,10 +11653,10 @@ function runtimeAttributes(gl, program) {
 
 
 /***/ }),
-/* 58 */
+/* 53 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var util = __webpack_require__(59)
+var util = __webpack_require__(54)
 
 var lineA = [0, 0]
 var lineB = [0, 0]
@@ -12220,14 +11725,14 @@ function addNext(out, normal, length) {
 }
 
 /***/ }),
-/* 59 */
+/* 54 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var add = __webpack_require__(60)
-var set = __webpack_require__(61)
-var normalize = __webpack_require__(62)
-var subtract = __webpack_require__(63)
-var dot = __webpack_require__(64)
+var add = __webpack_require__(55)
+var set = __webpack_require__(56)
+var normalize = __webpack_require__(57)
+var subtract = __webpack_require__(58)
+var dot = __webpack_require__(59)
 
 var tmp = [0, 0]
 
@@ -12258,7 +11763,7 @@ module.exports.direction = function direction(out, a, b) {
 }
 
 /***/ }),
-/* 60 */
+/* 55 */
 /***/ (function(module, exports) {
 
 module.exports = add
@@ -12278,7 +11783,7 @@ function add(out, a, b) {
 }
 
 /***/ }),
-/* 61 */
+/* 56 */
 /***/ (function(module, exports) {
 
 module.exports = set
@@ -12298,7 +11803,7 @@ function set(out, x, y) {
 }
 
 /***/ }),
-/* 62 */
+/* 57 */
 /***/ (function(module, exports) {
 
 module.exports = normalize
@@ -12324,7 +11829,7 @@ function normalize(out, a) {
 }
 
 /***/ }),
-/* 63 */
+/* 58 */
 /***/ (function(module, exports) {
 
 module.exports = subtract
@@ -12344,7 +11849,7 @@ function subtract(out, a, b) {
 }
 
 /***/ }),
-/* 64 */
+/* 59 */
 /***/ (function(module, exports) {
 
 module.exports = dot
@@ -12361,15 +11866,15 @@ function dot(a, b) {
 }
 
 /***/ }),
-/* 65 */
+/* 60 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var pool = __webpack_require__(66)
-var ops = __webpack_require__(73)
-var ndarray = __webpack_require__(78)
+var pool = __webpack_require__(61)
+var ops = __webpack_require__(68)
+var ndarray = __webpack_require__(73)
 
 var SUPPORTED_TYPES = [
   "uint8",
@@ -12520,14 +12025,14 @@ module.exports = createBuffer
 
 
 /***/ }),
-/* 66 */
+/* 61 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 /* WEBPACK VAR INJECTION */(function(global, Buffer) {
 
-var bits = __webpack_require__(71)
-var dup = __webpack_require__(72)
+var bits = __webpack_require__(66)
+var dup = __webpack_require__(67)
 
 //Legacy pool support
 if(!global.__TYPEDARRAY_POOL) {
@@ -12738,10 +12243,10 @@ exports.clearCache = function clearCache() {
     BUFFER[i].length = 0
   }
 }
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(20), __webpack_require__(67).Buffer))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(18), __webpack_require__(62).Buffer))
 
 /***/ }),
-/* 67 */
+/* 62 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12755,9 +12260,9 @@ exports.clearCache = function clearCache() {
 
 
 
-var base64 = __webpack_require__(68)
-var ieee754 = __webpack_require__(69)
-var isArray = __webpack_require__(70)
+var base64 = __webpack_require__(63)
+var ieee754 = __webpack_require__(64)
+var isArray = __webpack_require__(65)
 
 exports.Buffer = Buffer
 exports.SlowBuffer = SlowBuffer
@@ -14535,10 +14040,10 @@ function isnan (val) {
   return val !== val // eslint-disable-line no-self-compare
 }
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(20)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(18)))
 
 /***/ }),
-/* 68 */
+/* 63 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14659,7 +14164,7 @@ function fromByteArray (uint8) {
 
 
 /***/ }),
-/* 69 */
+/* 64 */
 /***/ (function(module, exports) {
 
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
@@ -14749,7 +14254,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 
 
 /***/ }),
-/* 70 */
+/* 65 */
 /***/ (function(module, exports) {
 
 var toString = {}.toString;
@@ -14760,7 +14265,7 @@ module.exports = Array.isArray || function (arr) {
 
 
 /***/ }),
-/* 71 */
+/* 66 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14971,7 +14476,7 @@ exports.nextCombination = function(v) {
 
 
 /***/ }),
-/* 72 */
+/* 67 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15026,13 +14531,13 @@ function dupe(count, value) {
 module.exports = dupe
 
 /***/ }),
-/* 73 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var compile = __webpack_require__(74)
+var compile = __webpack_require__(69)
 
 var EmptyProc = {
   body: "",
@@ -15494,13 +14999,13 @@ exports.equals = compile({
 
 
 /***/ }),
-/* 74 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var createThunk = __webpack_require__(75)
+var createThunk = __webpack_require__(70)
 
 function Procedure() {
   this.argTypes = []
@@ -15610,7 +15115,7 @@ module.exports = compileCwise
 
 
 /***/ }),
-/* 75 */
+/* 70 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -15639,7 +15144,7 @@ module.exports = compileCwise
 //   return thunk(compile.bind1(proc))
 // }
 
-var compile = __webpack_require__(76)
+var compile = __webpack_require__(71)
 
 function createThunk(proc) {
   var code = ["'use strict'", "var CACHED={}"]
@@ -15703,13 +15208,13 @@ module.exports = createThunk
 
 
 /***/ }),
-/* 76 */
+/* 71 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var uniq = __webpack_require__(77)
+var uniq = __webpack_require__(72)
 
 // This function generates very simple loops analogous to how you typically traverse arrays (the outermost loop corresponds to the slowest changing index, the innermost loop to the fastest changing index)
 // TODO: If two arrays have the same strides (and offsets) there is potential for decreasing the number of "pointers" and related variables. The drawback is that the type signature would become more specific and that there would thus be less potential for caching, but it might still be worth it, especially when dealing with large numbers of arguments.
@@ -16068,7 +15573,7 @@ module.exports = generateCWiseOp
 
 
 /***/ }),
-/* 77 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16132,11 +15637,11 @@ module.exports = unique
 
 
 /***/ }),
-/* 78 */
+/* 73 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var iota = __webpack_require__(79)
-var isBuffer = __webpack_require__(80)
+var iota = __webpack_require__(74)
+var isBuffer = __webpack_require__(75)
 
 var hasTypedArrays  = ((typeof Float64Array) !== "undefined")
 
@@ -16481,7 +15986,7 @@ module.exports = wrappedNDArrayCtor
 
 
 /***/ }),
-/* 79 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16498,7 +16003,7 @@ function iota(n) {
 module.exports = iota
 
 /***/ }),
-/* 80 */
+/* 75 */
 /***/ (function(module, exports) {
 
 /*!
@@ -16525,14 +16030,14 @@ function isSlowBuffer (obj) {
 
 
 /***/ }),
-/* 81 */
+/* 76 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var createVAONative = __webpack_require__(82)
-var createVAOEmulated = __webpack_require__(83)
+var createVAONative = __webpack_require__(77)
+var createVAOEmulated = __webpack_require__(78)
 
 function ExtensionShim (gl) {
   this.bindVertexArrayOES = gl.bindVertexArray.bind(gl)
@@ -16559,13 +16064,13 @@ module.exports = createVAO
 
 
 /***/ }),
-/* 82 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bindAttribs = __webpack_require__(21)
+var bindAttribs = __webpack_require__(19)
 
 function VertexAttribute(location, dimension, a, b, c, d) {
   this.location = location
@@ -16652,13 +16157,13 @@ function createVAONative(gl, ext) {
 module.exports = createVAONative
 
 /***/ }),
-/* 83 */
+/* 78 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var bindAttribs = __webpack_require__(21)
+var bindAttribs = __webpack_require__(19)
 
 function VAOEmulated(gl) {
   this.gl = gl
@@ -16697,7 +16202,7 @@ function createVAOEmulated(gl) {
 module.exports = createVAOEmulated
 
 /***/ }),
-/* 84 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -16762,14 +16267,14 @@ X.prototype.gluTessProperty=X.prototype.B;X.prototype.gluGetTessProperty=X.proto
 
 
 /***/ }),
-/* 85 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // expose module classes
-exports.Intersection = __webpack_require__(86);
-exports.IntersectionArgs = __webpack_require__(9);
-exports.Shapes = __webpack_require__(92);
-exports.AffineShapes = __webpack_require__(93);
+exports.Intersection = __webpack_require__(81);
+exports.IntersectionArgs = __webpack_require__(8);
+exports.Shapes = __webpack_require__(87);
+exports.AffineShapes = __webpack_require__(88);
 
 // expose affine module classes
 exports.Point2D = __webpack_require__(1).Point2D;
@@ -16778,7 +16283,7 @@ exports.Matrix2D = __webpack_require__(1).Matrix2D;
 
 
 /***/ }),
-/* 86 */
+/* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -16792,7 +16297,7 @@ exports.Matrix2D = __webpack_require__(1).Matrix2D;
 if (true) {
     var Point2D = __webpack_require__(1).Point2D,
         Vector2D = __webpack_require__(1).Vector2D,
-        Polynomial = __webpack_require__(90).Polynomial;
+        Polynomial = __webpack_require__(85).Polynomial;
 }
 
 /**
@@ -18752,7 +18257,7 @@ if (true) {
 
 
 /***/ }),
-/* 87 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -18945,7 +18450,7 @@ if (true) {
 
 
 /***/ }),
-/* 88 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -19192,7 +18697,7 @@ if (true) {
 
 
 /***/ }),
-/* 89 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -19830,17 +19335,17 @@ if (true) {
 
 
 /***/ }),
-/* 90 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // expose classes
 
-exports.Polynomial = __webpack_require__(22);
-exports.SqrtPolynomial = __webpack_require__(91);
+exports.Polynomial = __webpack_require__(20);
+exports.SqrtPolynomial = __webpack_require__(86);
 
 
 /***/ }),
-/* 91 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -19852,7 +19357,7 @@ exports.SqrtPolynomial = __webpack_require__(91);
  */
 
 if (true) {
-    var Polynomial = __webpack_require__(22);
+    var Polynomial = __webpack_require__(20);
 }
 
 /**
@@ -19906,7 +19411,7 @@ if (true) {
 
 
 /***/ }),
-/* 92 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -19918,7 +19423,7 @@ if (true) {
 
 if (true) {
     var Point2D = __webpack_require__(1).Point2D,
-        IntersectionArgs = __webpack_require__(9);
+        IntersectionArgs = __webpack_require__(8);
 }
 
 
@@ -20087,7 +19592,7 @@ if (true) {
 
 
 /***/ }),
-/* 93 */
+/* 88 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -20098,7 +19603,7 @@ if (true) {
 
 if (true) {
     var Point2D = __webpack_require__(1).Point2D,
-        IntersectionArgs = __webpack_require__(9);
+        IntersectionArgs = __webpack_require__(8);
 }
 
 
@@ -20220,11 +19725,11 @@ if (true) {
 
 
 /***/ }),
-/* 94 */
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const bezier = __webpack_require__(95);
-const arc = __webpack_require__(23);
+const bezier = __webpack_require__(90);
+const arc = __webpack_require__(21);
 const { add } = __webpack_require__(6);
 
 module.exports = function pathToPolylines(data) {
@@ -20283,13 +19788,13 @@ module.exports = function pathToPolylines(data) {
 };
 
 /***/ }),
-/* 95 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__(96)()
+module.exports = __webpack_require__(91)()
 
 /***/ }),
-/* 96 */
+/* 91 */
 /***/ (function(module, exports) {
 
 function clone(point) { //TODO: use gl-vec2 for this
@@ -20492,7 +19997,7 @@ module.exports = function createBezierBuilder(opt) {
 
 
 /***/ }),
-/* 97 */
+/* 92 */
 /***/ (function(module, exports, __webpack_require__) {
 
 const { mix, distanceTo } = __webpack_require__(6);
@@ -20572,16 +20077,16 @@ exports.getPartialLengths = function* getPartialPolylineLengths(points) {
 };
 
 /***/ }),
-/* 98 */
+/* 93 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const arc = __webpack_require__(23);
+const arc = __webpack_require__(21);
 const { distanceTo } = __webpack_require__(6);
 const Path = __webpack_require__(3);
 const Color = __webpack_require__(2);
-const Brush = __webpack_require__(99);
-const Eraser = __webpack_require__(100);
-const Select = __webpack_require__(101);
+const Brush = __webpack_require__(94);
+const Eraser = __webpack_require__(95);
+const Select = __webpack_require__(96);
 
 module.exports = class Editor {
   constructor(canvas) {
@@ -20837,11 +20342,11 @@ module.exports = class Editor {
 };
 
 /***/ }),
-/* 99 */
+/* 94 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Tool = __webpack_require__(10);
-const PathFitter = __webpack_require__(24);
+const Tool = __webpack_require__(9);
+const PathFitter = __webpack_require__(22);
 const Path = __webpack_require__(3);
 const Color = __webpack_require__(2);
 
@@ -20891,11 +20396,11 @@ module.exports = class Brush extends Tool {
 };
 
 /***/ }),
-/* 100 */
+/* 95 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const PathFitter = __webpack_require__(24);
-const Tool = __webpack_require__(10);
+const PathFitter = __webpack_require__(22);
+const Tool = __webpack_require__(9);
 const Path = __webpack_require__(3);
 const Color = __webpack_require__(2);
 
@@ -20951,11 +20456,10 @@ module.exports = class Eraser extends Tool {
 };
 
 /***/ }),
-/* 101 */
+/* 96 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const triangulate = __webpack_require__(102);
-const Tool = __webpack_require__(10);
+const Tool = __webpack_require__(9);
 const Path = __webpack_require__(3);
 
 module.exports = class Select extends Tool {
@@ -20969,7 +20473,8 @@ module.exports = class Select extends Tool {
     this.editor.selection = [];
 
     // get objects inside selection area
-    let cells = triangulate(this.points).map(cell => cell.map(i => this.points[i]));
+    // let cells = triangulate(this.points).map(cell => cell.map(i => this.points[i]))
+    // TODO: just use Path#intersect (fill) for this
 
     // get objects intersecting selection line
     let path = Path.fromPoints(this.points);
@@ -21029,1101 +20534,6 @@ module.exports = class Select extends Tool {
     this.select();
   }
 };
-
-/***/ }),
-/* 102 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var monotoneTriangulate = __webpack_require__(103)
-var makeIndex = __webpack_require__(106)
-var delaunayFlip = __webpack_require__(107)
-var filterTriangulation = __webpack_require__(109)
-
-module.exports = cdt2d
-
-function canonicalizeEdge(e) {
-  return [Math.min(e[0], e[1]), Math.max(e[0], e[1])]
-}
-
-function compareEdge(a, b) {
-  return a[0]-b[0] || a[1]-b[1]
-}
-
-function canonicalizeEdges(edges) {
-  return edges.map(canonicalizeEdge).sort(compareEdge)
-}
-
-function getDefault(options, property, dflt) {
-  if(property in options) {
-    return options[property]
-  }
-  return dflt
-}
-
-function cdt2d(points, edges, options) {
-
-  if(!Array.isArray(edges)) {
-    options = edges || {}
-    edges = []
-  } else {
-    options = options || {}
-    edges = edges || []
-  }
-
-  //Parse out options
-  var delaunay = !!getDefault(options, 'delaunay', true)
-  var interior = !!getDefault(options, 'interior', true)
-  var exterior = !!getDefault(options, 'exterior', true)
-  var infinity = !!getDefault(options, 'infinity', false)
-
-  //Handle trivial case
-  if((!interior && !exterior) || points.length === 0) {
-    return []
-  }
-
-  //Construct initial triangulation
-  var cells = monotoneTriangulate(points, edges)
-
-  //If delaunay refinement needed, then improve quality by edge flipping
-  if(delaunay || interior !== exterior || infinity) {
-
-    //Index all of the cells to support fast neighborhood queries
-    var triangulation = makeIndex(points.length, canonicalizeEdges(edges))
-    for(var i=0; i<cells.length; ++i) {
-      var f = cells[i]
-      triangulation.addTriangle(f[0], f[1], f[2])
-    }
-
-    //Run edge flipping
-    if(delaunay) {
-      delaunayFlip(points, triangulation)
-    }
-
-    //Filter points
-    if(!exterior) {
-      return filterTriangulation(triangulation, -1)
-    } else if(!interior) {
-      return filterTriangulation(triangulation,  1, infinity)
-    } else if(infinity) {
-      return filterTriangulation(triangulation, 0, infinity)
-    } else {
-      return triangulation.cells()
-    }
-    
-  } else {
-    return cells
-  }
-}
-
-
-/***/ }),
-/* 103 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var bsearch = __webpack_require__(7)
-var orient = __webpack_require__(104)[3]
-
-var EVENT_POINT = 0
-var EVENT_END   = 1
-var EVENT_START = 2
-
-module.exports = monotoneTriangulate
-
-//A partial convex hull fragment, made of two unimonotone polygons
-function PartialHull(a, b, idx, lowerIds, upperIds) {
-  this.a = a
-  this.b = b
-  this.idx = idx
-  this.lowerIds = lowerIds
-  this.upperIds = upperIds
-}
-
-//An event in the sweep line procedure
-function Event(a, b, type, idx) {
-  this.a    = a
-  this.b    = b
-  this.type = type
-  this.idx  = idx
-}
-
-//This is used to compare events for the sweep line procedure
-// Points are:
-//  1. sorted lexicographically
-//  2. sorted by type  (point < end < start)
-//  3. segments sorted by winding order
-//  4. sorted by index
-function compareEvent(a, b) {
-  var d =
-    (a.a[0] - b.a[0]) ||
-    (a.a[1] - b.a[1]) ||
-    (a.type - b.type)
-  if(d) { return d }
-  if(a.type !== EVENT_POINT) {
-    d = orient(a.a, a.b, b.b)
-    if(d) { return d }
-  }
-  return a.idx - b.idx
-}
-
-function testPoint(hull, p) {
-  return orient(hull.a, hull.b, p)
-}
-
-function addPoint(cells, hulls, points, p, idx) {
-  var lo = bsearch.lt(hulls, p, testPoint)
-  var hi = bsearch.gt(hulls, p, testPoint)
-  for(var i=lo; i<hi; ++i) {
-    var hull = hulls[i]
-
-    //Insert p into lower hull
-    var lowerIds = hull.lowerIds
-    var m = lowerIds.length
-    while(m > 1 && orient(
-        points[lowerIds[m-2]],
-        points[lowerIds[m-1]],
-        p) > 0) {
-      cells.push(
-        [lowerIds[m-1],
-         lowerIds[m-2],
-         idx])
-      m -= 1
-    }
-    lowerIds.length = m
-    lowerIds.push(idx)
-
-    //Insert p into upper hull
-    var upperIds = hull.upperIds
-    var m = upperIds.length
-    while(m > 1 && orient(
-        points[upperIds[m-2]],
-        points[upperIds[m-1]],
-        p) < 0) {
-      cells.push(
-        [upperIds[m-2],
-         upperIds[m-1],
-         idx])
-      m -= 1
-    }
-    upperIds.length = m
-    upperIds.push(idx)
-  }
-}
-
-function findSplit(hull, edge) {
-  var d
-  if(hull.a[0] < edge.a[0]) {
-    d = orient(hull.a, hull.b, edge.a)
-  } else {
-    d = orient(edge.b, edge.a, hull.a)
-  }
-  if(d) { return d }
-  if(edge.b[0] < hull.b[0]) {
-    d = orient(hull.a, hull.b, edge.b)
-  } else {
-    d = orient(edge.b, edge.a, hull.b)
-  }
-  return d || hull.idx - edge.idx
-}
-
-function splitHulls(hulls, points, event) {
-  var splitIdx = bsearch.le(hulls, event, findSplit)
-  var hull = hulls[splitIdx]
-  var upperIds = hull.upperIds
-  var x = upperIds[upperIds.length-1]
-  hull.upperIds = [x]
-  hulls.splice(splitIdx+1, 0,
-    new PartialHull(event.a, event.b, event.idx, [x], upperIds))
-}
-
-
-function mergeHulls(hulls, points, event) {
-  //Swap pointers for merge search
-  var tmp = event.a
-  event.a = event.b
-  event.b = tmp
-  var mergeIdx = bsearch.eq(hulls, event, findSplit)
-  var upper = hulls[mergeIdx]
-  var lower = hulls[mergeIdx-1]
-  lower.upperIds = upper.upperIds
-  hulls.splice(mergeIdx, 1)
-}
-
-
-function monotoneTriangulate(points, edges) {
-
-  var numPoints = points.length
-  var numEdges = edges.length
-
-  var events = []
-
-  //Create point events
-  for(var i=0; i<numPoints; ++i) {
-    events.push(new Event(
-      points[i],
-      null,
-      EVENT_POINT,
-      i))
-  }
-
-  //Create edge events
-  for(var i=0; i<numEdges; ++i) {
-    var e = edges[i]
-    var a = points[e[0]]
-    var b = points[e[1]]
-    if(a[0] < b[0]) {
-      events.push(
-        new Event(a, b, EVENT_START, i),
-        new Event(b, a, EVENT_END, i))
-    } else if(a[0] > b[0]) {
-      events.push(
-        new Event(b, a, EVENT_START, i),
-        new Event(a, b, EVENT_END, i))
-    }
-  }
-
-  //Sort events
-  events.sort(compareEvent)
-
-  //Initialize hull
-  var minX = events[0].a[0] - (1 + Math.abs(events[0].a[0])) * Math.pow(2, -52)
-  var hull = [ new PartialHull([minX, 1], [minX, 0], -1, [], [], [], []) ]
-
-  //Process events in order
-  var cells = []
-  for(var i=0, numEvents=events.length; i<numEvents; ++i) {
-    var event = events[i]
-    var type = event.type
-    if(type === EVENT_POINT) {
-      addPoint(cells, hull, points, event.a, event.idx)
-    } else if(type === EVENT_START) {
-      splitHulls(hull, points, event)
-    } else {
-      mergeHulls(hull, points, event)
-    }
-  }
-
-  //Return triangulation
-  return cells
-}
-
-
-/***/ }),
-/* 104 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var twoProduct = __webpack_require__(11)
-var robustSum = __webpack_require__(25)
-var robustScale = __webpack_require__(26)
-var robustSubtract = __webpack_require__(27)
-
-var NUM_EXPAND = 5
-
-var EPSILON     = 1.1102230246251565e-16
-var ERRBOUND3   = (3.0 + 16.0 * EPSILON) * EPSILON
-var ERRBOUND4   = (7.0 + 56.0 * EPSILON) * EPSILON
-
-function cofactor(m, c) {
-  var result = new Array(m.length-1)
-  for(var i=1; i<m.length; ++i) {
-    var r = result[i-1] = new Array(m.length-1)
-    for(var j=0,k=0; j<m.length; ++j) {
-      if(j === c) {
-        continue
-      }
-      r[k++] = m[i][j]
-    }
-  }
-  return result
-}
-
-function matrix(n) {
-  var result = new Array(n)
-  for(var i=0; i<n; ++i) {
-    result[i] = new Array(n)
-    for(var j=0; j<n; ++j) {
-      result[i][j] = ["m", j, "[", (n-i-1), "]"].join("")
-    }
-  }
-  return result
-}
-
-function sign(n) {
-  if(n & 1) {
-    return "-"
-  }
-  return ""
-}
-
-function generateSum(expr) {
-  if(expr.length === 1) {
-    return expr[0]
-  } else if(expr.length === 2) {
-    return ["sum(", expr[0], ",", expr[1], ")"].join("")
-  } else {
-    var m = expr.length>>1
-    return ["sum(", generateSum(expr.slice(0, m)), ",", generateSum(expr.slice(m)), ")"].join("")
-  }
-}
-
-function determinant(m) {
-  if(m.length === 2) {
-    return [["sum(prod(", m[0][0], ",", m[1][1], "),prod(-", m[0][1], ",", m[1][0], "))"].join("")]
-  } else {
-    var expr = []
-    for(var i=0; i<m.length; ++i) {
-      expr.push(["scale(", generateSum(determinant(cofactor(m, i))), ",", sign(i), m[0][i], ")"].join(""))
-    }
-    return expr
-  }
-}
-
-function orientation(n) {
-  var pos = []
-  var neg = []
-  var m = matrix(n)
-  var args = []
-  for(var i=0; i<n; ++i) {
-    if((i&1)===0) {
-      pos.push.apply(pos, determinant(cofactor(m, i)))
-    } else {
-      neg.push.apply(neg, determinant(cofactor(m, i)))
-    }
-    args.push("m" + i)
-  }
-  var posExpr = generateSum(pos)
-  var negExpr = generateSum(neg)
-  var funcName = "orientation" + n + "Exact"
-  var code = ["function ", funcName, "(", args.join(), "){var p=", posExpr, ",n=", negExpr, ",d=sub(p,n);\
-return d[d.length-1];};return ", funcName].join("")
-  var proc = new Function("sum", "prod", "scale", "sub", code)
-  return proc(robustSum, twoProduct, robustScale, robustSubtract)
-}
-
-var orientation3Exact = orientation(3)
-var orientation4Exact = orientation(4)
-
-var CACHED = [
-  function orientation0() { return 0 },
-  function orientation1() { return 0 },
-  function orientation2(a, b) { 
-    return b[0] - a[0]
-  },
-  function orientation3(a, b, c) {
-    var l = (a[1] - c[1]) * (b[0] - c[0])
-    var r = (a[0] - c[0]) * (b[1] - c[1])
-    var det = l - r
-    var s
-    if(l > 0) {
-      if(r <= 0) {
-        return det
-      } else {
-        s = l + r
-      }
-    } else if(l < 0) {
-      if(r >= 0) {
-        return det
-      } else {
-        s = -(l + r)
-      }
-    } else {
-      return det
-    }
-    var tol = ERRBOUND3 * s
-    if(det >= tol || det <= -tol) {
-      return det
-    }
-    return orientation3Exact(a, b, c)
-  },
-  function orientation4(a,b,c,d) {
-    var adx = a[0] - d[0]
-    var bdx = b[0] - d[0]
-    var cdx = c[0] - d[0]
-    var ady = a[1] - d[1]
-    var bdy = b[1] - d[1]
-    var cdy = c[1] - d[1]
-    var adz = a[2] - d[2]
-    var bdz = b[2] - d[2]
-    var cdz = c[2] - d[2]
-    var bdxcdy = bdx * cdy
-    var cdxbdy = cdx * bdy
-    var cdxady = cdx * ady
-    var adxcdy = adx * cdy
-    var adxbdy = adx * bdy
-    var bdxady = bdx * ady
-    var det = adz * (bdxcdy - cdxbdy) 
-            + bdz * (cdxady - adxcdy)
-            + cdz * (adxbdy - bdxady)
-    var permanent = (Math.abs(bdxcdy) + Math.abs(cdxbdy)) * Math.abs(adz)
-                  + (Math.abs(cdxady) + Math.abs(adxcdy)) * Math.abs(bdz)
-                  + (Math.abs(adxbdy) + Math.abs(bdxady)) * Math.abs(cdz)
-    var tol = ERRBOUND4 * permanent
-    if ((det > tol) || (-det > tol)) {
-      return det
-    }
-    return orientation4Exact(a,b,c,d)
-  }
-]
-
-function slowOrient(args) {
-  var proc = CACHED[args.length]
-  if(!proc) {
-    proc = CACHED[args.length] = orientation(args.length)
-  }
-  return proc.apply(undefined, args)
-}
-
-function generateOrientationProc() {
-  while(CACHED.length <= NUM_EXPAND) {
-    CACHED.push(orientation(CACHED.length))
-  }
-  var args = []
-  var procArgs = ["slow"]
-  for(var i=0; i<=NUM_EXPAND; ++i) {
-    args.push("a" + i)
-    procArgs.push("o" + i)
-  }
-  var code = [
-    "function getOrientation(", args.join(), "){switch(arguments.length){case 0:case 1:return 0;"
-  ]
-  for(var i=2; i<=NUM_EXPAND; ++i) {
-    code.push("case ", i, ":return o", i, "(", args.slice(0, i).join(), ");")
-  }
-  code.push("}var s=new Array(arguments.length);for(var i=0;i<arguments.length;++i){s[i]=arguments[i]};return slow(s);}return getOrientation")
-  procArgs.push(code.join(""))
-
-  var proc = Function.apply(undefined, procArgs)
-  module.exports = proc.apply(undefined, [slowOrient].concat(CACHED))
-  for(var i=0; i<=NUM_EXPAND; ++i) {
-    module.exports[i] = CACHED[i]
-  }
-}
-
-generateOrientationProc()
-
-/***/ }),
-/* 105 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = fastTwoSum
-
-function fastTwoSum(a, b, result) {
-	var x = a + b
-	var bv = x - a
-	var av = x - bv
-	var br = b - bv
-	var ar = a - av
-	if(result) {
-		result[0] = ar + br
-		result[1] = x
-		return result
-	}
-	return [ar+br, x]
-}
-
-/***/ }),
-/* 106 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var bsearch = __webpack_require__(7)
-
-module.exports = createTriangulation
-
-function Triangulation(stars, edges) {
-  this.stars = stars
-  this.edges = edges
-}
-
-var proto = Triangulation.prototype
-
-function removePair(list, j, k) {
-  for(var i=1, n=list.length; i<n; i+=2) {
-    if(list[i-1] === j && list[i] === k) {
-      list[i-1] = list[n-2]
-      list[i] = list[n-1]
-      list.length = n - 2
-      return
-    }
-  }
-}
-
-proto.isConstraint = (function() {
-  var e = [0,0]
-  function compareLex(a, b) {
-    return a[0] - b[0] || a[1] - b[1]
-  }
-  return function(i, j) {
-    e[0] = Math.min(i,j)
-    e[1] = Math.max(i,j)
-    return bsearch.eq(this.edges, e, compareLex) >= 0
-  }
-})()
-
-proto.removeTriangle = function(i, j, k) {
-  var stars = this.stars
-  removePair(stars[i], j, k)
-  removePair(stars[j], k, i)
-  removePair(stars[k], i, j)
-}
-
-proto.addTriangle = function(i, j, k) {
-  var stars = this.stars
-  stars[i].push(j, k)
-  stars[j].push(k, i)
-  stars[k].push(i, j)
-}
-
-proto.opposite = function(j, i) {
-  var list = this.stars[i]
-  for(var k=1, n=list.length; k<n; k+=2) {
-    if(list[k] === j) {
-      return list[k-1]
-    }
-  }
-  return -1
-}
-
-proto.flip = function(i, j) {
-  var a = this.opposite(i, j)
-  var b = this.opposite(j, i)
-  this.removeTriangle(i, j, a)
-  this.removeTriangle(j, i, b)
-  this.addTriangle(i, b, a)
-  this.addTriangle(j, a, b)
-}
-
-proto.edges = function() {
-  var stars = this.stars
-  var result = []
-  for(var i=0, n=stars.length; i<n; ++i) {
-    var list = stars[i]
-    for(var j=0, m=list.length; j<m; j+=2) {
-      result.push([list[j], list[j+1]])
-    }
-  }
-  return result
-}
-
-proto.cells = function() {
-  var stars = this.stars
-  var result = []
-  for(var i=0, n=stars.length; i<n; ++i) {
-    var list = stars[i]
-    for(var j=0, m=list.length; j<m; j+=2) {
-      var s = list[j]
-      var t = list[j+1]
-      if(i < Math.min(s, t)) {
-        result.push([i, s, t])
-      }
-    }
-  }
-  return result
-}
-
-function createTriangulation(numVerts, edges) {
-  var stars = new Array(numVerts)
-  for(var i=0; i<numVerts; ++i) {
-    stars[i] = []
-  }
-  return new Triangulation(stars, edges)
-}
-
-
-/***/ }),
-/* 107 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var inCircle = __webpack_require__(108)[4]
-var bsearch = __webpack_require__(7)
-
-module.exports = delaunayRefine
-
-function testFlip(points, triangulation, stack, a, b, x) {
-  var y = triangulation.opposite(a, b)
-
-  //Test boundary edge
-  if(y < 0) {
-    return
-  }
-
-  //Swap edge if order flipped
-  if(b < a) {
-    var tmp = a
-    a = b
-    b = tmp
-    tmp = x
-    x = y
-    y = tmp
-  }
-
-  //Test if edge is constrained
-  if(triangulation.isConstraint(a, b)) {
-    return
-  }
-
-  //Test if edge is delaunay
-  if(inCircle(points[a], points[b], points[x], points[y]) < 0) {
-    stack.push(a, b)
-  }
-}
-
-//Assume edges are sorted lexicographically
-function delaunayRefine(points, triangulation) {
-  var stack = []
-
-  var numPoints = points.length
-  var stars = triangulation.stars
-  for(var a=0; a<numPoints; ++a) {
-    var star = stars[a]
-    for(var j=1; j<star.length; j+=2) {
-      var b = star[j]
-
-      //If order is not consistent, then skip edge
-      if(b < a) {
-        continue
-      }
-
-      //Check if edge is constrained
-      if(triangulation.isConstraint(a, b)) {
-        continue
-      }
-
-      //Find opposite edge
-      var x = star[j-1], y = -1
-      for(var k=1; k<star.length; k+=2) {
-        if(star[k-1] === b) {
-          y = star[k]
-          break
-        }
-      }
-
-      //If this is a boundary edge, don't flip it
-      if(y < 0) {
-        continue
-      }
-
-      //If edge is in circle, flip it
-      if(inCircle(points[a], points[b], points[x], points[y]) < 0) {
-        stack.push(a, b)
-      }
-    }
-  }
-
-  while(stack.length > 0) {
-    var b = stack.pop()
-    var a = stack.pop()
-
-    //Find opposite pairs
-    var x = -1, y = -1
-    var star = stars[a]
-    for(var i=1; i<star.length; i+=2) {
-      var s = star[i-1]
-      var t = star[i]
-      if(s === b) {
-        y = t
-      } else if(t === b) {
-        x = s
-      }
-    }
-
-    //If x/y are both valid then skip edge
-    if(x < 0 || y < 0) {
-      continue
-    }
-
-    //If edge is now delaunay, then don't flip it
-    if(inCircle(points[a], points[b], points[x], points[y]) >= 0) {
-      continue
-    }
-
-    //Flip the edge
-    triangulation.flip(a, b)
-
-    //Test flipping neighboring edges
-    testFlip(points, triangulation, stack, x, a, y)
-    testFlip(points, triangulation, stack, a, y, x)
-    testFlip(points, triangulation, stack, y, b, x)
-    testFlip(points, triangulation, stack, b, x, y)
-  }
-}
-
-
-/***/ }),
-/* 108 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var twoProduct = __webpack_require__(11)
-var robustSum = __webpack_require__(25)
-var robustDiff = __webpack_require__(27)
-var robustScale = __webpack_require__(26)
-
-var NUM_EXPAND = 6
-
-function cofactor(m, c) {
-  var result = new Array(m.length-1)
-  for(var i=1; i<m.length; ++i) {
-    var r = result[i-1] = new Array(m.length-1)
-    for(var j=0,k=0; j<m.length; ++j) {
-      if(j === c) {
-        continue
-      }
-      r[k++] = m[i][j]
-    }
-  }
-  return result
-}
-
-function matrix(n) {
-  var result = new Array(n)
-  for(var i=0; i<n; ++i) {
-    result[i] = new Array(n)
-    for(var j=0; j<n; ++j) {
-      result[i][j] = ["m", j, "[", (n-i-2), "]"].join("")
-    }
-  }
-  return result
-}
-
-function generateSum(expr) {
-  if(expr.length === 1) {
-    return expr[0]
-  } else if(expr.length === 2) {
-    return ["sum(", expr[0], ",", expr[1], ")"].join("")
-  } else {
-    var m = expr.length>>1
-    return ["sum(", generateSum(expr.slice(0, m)), ",", generateSum(expr.slice(m)), ")"].join("")
-  }
-}
-
-function makeProduct(a, b) {
-  if(a.charAt(0) === "m") {
-    if(b.charAt(0) === "w") {
-      var toks = a.split("[")
-      return ["w", b.substr(1), "m", toks[0].substr(1)].join("")
-    } else {
-      return ["prod(", a, ",", b, ")"].join("")
-    }
-  } else {
-    return makeProduct(b, a)
-  }
-}
-
-function sign(s) {
-  if(s & 1 !== 0) {
-    return "-"
-  }
-  return ""
-}
-
-function determinant(m) {
-  if(m.length === 2) {
-    return [["diff(", makeProduct(m[0][0], m[1][1]), ",", makeProduct(m[1][0], m[0][1]), ")"].join("")]
-  } else {
-    var expr = []
-    for(var i=0; i<m.length; ++i) {
-      expr.push(["scale(", generateSum(determinant(cofactor(m, i))), ",", sign(i), m[0][i], ")"].join(""))
-    }
-    return expr
-  }
-}
-
-function makeSquare(d, n) {
-  var terms = []
-  for(var i=0; i<n-2; ++i) {
-    terms.push(["prod(m", d, "[", i, "],m", d, "[", i, "])"].join(""))
-  }
-  return generateSum(terms)
-}
-
-function orientation(n) {
-  var pos = []
-  var neg = []
-  var m = matrix(n)
-  for(var i=0; i<n; ++i) {
-    m[0][i] = "1"
-    m[n-1][i] = "w"+i
-  } 
-  for(var i=0; i<n; ++i) {
-    if((i&1)===0) {
-      pos.push.apply(pos,determinant(cofactor(m, i)))
-    } else {
-      neg.push.apply(neg,determinant(cofactor(m, i)))
-    }
-  }
-  var posExpr = generateSum(pos)
-  var negExpr = generateSum(neg)
-  var funcName = "exactInSphere" + n
-  var funcArgs = []
-  for(var i=0; i<n; ++i) {
-    funcArgs.push("m" + i)
-  }
-  var code = ["function ", funcName, "(", funcArgs.join(), "){"]
-  for(var i=0; i<n; ++i) {
-    code.push("var w",i,"=",makeSquare(i,n),";")
-    for(var j=0; j<n; ++j) {
-      if(j !== i) {
-        code.push("var w",i,"m",j,"=scale(w",i,",m",j,"[0]);")
-      }
-    }
-  }
-  code.push("var p=", posExpr, ",n=", negExpr, ",d=diff(p,n);return d[d.length-1];}return ", funcName)
-  var proc = new Function("sum", "diff", "prod", "scale", code.join(""))
-  return proc(robustSum, robustDiff, twoProduct, robustScale)
-}
-
-function inSphere0() { return 0 }
-function inSphere1() { return 0 }
-function inSphere2() { return 0 }
-
-var CACHED = [
-  inSphere0,
-  inSphere1,
-  inSphere2
-]
-
-function slowInSphere(args) {
-  var proc = CACHED[args.length]
-  if(!proc) {
-    proc = CACHED[args.length] = orientation(args.length)
-  }
-  return proc.apply(undefined, args)
-}
-
-function generateInSphereTest() {
-  while(CACHED.length <= NUM_EXPAND) {
-    CACHED.push(orientation(CACHED.length))
-  }
-  var args = []
-  var procArgs = ["slow"]
-  for(var i=0; i<=NUM_EXPAND; ++i) {
-    args.push("a" + i)
-    procArgs.push("o" + i)
-  }
-  var code = [
-    "function testInSphere(", args.join(), "){switch(arguments.length){case 0:case 1:return 0;"
-  ]
-  for(var i=2; i<=NUM_EXPAND; ++i) {
-    code.push("case ", i, ":return o", i, "(", args.slice(0, i).join(), ");")
-  }
-  code.push("}var s=new Array(arguments.length);for(var i=0;i<arguments.length;++i){s[i]=arguments[i]};return slow(s);}return testInSphere")
-  procArgs.push(code.join(""))
-
-  var proc = Function.apply(undefined, procArgs)
-
-  module.exports = proc.apply(undefined, [slowInSphere].concat(CACHED))
-  for(var i=0; i<=NUM_EXPAND; ++i) {
-    module.exports[i] = CACHED[i]
-  }
-}
-
-generateInSphereTest()
-
-/***/ }),
-/* 109 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var bsearch = __webpack_require__(7)
-
-module.exports = classifyFaces
-
-function FaceIndex(cells, neighbor, constraint, flags, active, next, boundary) {
-  this.cells       = cells
-  this.neighbor    = neighbor
-  this.flags       = flags
-  this.constraint  = constraint
-  this.active      = active
-  this.next        = next
-  this.boundary    = boundary
-}
-
-var proto = FaceIndex.prototype
-
-function compareCell(a, b) {
-  return a[0] - b[0] ||
-         a[1] - b[1] ||
-         a[2] - b[2]
-}
-
-proto.locate = (function() {
-  var key = [0,0,0]
-  return function(a, b, c) {
-    var x = a, y = b, z = c
-    if(b < c) {
-      if(b < a) {
-        x = b
-        y = c
-        z = a
-      }
-    } else if(c < a) {
-      x = c
-      y = a
-      z = b
-    }
-    if(x < 0) {
-      return -1
-    }
-    key[0] = x
-    key[1] = y
-    key[2] = z
-    return bsearch.eq(this.cells, key, compareCell)
-  }
-})()
-
-function indexCells(triangulation, infinity) {
-  //First get cells and canonicalize
-  var cells = triangulation.cells()
-  var nc = cells.length
-  for(var i=0; i<nc; ++i) {
-    var c = cells[i]
-    var x = c[0], y = c[1], z = c[2]
-    if(y < z) {
-      if(y < x) {
-        c[0] = y
-        c[1] = z
-        c[2] = x
-      }
-    } else if(z < x) {
-      c[0] = z
-      c[1] = x
-      c[2] = y
-    }
-  }
-  cells.sort(compareCell)
-
-  //Initialize flag array
-  var flags = new Array(nc)
-  for(var i=0; i<flags.length; ++i) {
-    flags[i] = 0
-  }
-
-  //Build neighbor index, initialize queues
-  var active = []
-  var next   = []
-  var neighbor = new Array(3*nc)
-  var constraint = new Array(3*nc)
-  var boundary = null
-  if(infinity) {
-    boundary = []
-  }
-  var index = new FaceIndex(
-    cells,
-    neighbor,
-    constraint,
-    flags,
-    active,
-    next,
-    boundary)
-  for(var i=0; i<nc; ++i) {
-    var c = cells[i]
-    for(var j=0; j<3; ++j) {
-      var x = c[j], y = c[(j+1)%3]
-      var a = neighbor[3*i+j] = index.locate(y, x, triangulation.opposite(y, x))
-      var b = constraint[3*i+j] = triangulation.isConstraint(x, y)
-      if(a < 0) {
-        if(b) {
-          next.push(i)
-        } else {
-          active.push(i)
-          flags[i] = 1
-        }
-        if(infinity) {
-          boundary.push([y, x, -1])
-        }
-      }
-    }
-  }
-  return index
-}
-
-function filterCells(cells, flags, target) {
-  var ptr = 0
-  for(var i=0; i<cells.length; ++i) {
-    if(flags[i] === target) {
-      cells[ptr++] = cells[i]
-    }
-  }
-  cells.length = ptr
-  return cells
-}
-
-function classifyFaces(triangulation, target, infinity) {
-  var index = indexCells(triangulation, infinity)
-
-  if(target === 0) {
-    if(infinity) {
-      return index.cells.concat(index.boundary)
-    } else {
-      return index.cells
-    }
-  }
-
-  var side = 1
-  var active = index.active
-  var next = index.next
-  var flags = index.flags
-  var cells = index.cells
-  var constraint = index.constraint
-  var neighbor = index.neighbor
-
-  while(active.length > 0 || next.length > 0) {
-    while(active.length > 0) {
-      var t = active.pop()
-      if(flags[t] === -side) {
-        continue
-      }
-      flags[t] = side
-      var c = cells[t]
-      for(var j=0; j<3; ++j) {
-        var f = neighbor[3*t+j]
-        if(f >= 0 && flags[f] === 0) {
-          if(constraint[3*t+j]) {
-            next.push(f)
-          } else {
-            active.push(f)
-            flags[f] = side
-          }
-        }
-      }
-    }
-
-    //Swap arrays and loop
-    var tmp = next
-    next = active
-    active = tmp
-    next.length = 0
-    side = -side
-  }
-
-  var result = filterCells(cells, flags, target)
-  if(infinity) {
-    return result.concat(index.boundary)
-  }
-  return result
-}
-
 
 /***/ })
 /******/ ]);

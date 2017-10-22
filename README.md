@@ -1,7 +1,7 @@
 # Graphein
 Vector drawing tool in the browser.
 
-[Test Page](https://cpsdqs.github.io/graphein/test/index)
+[Test Page](https://cpsdqs.github.io/graphein/test/)
 
 ## Todo
 - GUI
@@ -13,7 +13,6 @@ Vector drawing tool in the browser.
   + Size
   + Minimum size
   + Weighted Smoothing
-  + Width smoothing (weighted?)
   + Fake pen pressure from speed/acceleration (enabled by default with mouse events)
 - Eraser Tool
   + Path splitting

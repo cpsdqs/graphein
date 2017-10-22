@@ -17,7 +17,6 @@
   "dependencies": {
     "adaptive-bezier-curve": "^1.0.3",
     "arc-to": "^1.0.1",
-    "cdt2d": "^1.0.0",
     "gl-buffer": "^2.1.2",
     "gl-matrix": "^2.4.0",
     "gl-shader": "^4.2.1",
