@@ -11,11 +11,16 @@ module.exports = class Eraser extends Tool {
   }
 
   erase () {
-    let centerLine = PathFitter.fitPath(this.points)
     let path = new Path()
     path.stroke = new Color(1, 0, 0, 1)
-    path.data.push([0x60, 0, 5, 5])
+
+    let centerLine = PathFitter.fitPath(this.points.map(p => [p.x, p.y]))
+    let weightLeft = PathFitter.fitPath(this.points.map(p => [p.length, p.left]), 1)
+    let weightRight = PathFitter.fitPath(this.points.map(p => [p.length, p.right]), 1)
+
     path.data.push(...centerLine)
+    path.left.push(...weightLeft)
+    path.right.push(...weightRight)
 
     this.editor.currentLayer.appendChild(path)
 
@@ -34,17 +39,17 @@ module.exports = class Eraser extends Tool {
     for (let layer of removeLayers) layer.parentNode.removeChild(layer)
   }
 
-  strokeStart (x, y) {
+  strokeStart (x, y, left, right, length) {
     this.points = []
-    this.points.push([x, y])
+    this.points.push({ x, y, left, right, length })
   }
 
-  strokeMove (x, y) {
-    this.points.push([x, y])
+  strokeMove (x, y, left, right, length) {
+    this.points.push({ x, y, left, right, length })
   }
 
-  strokeEnd (x, y) {
-    this.points.push([x, y])
+  strokeEnd (x, y, left, right, length) {
+    this.points.push({ x, y, left, right, length })
     this.erase()
   }
 }

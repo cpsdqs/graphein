@@ -1,4 +1,5 @@
 const arc = require('arc-to')
+const { distanceTo } = require('./path/vector-utils')
 const Path = require('./path')
 const Color = require('./color')
 const Brush = require('./brush')
@@ -134,8 +135,9 @@ module.exports = class Editor {
     this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right, true)
 
     this.lastPoint = [e.offsetX, e.offsetY]
+    this.roughLength = 0
 
-    this.tool.strokeStart(e.offsetX, e.offsetY, left, right, e)
+    this.tool.strokeStart(e.offsetX, e.offsetY, left, right, this.roughLength, e)
     this.canvas.render()
   }
 
@@ -172,22 +174,29 @@ module.exports = class Editor {
     left += this.tiltAmount * Math.abs(vecLeft.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength)
     right += this.tiltAmount * Math.abs(vecRight.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength)
 
-    this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right)
+    if (!e.isCoalescedEvent) {
+      this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right)
 
-    if (this.previewStroke.roughLength > 400) {
-      // split stroke to prevent lag
-      this.createPreviewStroke()
-      this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right, true)
+      if (this.previewStroke.roughLength > 400) {
+        // split stroke to prevent lag
+        this.createPreviewStroke()
+        this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right, true)
+      }
     }
+
+    this.roughLength += this.lastPoint::distanceTo([e.offsetX, e.offsetY])
 
     this.lastPoint = [e.offsetX, e.offsetY]
 
-    this.tool.strokeMove(e.offsetX, e.offsetY, left, right, e)
+    this.tool.strokeMove(e.offsetX, e.offsetY, left, right, this.roughLength, e)
   }
 
   onPointerMove = e => {
     let events = [e]
-    if (e.getCoalescedEvents) events.unshift(...e.getCoalescedEvents())
+    if (e.getCoalescedEvents) events.unshift(...e.getCoalescedEvents().map(e => {
+      e.isCoalescedEvent = true
+      return e
+    }))
 
     for (let event of events) this.handleSinglePointerMove(event)
 
@@ -208,7 +217,7 @@ module.exports = class Editor {
     this.previewStrokes = []
 
     this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY)
-    this.tool.strokeEnd(e.offsetX, e.offsetY, left, right, e)
+    this.tool.strokeEnd(e.offsetX, e.offsetY, left, right, this.roughLength, e)
     this.canvas.render()
   }
 

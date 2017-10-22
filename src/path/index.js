@@ -3,6 +3,7 @@ const getNormals = require('polyline-normals')
 const createBuffer = require('gl-buffer')
 const createVAO = require('gl-vao')
 const libtess = require('libtess')
+const { Intersection, Point2D } = require('kld-intersections')
 const Layer = require('../layer')
 const Color = require('../color')
 const pathToPolylines = require('./path-to-polylines')
@@ -24,6 +25,7 @@ module.exports = class Path extends Layer {
     this.dirty = false
 
     // cache
+    this.contour = null
     this.leftContours = null
     this.rightContours = null
     this.contourTriangles = null
@@ -168,7 +170,7 @@ module.exports = class Path extends Layer {
     // TODO: render all paths
     let leftContour = this.leftContours[0]
     let rightContour = this.rightContours[0]
-    let contour = leftContour.concat(rightContour.slice().reverse())
+    this.contour = leftContour.concat(rightContour.slice().reverse())
 
     let tess = new libtess.GluTesselator()
     tess.gluTessCallback(libtess.gluEnum.GLU_TESS_VERTEX_DATA, (data, pva) => {
@@ -197,7 +199,7 @@ module.exports = class Path extends Layer {
     tess.gluTessBeginPolygon(this.contourTriangles)
     tess.gluTessBeginContour()
 
-    for (let point of contour) {
+    for (let point of this.contour) {
       tess.gluTessVertex([point[0], point[1], 0], [point[0], point[1], 0])
     }
 
@@ -235,7 +237,7 @@ module.exports = class Path extends Layer {
     }
 
     // stroke lines if there's alpha
-    if (strokeColor[3]) {
+    if (strokeColor[3] && this.strokeVAOLength) {
       let shader = context.shaders.path
       shader.bind()
       shader.uniforms.color = strokeColor
@@ -268,6 +270,28 @@ module.exports = class Path extends Layer {
     let length = this.roughLength
     this.left.push([start ? 0x10 : 0x20, length, left])
     this.right.push([start ? 0x10 : 0x20, length, right])
+  }
+
+  intersect (layer) {
+    // TODO: transformations
+    if (layer instanceof Path) {
+      if (!this.contour) this.updateStrokeContours()
+      if (!layer.contour) layer.updateStrokeContours()
+
+      let ownPoints = this.contour.map(point => new Point2D(...point))
+      let layerPoints = layer.contour.map(point => new Point2D(...point))
+      let intersection = Intersection.intersectPolylinePolyline(ownPoints, layerPoints)
+      let uniquePoints = []
+      let uniquePointNames = []
+      for (let point of intersection.points) {
+        let name = point.x + ',' + point.y
+        if (!uniquePointNames.includes(name)) {
+          uniquePointNames.push(name)
+          uniquePoints.push(point)
+        }
+      }
+      return uniquePoints
+    } else throw new Error(`Intersection of Path with ${layer.constructor.name} not implemented`)
   }
 
   serialize () {

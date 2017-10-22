@@ -17,42 +17,32 @@ module.exports = class Brush extends Tool {
     path.stroke = this.color.clone()
 
     let centerLine = PathFitter.fitPath(this.points.map(p => [p.x, p.y]))
-    let weightLeft = PathFitter.fitPath(this.points.map(p => [p.length, p.left]), 3)
-    let weightRight = PathFitter.fitPath(this.points.map(p => [p.length, p.right]), 3)
+    let weightLeft = PathFitter.fitPath(this.points.map(p => [p.length, p.left]), 1)
+    let weightRight = PathFitter.fitPath(this.points.map(p => [p.length, p.right]), 1)
 
     path.data.push(...centerLine)
-
-    // TODO: don't do the following
-    // copy width data to simplified path
-    let first = true
-    for (let point of this.points) {
-      path.left.push([first ? 0x10 : 0x20, point.length, point.left])
-      path.right.push([first ? 0x10 : 0x20, point.length, point.right])
-      first = false
-    }
+    path.left.push(...weightLeft)
+    path.right.push(...weightRight)
 
     this.editor.currentLayer.appendChild(path)
   }
 
-  strokeStart (x, y, left, right) {
+  strokeStart (x, y, left, right, length) {
     this.points = []
-    this.points.push({ x, y, left, right, length: 0 })
+    this.points.push({ x, y, left, right, length })
   }
 
-  strokeMove (x, y, left, right) {
+  strokeMove (x, y, left, right, length) {
     let lastPoint = this.points[this.points.length - 1]
     if (lastPoint.x === x && lastPoint.y === y) {
       Object.assign(lastPoint, { left, right })
     } else {
-      let lastLength = lastPoint.length
-      let partLength = Math.hypot(x - lastPoint.x, y - lastPoint.y)
-      let length = partLength + lastLength
       this.points.push({ x, y, left, right, length })
     }
   }
 
-  strokeEnd (x, y, left, right) {
-    this.strokeMove(x, y, left, right)
+  strokeEnd (x, y, left, right, length) {
+    this.strokeMove(x, y, left, right, length)
 
     this.stroke()
   }
