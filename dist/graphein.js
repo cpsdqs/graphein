@@ -347,8 +347,8 @@ module.exports = (_temp = _class = class Path extends Layer {
         let centerPoint = getPointAtLength(centerLine, point[0]);
 
         let interpolation = getInterpolationAtLength(centerLine, point[0]);
-        let firstNormal = centerNormals[interpolation[0]] || [0, 0];
-        let secondNormal = centerNormals[interpolation[1]] || [0, 0];
+        let firstNormal = centerNormals[interpolation[0]] || [[0, 0], 0];
+        let secondNormal = centerNormals[interpolation[1]] || [[0, 0], 0];
         let centerNormal = (_context2 = (_context2 = firstNormal[0], mix).call(_context2, secondNormal[0], interpolation[2]), invert).call(_context2);
 
         leftContour.push(add.call(centerPoint, scale.call(centerNormal, point[1])));
@@ -360,8 +360,8 @@ module.exports = (_temp = _class = class Path extends Layer {
         let centerPoint = getPointAtLength(centerLine, point[0]);
 
         let interpolation = getInterpolationAtLength(centerLine, point[0]);
-        let firstNormal = centerNormals[interpolation[0]] || [0, 0];
-        let secondNormal = centerNormals[interpolation[1]] || [0, 0];
+        let firstNormal = centerNormals[interpolation[0]] || [[0, 0], 0];
+        let secondNormal = centerNormals[interpolation[1]] || [[0, 0], 0];
         let centerNormal = (_context3 = firstNormal[0], mix).call(_context3, secondNormal[0], interpolation[2]);
 
         rightContour.push(add.call(centerPoint, scale.call(centerNormal, point[1])));
