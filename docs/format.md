@@ -53,6 +53,7 @@ A path draws an arbitrary path using a compact version of the SVG path `d` synta
 | e    | uint8 or nil   | Line cap. `0` for butt, `1` for round, `2` for projecting. Will be inherited
 | j    | uint8 or nil   | Line join. `0` for bevel, `1` for round, `2` for miter. Will be inherited
 | m    | float32 or nil | Miter limit for miter line joins. Will be inherited
+| n    | float32 or nil | Minimum width
 
 ###### Instructions
 Every instruction is an array. The first entry is always the type as a uint8:

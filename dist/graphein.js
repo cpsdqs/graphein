@@ -226,6 +226,7 @@ module.exports = (_temp = _class = class Path extends Layer {
     this.cap = Path.caps.BUTT;
     this.join = Path.joins.BEVEL;
     this.miter = 0;
+    this.minimumWidth = 0;
 
     this.dirty = false;
 
@@ -350,6 +351,16 @@ module.exports = (_temp = _class = class Path extends Layer {
       // TODO: don't assume thickness lines and center lines align
       let leftThickness = addCenterLineSamples(leftThicknesses[i]);
       let rightThickness = addCenterLineSamples(rightThicknesses[i]);
+
+      // apply minimum width
+      if (this.minimumWidth) {
+        leftThickness = leftThickness.forEach(point => {
+          point.y += this.minimumWidth / 2;
+        });
+        rightThickness = rightThickness.forEach(point => {
+          point.y += this.minimumWidth / 2;
+        });
+      }
 
       let leftContour = [];
       let rightContour = [];
@@ -520,6 +531,7 @@ module.exports = (_temp = _class = class Path extends Layer {
       e: this.cap,
       j: this.join,
       m: this.miter,
+      n: this.minimumWidth,
       s: this.stroke ? this.stroke.serialize() : null,
       f: this.fill ? this.fill.serialize() : null
     });
@@ -532,6 +544,7 @@ module.exports = (_temp = _class = class Path extends Layer {
     path.cap = data.e || 0;
     path.join = data.j || 0;
     path.miter = data.m || 0;
+    path.minimumWidth = data.n || 0;
     path.stroke = Color.deserialize(data.s);
     path.fill = Color.deserialize(data.f);
     path.data = data.d || [];
