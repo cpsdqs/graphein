@@ -76,7 +76,7 @@ module.exports = class Editor {
     ctx.save()
     ctx.rotate(-Math.atan2(dx, -dy))
 
-    let scaleY = 1 + Math.hypot(dx, dy) / 10
+    let scaleY = 1 + Math.hypot(dx, dy) / 40
 
     ctx.strokeStyle = '#000'
     ctx.lineWidth = 2

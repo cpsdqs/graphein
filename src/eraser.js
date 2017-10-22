@@ -22,16 +22,12 @@ module.exports = class Eraser extends Tool {
     path.left.push(...weightLeft)
     path.right.push(...weightRight)
 
-    this.editor.currentLayer.appendChild(path)
-
     let layers = this.editor.currentLayer.children
     let removeLayers = []
     for (let layer of layers) {
+      // TODO: intersect piecewise
       let points = path.intersect(layer)
       if (points.length) {
-        // for (let point of points) {
-          // TODO: split paths
-        // }
         removeLayers.push(layer)
       }
     }

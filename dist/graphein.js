@@ -20263,7 +20263,7 @@ module.exports = class Editor {
     ctx.save();
     ctx.rotate(-Math.atan2(dx, -dy));
 
-    let scaleY = 1 + Math.hypot(dx, dy) / 10;
+    let scaleY = 1 + Math.hypot(dx, dy) / 40;
 
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 2;
@@ -20436,16 +20436,12 @@ module.exports = class Eraser extends Tool {
     path.left.push(...weightLeft);
     path.right.push(...weightRight);
 
-    this.editor.currentLayer.appendChild(path);
-
     let layers = this.editor.currentLayer.children;
     let removeLayers = [];
     for (let layer of layers) {
+      // TODO: intersect piecewise
       let points = path.intersect(layer);
       if (points.length) {
-        // for (let point of points) {
-        // TODO: split paths
-        // }
         removeLayers.push(layer);
       }
     }
