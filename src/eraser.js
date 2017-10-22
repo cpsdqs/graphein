@@ -14,8 +14,8 @@ module.exports = class Eraser extends Tool {
     let centerLine = PathFitter.fitPath(this.points)
     let path = new Path()
     path.stroke = new Color(1, 0, 0, 1)
-    path.data.push(new Path.Command(0x60, 0, 5, 5))
-    path.data.push(...centerLine.map(command => new Path.Command(...command)))
+    path.data.push([0x60, 0, 5, 5])
+    path.data.push(...centerLine)
 
     this.editor.currentLayer.appendChild(path)
 

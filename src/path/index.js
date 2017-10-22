@@ -2,7 +2,7 @@ const { mat4 } = require('gl-matrix')
 const getNormals = require('polyline-normals')
 const createBuffer = require('gl-buffer')
 const createVAO = require('gl-vao')
-const earcut = require('earcut')
+const libtess = require('libtess')
 const Layer = require('../layer')
 const Color = require('../color')
 const pathToPolylines = require('./path-to-polylines')
@@ -169,15 +169,40 @@ module.exports = class Path extends Layer {
     let leftContour = this.leftContours[0]
     let rightContour = this.rightContours[0]
     let contour = leftContour.concat(rightContour.slice().reverse())
-    let flatContour = []
-    for (let point of contour) flatContour.push(...point)
 
-    let triangles = earcut(flatContour, [contour.length - 1])
+    let tess = new libtess.GluTesselator()
+    tess.gluTessCallback(libtess.gluEnum.GLU_TESS_VERTEX_DATA, (data, pva) => {
+      pva.push(data[0], data[1])
+      // console.log(data.join())
+    })
+    tess.gluTessCallback(libtess.gluEnum.GLU_TESS_BEGIN, (type) => {
+      // console.log('begin', type)
+    })
+    tess.gluTessCallback(libtess.gluEnum.GLU_TESS_ERROR, (type) => {
+      // console.log('error', type)
+    })
+    tess.gluTessCallback(libtess.gluEnum.GLU_TESS_COMBINE, (coords, data, weight) => {
+      return [coords[0], coords[1], coords[2]]
+    })
+    tess.gluTessCallback(libtess.gluEnum.GLU_TESS_EDGE_FLAG, (flag) => {
+      // console.log('edge-flag', flag)
+    })
+
+    // nonzero winding rule to prevent overlap from subtracting
+    tess.gluTessProperty(libtess.gluEnum.GLU_TESS_WINDING_RULE, libtess.windingRule.GLU_TESS_WINDING_NONZERO)
+
+    tess.gluTessNormal(0, 0, 1)
 
     this.contourTriangles = []
-    for (let index of triangles) {
-      this.contourTriangles.push(...contour[index])
+    tess.gluTessBeginPolygon(this.contourTriangles)
+    tess.gluTessBeginContour()
+
+    for (let point of contour) {
+      tess.gluTessVertex([point[0], point[1], 0], [point[0], point[1], 0])
     }
+
+    tess.gluTessEndContour()
+    tess.gluTessEndPolygon()
   }
 
   render (gl, transform, context) {
@@ -187,14 +212,15 @@ module.exports = class Path extends Layer {
     let strokeColor = this.stroke ? this.stroke.toVec4() : [0, 0, 0, 0]
     let fillColor = this.fill ? this.fill.toVec4() : [0, 0, 0, 0]
 
-    if (this.dirty) this.updateStrokeContours()
+    if (this.dirty) {
+      this.updateStrokeContours()
 
-    // stroke lines if there's alpha
-    if (strokeColor[3]) {
       if (!this.strokeAttributeBuffers) {
         this.strokeAttributeBuffers = {
           positions: createBuffer(gl, this.contourTriangles)
         }
+      } else {
+        this.strokeAttributeBuffers.positions.update(this.contourTriangles)
       }
       if (!this.strokeVAO) {
         this.strokeVAO = createVAO(gl, [{
@@ -205,13 +231,18 @@ module.exports = class Path extends Layer {
       }
       this.strokeVAOLength = this.contourTriangles.length / 2
 
+      this.dirty = false
+    }
+
+    // stroke lines if there's alpha
+    if (strokeColor[3]) {
       let shader = context.shaders.path
       shader.bind()
       shader.uniforms.color = strokeColor
       shader.uniforms.transform = transform
 
       this.strokeVAO.bind()
-      this.strokeVAO.draw(gl.LINE_LOOP, this.strokeVAOLength)
+      this.strokeVAO.draw(gl.TRIANGLES, this.strokeVAOLength)
       this.strokeVAO.unbind()
     }
   }
