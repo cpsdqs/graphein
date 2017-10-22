@@ -20,12 +20,15 @@ module.exports = class Brush extends Tool {
     let weightLeft = PathFitter.fitPath(this.points.map(p => [p.length, p.left]), 3)
     let weightRight = PathFitter.fitPath(this.points.map(p => [p.length, p.right]), 3)
 
-    path.data.push(...centerLine.map(command => new Path.Command(...command)))
+    path.data.push(...centerLine)
 
     // TODO: don't do the following
     // copy width data to simplified path
+    let first = true
     for (let point of this.points) {
-      path.data.push(new Path.Command(0x60, point.length, point.left, point.right))
+      path.left.push([first ? 0x10 : 0x20, point.length, point.left])
+      path.right.push([first ? 0x10 : 0x20, point.length, point.right])
+      first = false
     }
 
     this.editor.currentLayer.appendChild(path)

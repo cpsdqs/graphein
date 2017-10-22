@@ -7,7 +7,7 @@ const Layer = require('../layer')
 const Color = require('../color')
 const pathToPolylines = require('./path-to-polylines')
 const { getPointAtLength, getPartialLengths, getInterpolationAtLength } = require('./polyline-utils')
-const { add, mix, invert, scale } = require('./vector-utils')
+const { add, mix, invert, scale, distanceTo } = require('./vector-utils')
 
 module.exports = class Path extends Layer {
   constructor () {
@@ -143,7 +143,9 @@ module.exports = class Path extends Layer {
         let centerPoint = getPointAtLength(centerLine, point[0])
 
         let interpolation = getInterpolationAtLength(centerLine, point[0])
-        let centerNormal = centerNormals[interpolation[0]][0]::mix(centerNormals[interpolation[1]][0], interpolation[2])::invert()
+        let firstNormal = centerNormals[interpolation[0]] || [0, 0]
+        let secondNormal = centerNormals[interpolation[1]] || [0, 0]
+        let centerNormal = firstNormal[0]::mix(secondNormal[0], interpolation[2])::invert()
 
         leftContour.push(centerPoint::add(centerNormal::scale(point[1])))
       }
@@ -152,7 +154,9 @@ module.exports = class Path extends Layer {
         let centerPoint = getPointAtLength(centerLine, point[0])
 
         let interpolation = getInterpolationAtLength(centerLine, point[0])
-        let centerNormal = centerNormals[interpolation[0]][0]::mix(centerNormals[interpolation[1]][0], interpolation[2])
+        let firstNormal = centerNormals[interpolation[0]] || [0, 0]
+        let secondNormal = centerNormals[interpolation[1]] || [0, 0]
+        let centerNormal = firstNormal[0]::mix(secondNormal[0], interpolation[2])
 
         rightContour.push(centerPoint::add(centerNormal::scale(point[1])))
       }
@@ -210,6 +214,29 @@ module.exports = class Path extends Layer {
       this.strokeVAO.draw(gl.LINE_LOOP, this.strokeVAOLength)
       this.strokeVAO.unbind()
     }
+  }
+
+  get roughLength () {
+    let length = 0
+
+    let lastPoint = null
+    for (let command of this.data) {
+      if (command[0] === 0x10) lastPoint = command.slice(1)
+      else if (command[0] === 0x20) {
+        if (lastPoint) length += lastPoint::distanceTo(command.slice(1))
+        lastPoint = command.slice(1)
+      }
+    }
+
+    return length
+  }
+  set roughLength (v) {}
+
+  addRoughPoint (x, y, left, right, start) {
+    this.data.push([start ? 0x10 : 0x20, x, y])
+    let length = this.roughLength
+    this.left.push([start ? 0x10 : 0x20, length, left])
+    this.right.push([start ? 0x10 : 0x20, length, right])
   }
 
   serialize () {

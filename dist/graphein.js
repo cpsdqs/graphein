@@ -201,7 +201,7 @@ const Layer = __webpack_require__(6);
 const Color = __webpack_require__(1);
 const pathToPolylines = __webpack_require__(82);
 const { getPointAtLength, getPartialLengths, getInterpolationAtLength } = __webpack_require__(85);
-const { add, mix, invert, scale } = __webpack_require__(7);
+const { add, mix, invert, scale, distanceTo } = __webpack_require__(7);
 
 module.exports = (_temp = _class = class Path extends Layer {
   constructor() {
@@ -347,7 +347,9 @@ module.exports = (_temp = _class = class Path extends Layer {
         let centerPoint = getPointAtLength(centerLine, point[0]);
 
         let interpolation = getInterpolationAtLength(centerLine, point[0]);
-        let centerNormal = (_context2 = (_context2 = centerNormals[interpolation[0]][0], mix).call(_context2, centerNormals[interpolation[1]][0], interpolation[2]), invert).call(_context2);
+        let firstNormal = centerNormals[interpolation[0]] || [0, 0];
+        let secondNormal = centerNormals[interpolation[1]] || [0, 0];
+        let centerNormal = (_context2 = (_context2 = firstNormal[0], mix).call(_context2, secondNormal[0], interpolation[2]), invert).call(_context2);
 
         leftContour.push(add.call(centerPoint, scale.call(centerNormal, point[1])));
       }
@@ -358,7 +360,9 @@ module.exports = (_temp = _class = class Path extends Layer {
         let centerPoint = getPointAtLength(centerLine, point[0]);
 
         let interpolation = getInterpolationAtLength(centerLine, point[0]);
-        let centerNormal = (_context3 = centerNormals[interpolation[0]][0], mix).call(_context3, centerNormals[interpolation[1]][0], interpolation[2]);
+        let firstNormal = centerNormals[interpolation[0]] || [0, 0];
+        let secondNormal = centerNormals[interpolation[1]] || [0, 0];
+        let centerNormal = (_context3 = firstNormal[0], mix).call(_context3, secondNormal[0], interpolation[2]);
 
         rightContour.push(add.call(centerPoint, scale.call(centerNormal, point[1])));
       }
@@ -416,6 +420,30 @@ module.exports = (_temp = _class = class Path extends Layer {
       this.strokeVAO.draw(gl.LINE_LOOP, this.strokeVAOLength);
       this.strokeVAO.unbind();
     }
+  }
+
+  get roughLength() {
+    let length = 0;
+
+    let lastPoint = null;
+    for (let command of this.data) {
+      if (command[0] === 0x10) lastPoint = command.slice(1);else if (command[0] === 0x20) {
+        var _context4;
+
+        if (lastPoint) length += (_context4 = lastPoint, distanceTo).call(_context4, command.slice(1));
+        lastPoint = command.slice(1);
+      }
+    }
+
+    return length;
+  }
+  set roughLength(v) {}
+
+  addRoughPoint(x, y, left, right, start) {
+    this.data.push([start ? 0x10 : 0x20, x, y]);
+    let length = this.roughLength;
+    this.left.push([start ? 0x10 : 0x20, length, left]);
+    this.right.push([start ? 0x10 : 0x20, length, right]);
   }
 
   serialize() {
@@ -16950,12 +16978,15 @@ module.exports = class Brush extends Tool {
     let weightLeft = PathFitter.fitPath(this.points.map(p => [p.length, p.left]), 3);
     let weightRight = PathFitter.fitPath(this.points.map(p => [p.length, p.right]), 3);
 
-    path.data.push(...centerLine.map(command => new Path.Command(...command)));
+    path.data.push(...centerLine);
 
     // TODO: don't do the following
     // copy width data to simplified path
+    let first = true;
     for (let point of this.points) {
-      path.data.push(new Path.Command(0x60, point.length, point.left, point.right));
+      path.left.push([first ? 0x10 : 0x20, point.length, point.left]);
+      path.right.push([first ? 0x10 : 0x20, point.length, point.right]);
+      first = false;
     }
 
     this.editor.currentLayer.appendChild(path);
