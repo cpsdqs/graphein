@@ -11,7 +11,7 @@ module.exports = class Color {
   }
 
   toVec4 () {
-    return [this.red, this.green, this.blue, this.alpha]
+    return [...this]
   }
 
   *[Symbol.iterator] () {
@@ -19,6 +19,10 @@ module.exports = class Color {
     yield this.green
     yield this.blue
     yield this.alpha
+  }
+
+  get [Symbol.toStringTag] () {
+    return 'Color'
   }
 
   clone () {

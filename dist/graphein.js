@@ -154,6 +154,70 @@ exports.Matrix2D = __webpack_require__(84);
 
 /***/ }),
 /* 2 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__ = __webpack_require__(0);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__ = __webpack_require__(25);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__ = __webpack_require__(26);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__ = __webpack_require__(10);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__ = __webpack_require__(27);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__ = __webpack_require__(28);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__ = __webpack_require__(29);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__ = __webpack_require__(11);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__ = __webpack_require__(12);
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "glMatrix", function() { return __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__; });
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat2", function() { return __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__; });
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat2d", function() { return __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__; });
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat3", function() { return __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__; });
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat4", function() { return __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__; });
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "quat", function() { return __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__; });
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "vec2", function() { return __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__; });
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "vec3", function() { return __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__; });
+/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "vec4", function() { return __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__; });
+/**
+ * @fileoverview gl-matrix - High performance matrix and vector operations
+ * @author Brandon Jones
+ * @author Colin MacKenzie IV
+ * @version 2.4.0
+ */
+
+/* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+// END HEADER
+
+
+
+
+
+
+
+
+
+
+
+
+
+/***/ }),
+/* 3 */
 /***/ (function(module, exports) {
 
 module.exports = class Color {
@@ -169,7 +233,7 @@ module.exports = class Color {
   }
 
   toVec4() {
-    return [this.red, this.green, this.blue, this.alpha];
+    return [...this];
   }
 
   *[Symbol.iterator]() {
@@ -177,6 +241,10 @@ module.exports = class Color {
     yield this.green;
     yield this.blue;
     yield this.alpha;
+  }
+
+  get [Symbol.toStringTag]() {
+    return 'Color';
   }
 
   clone() {
@@ -198,19 +266,19 @@ module.exports = class Color {
 };
 
 /***/ }),
-/* 3 */
+/* 4 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var _class, _temp;
 
-const { mat4 } = __webpack_require__(4);
+const { mat4 } = __webpack_require__(2);
 const getNormals = __webpack_require__(53);
 const createBuffer = __webpack_require__(60);
 const createVAO = __webpack_require__(76);
 const libtess = __webpack_require__(79);
 const { Intersection, Point2D } = __webpack_require__(80);
 const Layer = __webpack_require__(7);
-const Color = __webpack_require__(2);
+const Color = __webpack_require__(3);
 const pathToPolylines = __webpack_require__(89);
 const { getPointAtLength, getPartialLengths, getInterpolationAtLength } = __webpack_require__(92);
 const { add, mix, invert, scale, distanceTo } = __webpack_require__(6);
@@ -566,70 +634,6 @@ module.exports = (_temp = _class = class Path extends Layer {
 Layer.registry.define('p', module.exports);
 
 /***/ }),
-/* 4 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__ = __webpack_require__(25);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__ = __webpack_require__(26);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__ = __webpack_require__(11);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__ = __webpack_require__(27);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__ = __webpack_require__(28);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__ = __webpack_require__(29);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__ = __webpack_require__(12);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__ = __webpack_require__(13);
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "glMatrix", function() { return __WEBPACK_IMPORTED_MODULE_0__gl_matrix_common__; });
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat2", function() { return __WEBPACK_IMPORTED_MODULE_1__gl_matrix_mat2__; });
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat2d", function() { return __WEBPACK_IMPORTED_MODULE_2__gl_matrix_mat2d__; });
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat3", function() { return __WEBPACK_IMPORTED_MODULE_3__gl_matrix_mat3__; });
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "mat4", function() { return __WEBPACK_IMPORTED_MODULE_4__gl_matrix_mat4__; });
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "quat", function() { return __WEBPACK_IMPORTED_MODULE_5__gl_matrix_quat__; });
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "vec2", function() { return __WEBPACK_IMPORTED_MODULE_6__gl_matrix_vec2__; });
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "vec3", function() { return __WEBPACK_IMPORTED_MODULE_7__gl_matrix_vec3__; });
-/* harmony reexport (module object) */ __webpack_require__.d(__webpack_exports__, "vec4", function() { return __WEBPACK_IMPORTED_MODULE_8__gl_matrix_vec4__; });
-/**
- * @fileoverview gl-matrix - High performance matrix and vector operations
- * @author Brandon Jones
- * @author Colin MacKenzie IV
- * @version 2.4.0
- */
-
-/* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-// END HEADER
-
-
-
-
-
-
-
-
-
-
-
-
-
-/***/ }),
 /* 5 */
 /***/ (function(module, exports) {
 
@@ -675,7 +679,7 @@ exports.distanceTo = function distanceToVector2D(b) {
 var _class, _temp;
 
 const Transform = __webpack_require__(14);
-const { mat4 } = __webpack_require__(4);
+const { mat4 } = __webpack_require__(2);
 
 const registry = {
   types: {},
@@ -745,6 +749,10 @@ module.exports = registry.types.g = (_temp = _class = class Layer {
       this.children.splice(this.children.indexOf(child), 1);
       child.parentNode = null;
     }
+  }
+
+  get [Symbol.toStringTag]() {
+    return this.constructor.name;
   }
 
   static deserializeLayerData(layer, data) {
@@ -854,76 +862,6 @@ module.exports = class Tool {
 
 /***/ }),
 /* 10 */
-/***/ (function(module, exports, __webpack_require__) {
-
-const { mat4 } = __webpack_require__(4);
-const Layer = __webpack_require__(7);
-
-const version = '0.0.0';
-
-module.exports = class Image extends Layer {
-  constructor() {
-    super();
-
-    // TODO: don't hardcode
-    this.version = version;
-    this.width = 100;
-    this.height = 100;
-    this.depth = 100;
-  }
-
-  serialize() {
-    return {
-      version: this.version,
-      w: this.width,
-      h: this.height,
-      d: this.depth,
-      c: this.children.map(child => child.serialize())
-    };
-  }
-
-  getWorldTransform() {
-    let near = 0.1;
-    let far = 100;
-    let fov = Math.sqrt(2) / 2;
-
-    let projection = mat4.create();
-    let a = Math.tan(Math.PI / 2 - fov / 2);
-    let b = 1 / (near - far);
-
-    projection[0] = a / b;
-    projection[5] = a;
-    projection[10] = b * (near + far);
-    projection[11] = -1;
-    projection[14] = 2 * b * near * far;
-    projection[15] = 0;
-
-    let result = mat4.create();
-    mat4.scale(result, projection, [-1 / (this.width * 50), -2 / this.height, 1]);
-    mat4.translate(result, result, [-this.width / 2, -this.height / 2, -Math.E]);
-
-    return result;
-  }
-
-  render(gl, context) {
-    this.renderChildren(gl, this.getWorldTransform(), context);
-  }
-
-  static deserialize(data) {
-    if (data.version !== version) throw new Error('Version does not match: ' + data.version);
-
-    let image = new Image();
-    image.width = data.w;
-    image.height = data.h;
-    image.depth = data.d;
-    image.children = Layer.deserializeChildren(data.c, image);
-
-    return image;
-  }
-};
-
-/***/ }),
-/* 11 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1731,7 +1669,7 @@ const sub = subtract;
 
 
 /***/ }),
-/* 12 */
+/* 11 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -2571,7 +2509,7 @@ const forEach = (function() {
 
 
 /***/ }),
-/* 13 */
+/* 12 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -3233,12 +3171,59 @@ const forEach = (function() {
 
 
 /***/ }),
+/* 13 */
+/***/ (function(module, exports, __webpack_require__) {
+
+const { mat4 } = __webpack_require__(2);
+const Layer = __webpack_require__(7);
+
+const version = '0.0.0';
+
+module.exports = class Image extends Layer {
+  constructor() {
+    super();
+
+    // TODO: don't hardcode
+    this.version = version;
+    this.width = 100;
+    this.height = 100;
+    this.depth = 100;
+  }
+
+  serialize() {
+    return {
+      version: this.version,
+      w: this.width,
+      h: this.height,
+      d: this.depth,
+      c: this.children.map(child => child.serialize())
+    };
+  }
+
+  render(gl, transform, context) {
+    this.renderChildren(gl, transform, context);
+  }
+
+  static deserialize(data) {
+    if (data.version !== version) throw new Error('Version does not match: ' + data.version);
+
+    let image = new Image();
+    image.width = data.w;
+    image.height = data.h;
+    image.depth = data.d;
+    image.children = Layer.deserializeChildren(data.c, image);
+
+    return image;
+  }
+};
+
+/***/ }),
 /* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var _class, _temp;
 
-const { mat4 } = __webpack_require__(4);
+const { mat4 } = __webpack_require__(2);
 
 module.exports = (_temp = _class = class Transform {
   constructor() {
@@ -5053,11 +5038,11 @@ module.exports = class PathFitter {
 /***/ (function(module, exports, __webpack_require__) {
 
 const Canvas = __webpack_require__(24);
-const Color = __webpack_require__(2);
-const Image = __webpack_require__(10);
+const Color = __webpack_require__(3);
+const Image = __webpack_require__(13);
 const Layer = __webpack_require__(7);
 const Transform = __webpack_require__(14);
-const Path = __webpack_require__(3);
+const Path = __webpack_require__(4);
 const Editor = __webpack_require__(93);
 
 const graphein = {
@@ -5076,7 +5061,8 @@ module.exports = window.graphein = graphein;
 /* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const Image = __webpack_require__(10);
+const { mat4 } = __webpack_require__(2);
+const Image = __webpack_require__(13);
 const shaders = __webpack_require__(30);
 
 class Canvas extends window.HTMLElement {
@@ -5093,6 +5079,9 @@ class Canvas extends window.HTMLElement {
 
     this.context = {
       shaders: this.shaders,
+      transform: mat4.create(),
+      width: 0,
+      height: 0,
       selection: []
     };
 
@@ -5103,6 +5092,7 @@ class Canvas extends window.HTMLElement {
   connectedCallback() {
     if (!this._didInit) {
       this._didInit = true;
+      this.tabIndex = this.getAttribute('tabindex') | 0;
       this.appendChild(this.canvas);
       this.appendChild(this.overlay);
     }
@@ -5118,6 +5108,36 @@ class Canvas extends window.HTMLElement {
     this.overlay.height = this.canvas.height;
     this.overlay.style.width = this.canvas.style.width;
     this.overlay.style.height = this.canvas.style.height;
+
+    this.context.width = this.image.width;
+    this.context.height = this.image.height;
+  }
+
+  getProjection() {
+    let near = 0.01;
+    let far = 3000;
+    let fov = Math.sqrt(2) / 2;
+
+    let projection = mat4.create();
+    let a = Math.tan(Math.PI / 2 - fov / 2);
+    let b = 1 / (near - far);
+
+    projection[0] = a / b / far;
+    projection[5] = a;
+    projection[10] = b * (near + far);
+    projection[11] = -1;
+    projection[14] = 2 * b * near * far;
+    projection[15] = 0;
+
+    return projection;
+  }
+
+  getWorldTransform() {
+    let world = mat4.create();
+    mat4.scale(world, this.getProjection(), [-2 / this.image.width, -2 / this.image.height, 1]);
+    mat4.translate(world, world, [-this.image.width / 2, -this.image.height / 2, -Math.E]);
+
+    return world;
   }
 
   get image() {
@@ -5131,13 +5151,19 @@ class Canvas extends window.HTMLElement {
     this.render();
   }
 
+  getTransform() {
+    let transform = mat4.create();
+    mat4.multiply(transform, this.context.transform, this.getWorldTransform());
+    return transform;
+  }
+
   render() {
     this.gl.clearColor(0, 0, 0, 0);
     this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
     this.gl.enable(this.gl.DEPTH_TEST);
 
-    this.image.render(this.gl, this.context);
+    this.image.render(this.gl, this.getTransform(), this.context);
   }
 }
 
@@ -7876,9 +7902,9 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony export (immutable) */ __webpack_exports__["fromEuler"] = fromEuler;
 /* harmony export (immutable) */ __webpack_exports__["str"] = str;
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__common__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__mat3__ = __webpack_require__(11);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__vec3__ = __webpack_require__(12);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__vec4__ = __webpack_require__(13);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__mat3__ = __webpack_require__(10);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__vec3__ = __webpack_require__(11);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__vec4__ = __webpack_require__(12);
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20094,9 +20120,10 @@ exports.getPartialLengths = function* getPartialPolylineLengths(points) {
 /***/ (function(module, exports, __webpack_require__) {
 
 const arc = __webpack_require__(21);
+const { vec2, vec3, mat4 } = __webpack_require__(2);
 const { distanceTo } = __webpack_require__(6);
-const Path = __webpack_require__(3);
-const Color = __webpack_require__(2);
+const Path = __webpack_require__(4);
+const Color = __webpack_require__(3);
 const Brush = __webpack_require__(94);
 const Eraser = __webpack_require__(95);
 const Select = __webpack_require__(96);
@@ -20119,14 +20146,17 @@ module.exports = class Editor {
       this.previewStrokes = [];
       this.createPreviewStroke();
 
+      let [x, y] = this.projectPoint([e.offsetX, e.offsetY]);
+
       let left = e.pressure * this.previewMaxWidth / 2;
       let right = e.pressure * this.previewMaxWidth / 2;
-      this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right, true);
+      this.previewStroke.addRoughPoint(x, y, left, right, true);
 
-      this.lastPoint = [e.offsetX, e.offsetY];
+      this.lastPoint = [x, y];
       this.roughLength = 0;
 
-      this.tool.strokeStart(e.offsetX, e.offsetY, left, right, this.roughLength, e);
+      this.tool.strokeStart(x, y, left, right, this.roughLength, e);
+      this.lastMouse = [e.offsetX, e.offsetY];
       this.canvas.render();
     };
 
@@ -20139,6 +20169,7 @@ module.exports = class Editor {
 
       for (let event of events) this.handleSinglePointerMove(event);
 
+      this.lastMouse = [e.offsetX, e.offsetY];
       this.canvas.render();
     };
 
@@ -20157,6 +20188,7 @@ module.exports = class Editor {
 
       this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY);
       this.tool.strokeEnd(e.offsetX, e.offsetY, left, right, this.roughLength, e);
+      this.lastMouse = [e.offsetX, e.offsetY];
       this.canvas.render();
     };
 
@@ -20216,6 +20248,8 @@ module.exports = class Editor {
     this.tiltAmount = 0.3;
     this.erasing = false;
 
+    this.lastMouse = [0, 0];
+
     this.canvas.addEventListener('image-change', e => {
       this.currentLayer = canvas.image.children[0];
     });
@@ -20235,6 +20269,39 @@ module.exports = class Editor {
 
       // TODO: touch
     }
+
+    this.canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      if (e.shiftKey) {
+        let transform = this.canvas.context.transform;
+        let rotY = -e.deltaX / 200;
+        let rotX = -e.deltaY / 200;
+        mat4.rotate(transform, transform, rotX, [1, 0, 0]);
+        mat4.rotate(transform, transform, rotY, [0, 1, 0]);
+      } else if (e.ctrlKey) {
+        this.scaleCanvas(1 - e.deltaY / 100, this.screenToGL(this.lastMouse));
+      } else {
+        let scale = vec3.create();
+        let transform = this.canvas.context.transform;
+        mat4.getScaling(scale, transform);
+        let scroll = [-e.deltaX / scale[0] / 200, e.deltaY / scale[1] / 200, 0];
+        mat4.translate(transform, transform, scroll);
+      }
+      this.canvas.render();
+    });
+
+    this.canvas.addEventListener('keydown', e => {
+      e.preventDefault();
+
+      if (e.key === '1') {
+        this.scaleCanvas(0.9);
+      } else if (e.key === '2') {
+        this.scaleCanvas(1.1);
+      } else if (e.key === 'M' && e.shiftKey) {
+        this.canvas.context.transform = mat4.create();
+        this.canvas.render();
+      }
+    });
   }
 
   get selection() {
@@ -20245,8 +20312,41 @@ module.exports = class Editor {
     this.canvas.context.selection = v;
   }
 
+  scaleCanvas(factor, pivot) {
+    let transform = this.canvas.context.transform;
+    let inverted = mat4.create();
+    mat4.invert(inverted, transform);
+
+    pivot = pivot || [0, 0, 0];
+    vec3.transformMat4(pivot, pivot, inverted);
+
+    mat4.translate(transform, transform, pivot);
+    mat4.scale(transform, transform, [factor, factor, 1]);
+    mat4.translate(transform, transform, vec3.scale(pivot, pivot, -1));
+    this.canvas.render();
+  }
+
   updateImage() {
     this.currentLayer = canvas.image.children[0];
+  }
+
+  screenToGL(point, transform) {
+    let magicNumber = transform ? vec3.transformMat4(vec3.create(), [0, 0, 0], transform)[2] : 0;
+    return [2 * point[0] / this.canvas.context.width - 1, -2 * point[1] / this.canvas.context.height + 1, magicNumber];
+  }
+
+  glToScreen(point) {
+    return [(point[0] + 1) / 2 * this.canvas.context.width, (-point[1] - 1) / 2 * this.canvas.context.height];
+  }
+
+  projectPoint(point) {
+    let transform = this.canvas.getTransform();
+    let inverted = mat4.create();
+    mat4.invert(inverted, transform);
+
+    let glPoint = this.screenToGL(point, transform);
+    vec3.transformMat4(glPoint, glPoint, inverted);
+    return glPoint;
   }
 
   renderCursor(x, y, p, dx, dy) {
@@ -20310,7 +20410,9 @@ module.exports = class Editor {
 
     // TODO: deduplicate points
 
-    let vec = [e.offsetX, e.offsetY].map((x, i) => x - this.lastPoint[i]);
+    let [x, y] = this.projectPoint([e.offsetX, e.offsetY]);
+
+    let vec = [x, y].map((x, i) => x - this.lastPoint[i]);
     let angle = Math.atan2(...vec);
 
     // angles:
@@ -20336,20 +20438,20 @@ module.exports = class Editor {
     right += this.tiltAmount * Math.abs(vecRight.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength);
 
     if (!e.isCoalescedEvent) {
-      this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right);
+      this.previewStroke.addRoughPoint(x, y, left, right);
 
       if (this.previewStroke.roughLength > 400) {
         // split stroke to prevent lag
         this.createPreviewStroke();
-        this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right, true);
+        this.previewStroke.addRoughPoint(x, y, left, right, true);
       }
     }
 
-    this.roughLength += (_context = this.lastPoint, distanceTo).call(_context, [e.offsetX, e.offsetY]);
+    this.roughLength += (_context = this.lastPoint, distanceTo).call(_context, [x, y]);
 
-    this.lastPoint = [e.offsetX, e.offsetY];
+    this.lastPoint = [x, y];
 
-    this.tool.strokeMove(e.offsetX, e.offsetY, left, right, this.roughLength, e);
+    this.tool.strokeMove(x, y, left, right, this.roughLength, e);
   }
 
 };
@@ -20360,8 +20462,8 @@ module.exports = class Editor {
 
 const Tool = __webpack_require__(9);
 const PathFitter = __webpack_require__(22);
-const Path = __webpack_require__(3);
-const Color = __webpack_require__(2);
+const Path = __webpack_require__(4);
+const Color = __webpack_require__(3);
 
 module.exports = class Brush extends Tool {
   constructor(...args) {
@@ -20414,8 +20516,8 @@ module.exports = class Brush extends Tool {
 
 const PathFitter = __webpack_require__(22);
 const Tool = __webpack_require__(9);
-const Path = __webpack_require__(3);
-const Color = __webpack_require__(2);
+const Path = __webpack_require__(4);
+const Color = __webpack_require__(3);
 
 module.exports = class Eraser extends Tool {
   constructor(...args) {
@@ -20469,7 +20571,7 @@ module.exports = class Eraser extends Tool {
 /***/ (function(module, exports, __webpack_require__) {
 
 const Tool = __webpack_require__(9);
-const Path = __webpack_require__(3);
+const Path = __webpack_require__(4);
 
 module.exports = class Select extends Tool {
   constructor(...args) {

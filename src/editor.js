@@ -1,4 +1,5 @@
 const arc = require('arc-to')
+const { vec2, vec3, mat4 } = require('gl-matrix')
 const { distanceTo } = require('./path/vector-utils')
 const Path = require('./path')
 const Color = require('./color')
@@ -29,6 +30,8 @@ module.exports = class Editor {
     this.tiltAmount = 0.3
     this.erasing = false
 
+    this.lastMouse = [0, 0]
+
     this.canvas.addEventListener('image-change', e => {
       this.currentLayer = canvas.image.children[0]
     })
@@ -48,6 +51,39 @@ module.exports = class Editor {
 
       // TODO: touch
     }
+
+    this.canvas.addEventListener('wheel', e => {
+      e.preventDefault()
+      if (e.shiftKey) {
+        let transform = this.canvas.context.transform
+        let rotY = -e.deltaX / 200
+        let rotX = -e.deltaY / 200
+        mat4.rotate(transform, transform, rotX, [1, 0, 0])
+        mat4.rotate(transform, transform, rotY, [0, 1, 0])
+      } else if (e.ctrlKey) {
+        this.scaleCanvas(1 - (e.deltaY / 100), this.screenToGL(this.lastMouse))
+      } else {
+        let scale = vec3.create()
+        let transform = this.canvas.context.transform
+        mat4.getScaling(scale, transform)
+        let scroll = [-e.deltaX / scale[0] / 200, e.deltaY / scale[1] / 200, 0]
+        mat4.translate(transform, transform, scroll)
+      }
+      this.canvas.render()
+    })
+
+    this.canvas.addEventListener('keydown', e => {
+      e.preventDefault()
+
+      if (e.key === '1') {
+        this.scaleCanvas(0.9)
+      } else if (e.key === '2') {
+        this.scaleCanvas(1.1)
+      } else if (e.key === 'M' && e.shiftKey) {
+        this.canvas.context.transform = mat4.create()
+        this.canvas.render()
+      }
+    })
   }
 
   get selection () {
@@ -58,8 +94,50 @@ module.exports = class Editor {
     this.canvas.context.selection = v
   }
 
+  scaleCanvas (factor, pivot) {
+    let transform = this.canvas.context.transform
+    let inverted = mat4.create()
+    mat4.invert(inverted, transform)
+
+    pivot = pivot || [0, 0, 0]
+    vec3.transformMat4(pivot, pivot, inverted)
+
+    mat4.translate(transform, transform, pivot)
+    mat4.scale(transform, transform, [factor, factor, 1])
+    mat4.translate(transform, transform, vec3.scale(pivot, pivot, -1))
+    this.canvas.render()
+  }
+
   updateImage () {
     this.currentLayer = canvas.image.children[0]
+  }
+
+  screenToGL (point, transform) {
+    let magicNumber = transform
+      ? vec3.transformMat4(vec3.create(), [0, 0, 0], transform)[2]
+      : 0
+    return [
+      2 * point[0] / this.canvas.context.width - 1,
+      -2 * point[1] / this.canvas.context.height + 1,
+      magicNumber
+    ]
+  }
+
+  glToScreen (point) {
+    return [
+      (point[0] + 1) / 2 * this.canvas.context.width,
+      (-point[1] - 1) / 2 * this.canvas.context.height
+    ]
+  }
+
+  projectPoint (point) {
+    let transform = this.canvas.getTransform()
+    let inverted = mat4.create()
+    mat4.invert(inverted, transform)
+
+    let glPoint = this.screenToGL(point, transform)
+    vec3.transformMat4(glPoint, glPoint, inverted)
+    return glPoint
   }
 
   renderCursor (x, y, p, dx, dy) {
@@ -130,14 +208,17 @@ module.exports = class Editor {
     this.previewStrokes = []
     this.createPreviewStroke()
 
+    let [x, y] = this.projectPoint([e.offsetX, e.offsetY])
+
     let left = e.pressure * this.previewMaxWidth / 2
     let right = e.pressure * this.previewMaxWidth / 2
-    this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right, true)
+    this.previewStroke.addRoughPoint(x, y, left, right, true)
 
-    this.lastPoint = [e.offsetX, e.offsetY]
+    this.lastPoint = [x, y]
     this.roughLength = 0
 
-    this.tool.strokeStart(e.offsetX, e.offsetY, left, right, this.roughLength, e)
+    this.tool.strokeStart(x, y, left, right, this.roughLength, e)
+    this.lastMouse = [e.offsetX, e.offsetY]
     this.canvas.render()
   }
 
@@ -149,7 +230,9 @@ module.exports = class Editor {
 
     // TODO: deduplicate points
 
-    let vec = [e.offsetX, e.offsetY].map((x, i) => x - this.lastPoint[i])
+    let [x, y] = this.projectPoint([e.offsetX, e.offsetY])
+
+    let vec = [x, y].map((x, i) => x - this.lastPoint[i])
     let angle = Math.atan2(...vec)
 
     // angles:
@@ -175,20 +258,20 @@ module.exports = class Editor {
     right += this.tiltAmount * Math.abs(vecRight.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength)
 
     if (!e.isCoalescedEvent) {
-      this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right)
+      this.previewStroke.addRoughPoint(x, y, left, right)
 
       if (this.previewStroke.roughLength > 400) {
         // split stroke to prevent lag
         this.createPreviewStroke()
-        this.previewStroke.addRoughPoint(e.offsetX, e.offsetY, left, right, true)
+        this.previewStroke.addRoughPoint(x, y, left, right, true)
       }
     }
 
-    this.roughLength += this.lastPoint::distanceTo([e.offsetX, e.offsetY])
+    this.roughLength += this.lastPoint::distanceTo([x, y])
 
-    this.lastPoint = [e.offsetX, e.offsetY]
+    this.lastPoint = [x, y]
 
-    this.tool.strokeMove(e.offsetX, e.offsetY, left, right, this.roughLength, e)
+    this.tool.strokeMove(x, y, left, right, this.roughLength, e)
   }
 
   onPointerMove = e => {
@@ -200,6 +283,7 @@ module.exports = class Editor {
 
     for (let event of events) this.handleSinglePointerMove(event)
 
+    this.lastMouse = [e.offsetX, e.offsetY]
     this.canvas.render()
   }
 
@@ -218,6 +302,7 @@ module.exports = class Editor {
 
     this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY)
     this.tool.strokeEnd(e.offsetX, e.offsetY, left, right, this.roughLength, e)
+    this.lastMouse = [e.offsetX, e.offsetY]
     this.canvas.render()
   }
 

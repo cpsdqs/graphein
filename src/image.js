@@ -24,31 +24,8 @@ module.exports = class Image extends Layer {
     }
   }
 
-  getWorldTransform () {
-    let near = 0.1
-    let far = 100
-    let fov = Math.sqrt(2) / 2
-
-    let projection = mat4.create()
-    let a = Math.tan(Math.PI / 2 - fov / 2)
-    let b = 1 / (near - far)
-
-    projection[0] = a / b
-    projection[5] = a
-    projection[10] = b * (near + far)
-    projection[11] = -1
-    projection[14] = 2 * b * near * far
-    projection[15] = 0
-
-    let result = mat4.create()
-    mat4.scale(result, projection, [-1 / (this.width * 50), -2 / this.height, 1])
-    mat4.translate(result, result, [-this.width / 2, -this.height / 2, -Math.E])
-
-    return result
-  }
-
-  render (gl, context) {
-    this.renderChildren(gl, this.getWorldTransform(), context)
+  render (gl, transform, context) {
+    this.renderChildren(gl, transform, context)
   }
 
   static deserialize (data) {

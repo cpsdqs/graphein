@@ -1,3 +1,4 @@
+const { mat4 } = require('gl-matrix')
 const Image = require('./image')
 const shaders = require('./shaders')
 
@@ -15,6 +16,9 @@ class Canvas extends window.HTMLElement {
 
     this.context = {
       shaders: this.shaders,
+      transform: mat4.create(),
+      width: 0,
+      height: 0,
       selection: []
     }
 
@@ -25,6 +29,7 @@ class Canvas extends window.HTMLElement {
   connectedCallback () {
     if (!this._didInit) {
       this._didInit = true
+      this.tabIndex = this.getAttribute('tabindex') | 0
       this.appendChild(this.canvas)
       this.appendChild(this.overlay)
     }
@@ -40,6 +45,36 @@ class Canvas extends window.HTMLElement {
     this.overlay.height = this.canvas.height
     this.overlay.style.width = this.canvas.style.width
     this.overlay.style.height = this.canvas.style.height
+
+    this.context.width = this.image.width
+    this.context.height = this.image.height
+  }
+
+  getProjection () {
+    let near = 0.01
+    let far = 3000
+    let fov = Math.sqrt(2) / 2
+
+    let projection = mat4.create()
+    let a = Math.tan(Math.PI / 2 - fov / 2)
+    let b = 1 / (near - far)
+
+    projection[0] = a / b / far
+    projection[5] = a
+    projection[10] = b * (near + far)
+    projection[11] = -1
+    projection[14] = 2 * b * near * far
+    projection[15] = 0
+
+    return projection
+  }
+
+  getWorldTransform () {
+    let world = mat4.create()
+    mat4.scale(world, this.getProjection(), [-2 / this.image.width, -2 / this.image.height, 1])
+    mat4.translate(world, world, [-this.image.width / 2, -this.image.height / 2, -Math.E])
+
+    return world
   }
 
   get image () {
@@ -53,13 +88,19 @@ class Canvas extends window.HTMLElement {
     this.render()
   }
 
+  getTransform () {
+    let transform = mat4.create()
+    mat4.multiply(transform, this.context.transform, this.getWorldTransform())
+    return transform
+  }
+
   render () {
     this.gl.clearColor(0, 0, 0, 0)
     this.gl.viewport(0, 0, this.canvas.width, this.canvas.height)
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
     this.gl.enable(this.gl.DEPTH_TEST)
 
-    this.image.render(this.gl, this.context)
+    this.image.render(this.gl, this.getTransform(), this.context)
   }
 }
 

@@ -71,6 +71,10 @@ module.exports = registry.types.g = class Layer {
     }
   }
 
+  get [Symbol.toStringTag] () {
+    return this.constructor.name
+  }
+
   static deserializeLayerData (layer, data) {
     layer.transform = Transform.deserialize(data.a)
     layer.children = Layer.deserializeChildren(data.c, layer)
