@@ -63,13 +63,43 @@ module.exports = class Editor {
       } else if (e.ctrlKey) {
         this.scaleCanvas(1 - (e.deltaY / 100), this.screenToGL(this.lastMouse))
       } else {
-        let scale = vec3.create()
         let transform = this.canvas.context.transform
-        mat4.getScaling(scale, transform)
-        let scroll = [-e.deltaX / scale[0] / 200, e.deltaY / scale[1] / 200, 0]
-        mat4.translate(transform, transform, scroll)
+        transform[12] += -e.deltaX / this.canvas.context.width
+        transform[13] += e.deltaY / this.canvas.context.height
       }
       this.canvas.render()
+    })
+
+    let lastGestureScale = 0
+    let lastGestureRotation = 0
+    this.canvas.addEventListener('gesturestart', e => {
+      e.preventDefault()
+      lastGestureScale = e.scale
+      lastGestureRotation = e.rotation
+    })
+    this.canvas.addEventListener('gesturechange', e => {
+      e.preventDefault()
+
+      let deltaScale = e.scale - lastGestureScale
+      this.scaleCanvas(1 + deltaScale, this.screenToGL(this.lastMouse))
+
+      let transform = this.canvas.context.transform
+      let inverted = mat4.create()
+      mat4.invert(inverted, transform)
+
+      let pivot = this.screenToGL(this.lastMouse)
+      vec3.transformMat4(pivot, pivot, inverted)
+
+      mat4.translate(transform, transform, pivot)
+      let deltaRotZ = e.rotation - lastGestureRotation
+      mat4.rotate(transform, transform, -deltaRotZ / 180 * Math.PI, [0, 0, 1])
+      mat4.translate(transform, transform, vec3.scale(pivot, pivot, -1))
+
+      lastGestureScale = e.scale
+      lastGestureRotation = e.rotation
+    })
+    this.canvas.addEventListener('gestureend', e => {
+      e.preventDefault()
     })
 
     this.canvas.addEventListener('keydown', e => {
