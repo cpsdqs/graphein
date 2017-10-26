@@ -5,6 +5,11 @@
     <title>Graphein Test Page</title>
   </head>
   <body>
+    <script>
+if (!'customElements' in window) {
+document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/webcomponentsjs/1.0.17/custom-elements-es5-adapter.js"><' + '/script>')
+}
+    </script>
     <script src="../dist/graphein.js"></script>
     <script src="./index.js"></script>
   </body>
