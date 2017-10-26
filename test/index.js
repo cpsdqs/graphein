@@ -234,9 +234,9 @@ const editor = new (window.graphein.Editor)(canvas)
 
     if ((match = color.match(/^#([\da-f]{6})$/i))) {
       return [
-        match[1].substr(0, 2) / 0xff,
-        match[1].substr(2, 2) / 0xff,
-        match[1].substr(4, 2) / 0xff,
+        parseInt(match[1].substr(0, 2), 16) / 0xff,
+        parseInt(match[1].substr(2, 2), 16) / 0xff,
+        parseInt(match[1].substr(4, 2), 16) / 0xff,
         1
       ]
     }
@@ -290,9 +290,9 @@ const editor = new (window.graphein.Editor)(canvas)
     }
     for (let child of node.children) {
       if (child instanceof SVGPathElement) {
-        let strokeWidth = child.style.strokeWidth || context.strokeWidth
-        let fillStyle = child.style.fill || context.fillStyle
-        let strokeStyle = child.style.stroke || context.strokeStyle
+        let strokeWidth = child.getAttribute('stroke-width') || child.style.strokeWidth || context.strokeWidth
+        let fillStyle = child.getAttribute('fill') || child.style.fill || context.fillStyle
+        let strokeStyle = child.getAttribute('stroke') || child.style.stroke || context.strokeStyle
 
         let path = new graphein.Path()
         path.fill = new graphein.Color(...parseColor(fillStyle))
@@ -316,13 +316,14 @@ const editor = new (window.graphein.Editor)(canvas)
 
         editor.currentLayer.appendChild(path)
       } else if (child instanceof SVGRectElement) {
+        let strokeWidth = child.getAttribute('stroke-width') || child.style.strokeWidth || context.strokeWidth
+        let fillStyle = child.getAttribute('fill') || child.style.fill || context.fillStyle
+        let strokeStyle = child.getAttribute('stroke') || child.style.stroke || context.strokeStyle
+
         let path = new graphein.Path()
-
-        let fillStyle = child.style.fill || context.fillStyle
-        let strokeStyle = child.style.stroke || 'none'
-
         path.fill = new graphein.Color(...parseColor(fillStyle))
         path.stroke = new graphein.Color(...parseColor(strokeStyle))
+        path.minimumWidth = parseLength(strokeWidth)
 
         let x = +child.getAttribute('x')
         let y = +child.getAttribute('y')
@@ -336,7 +337,44 @@ const editor = new (window.graphein.Editor)(canvas)
         path.data.push([0x21, 0, -height])
 
         editor.currentLayer.appendChild(path)
-      } else {
+      } else if (child instanceof SVGCircleElement) {
+        let strokeWidth = child.getAttribute('stroke-width') || child.style.strokeWidth || context.strokeWidth
+        let fillStyle = child.getAttribute('fill') || child.style.fill || context.fillStyle
+        let strokeStyle = child.getAttribute('stroke') || child.style.stroke || context.strokeStyle
+
+        let path = new graphein.Path()
+        path.fill = new graphein.Color(...parseColor(fillStyle))
+        path.stroke = new graphein.Color(...parseColor(strokeStyle))
+        path.minimumWidth = parseLength(strokeWidth)
+
+        let x = +child.getAttribute('cx')
+        let y = +child.getAttribute('cy')
+        let r = +child.getAttribute('r')
+
+        path.data.push([0x10, x, y])
+        path.data.push([0x50, x, y, r, 0, Math.PI * 2])
+
+        editor.currentLayer.appendChild(path)
+      } else if (child instanceof SVGLineElement) {
+        let strokeWidth = child.getAttribute('stroke-width') || child.style.strokeWidth || context.strokeWidth
+        let fillStyle = child.getAttribute('fill') || child.style.fill || context.fillStyle
+        let strokeStyle = child.getAttribute('stroke') || child.style.stroke || context.strokeStyle
+
+        let path = new graphein.Path()
+        path.fill = new graphein.Color(...parseColor(fillStyle))
+        path.stroke = new graphein.Color(...parseColor(strokeStyle))
+        path.minimumWidth = parseLength(strokeWidth)
+
+        let x1 = +child.getAttribute('x1')
+        let y1 = +child.getAttribute('y1')
+        let x2 = +child.getAttribute('x2')
+        let y2 = +child.getAttribute('y2')
+
+        path.data.push([0x10, x1, y1])
+        path.data.push([0x20, x2, y2])
+
+        editor.currentLayer.appendChild(path)
+      } else if (child.style) {
         if (child.style.fill) context.fillStyle = child.style.fill
         if (child.style.stroke) context.strokeStyle = child.style.stroke
         if (child.style.strokeWidth) context.strokeWidth = child.style.strokeWidth
