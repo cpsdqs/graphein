@@ -423,8 +423,8 @@ module.exports = (_temp = _class = class Path extends Layer {
       };
 
       // TODO: don't assume thickness lines and center lines align
-      let leftThickness = addCenterLineSamples(leftThicknesses[i]);
-      let rightThickness = addCenterLineSamples(rightThicknesses[i]);
+      let leftThickness = addCenterLineSamples(leftThicknesses[i] || []);
+      let rightThickness = addCenterLineSamples(rightThicknesses[i] || []);
 
       // apply minimum width
       if (this.minimumWidth) {
@@ -533,7 +533,7 @@ module.exports = (_temp = _class = class Path extends Layer {
     let strokeColor = this.stroke ? this.stroke.toVec4() : [0, 0, 0, 0];
     let fillColor = this.fill ? this.fill.toVec4() : [0, 0, 0, 0];
 
-    if (this.dirty) {
+    if (this.dirty || !this.strokeVAO) {
       this.updateStrokeContours();
 
       if (!this.strokeAttributeBuffers) {
@@ -20157,7 +20157,7 @@ exports.getPointAtLength = function getPointAtLengthOnPolyline(points, length) {
       let angle = Math.atan2(points[0][1] - points[1][1], points[0][0] - points[1][0]);
 
       return [points[0][0] + Math.cos(angle) * -length, points[0][1] + Math.sin(angle) * -length];
-    } else return points[0].slice();
+    } else return points.length ? points[0].slice() : [0, 0];
   }
 
   let lastLength = 0;

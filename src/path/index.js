@@ -142,8 +142,8 @@ module.exports = class Path extends Layer {
       }
 
       // TODO: don't assume thickness lines and center lines align
-      let leftThickness = addCenterLineSamples(leftThicknesses[i])
-      let rightThickness = addCenterLineSamples(rightThicknesses[i])
+      let leftThickness = addCenterLineSamples(leftThicknesses[i] || [])
+      let rightThickness = addCenterLineSamples(rightThicknesses[i] || [])
 
       // apply minimum width
       if (this.minimumWidth) {
@@ -244,7 +244,7 @@ module.exports = class Path extends Layer {
     let strokeColor = this.stroke ? this.stroke.toVec4() : [0, 0, 0, 0]
     let fillColor = this.fill ? this.fill.toVec4() : [0, 0, 0, 0]
 
-    if (this.dirty) {
+    if (this.dirty || !this.strokeVAO) {
       this.updateStrokeContours()
 
       if (!this.strokeAttributeBuffers) {

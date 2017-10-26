@@ -31,7 +31,7 @@ exports.getPointAtLength = function getPointAtLengthOnPolyline (points, length) 
         points[0][0] + Math.cos(angle) * -length,
         points[0][1] + Math.sin(angle) * -length
       ]
-    } else return points[0].slice()
+    } else return points.length ? points[0].slice() : [0, 0]
   }
 
   let lastLength = 0

@@ -216,3 +216,130 @@ const serialized = {
 const image = canvas.image = window.graphein.Image.deserialize(serialized)
 
 const editor = new (window.graphein.Editor)(canvas)
+
+{
+  // svg import
+  const div = document.createElement('div')
+  document.body.appendChild(div)
+  const input = document.createElement('textarea')
+  input.placeholder = 'Paste SVG'
+  input.style.fontFamily = 'Inconsolata, monospace'
+  div.appendChild(input)
+  const button = document.createElement('button')
+  button.textContent = 'Insert'
+  div.appendChild(button)
+
+  const parseColor = (color) => {
+    let match
+
+    if ((match = color.match(/^#([\da-f]{6})$/i))) {
+      return [
+        match[1].substr(0, 2) / 0xff,
+        match[1].substr(2, 2) / 0xff,
+        match[1].substr(4, 2) / 0xff,
+        1
+      ]
+    }
+    if ((match = color
+      .match(/^rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*(\d+))?\s*\)$/i))) {
+      return [
+        +match[1] / 0xff,
+        +match[2] / 0xff,
+        +match[3] / 0xff,
+        match[4] ? +match[4] / 0xff : 1
+      ]
+    }
+
+    return [0, 0, 0, 0]
+  }
+
+  const pathCommands = {
+    M: 0x10,
+    m: 0x11,
+    L: 0x20,
+    l: 0x21,
+    C: 0x30,
+    c: 0x31,
+    A: 0x50,
+    a: 0x51
+  }
+
+  const commandLengths = {
+    M: 2,
+    m: 2,
+    L: 2,
+    l: 2,
+    C: 6,
+    c: 6,
+    A: 5,
+    a: 5
+  }
+
+  const searchSVG = function (node, context) {
+    if (!context) {
+      context = {
+        fillStyle: '#000000',
+        strokeStyle: 'none'
+      }
+    }
+    for (let child of node.children) {
+      if (child instanceof SVGPathElement) {
+        // let lineWidth = child.style.strokeWidth || 0
+        let fillStyle = child.style.fill || context.fillStyle
+        let strokeStyle = child.style.stroke || 'none'
+
+        let path = new graphein.Path()
+        path.fill = new graphein.Color(...parseColor(fillStyle))
+        path.stroke = new graphein.Color(...parseColor(strokeStyle))
+
+        let d = child.getAttribute('d') || ''
+
+        let match
+        while ((match = d.match(/([mlca])\s*((?:-?(?:\d+\.?)?\d+\s*,?\s*)+)/i))) {
+          d = d.substr(match.index + match[0].length)
+          let command = match[1]
+          let numbers = match[2].trim().split(/\s+|\s*,\s*/).map(x => +x)
+
+          for (let i = numbers.length; i < commandLengths[command]; i++) {
+            numbers.push(0)
+          }
+
+          path.data.push([pathCommands[command], ...numbers])
+        }
+
+        editor.currentLayer.appendChild(path)
+      } else if (child instanceof SVGRectElement) {
+        let path = new graphein.Path()
+
+        let fillStyle = child.style.fill || context.fillStyle
+        let strokeStyle = child.style.stroke || 'none'
+
+        path.fill = new graphein.Color(...parseColor(fillStyle))
+        path.stroke = new graphein.Color(...parseColor(strokeStyle))
+
+        let x = +child.getAttribute('x')
+        let y = +child.getAttribute('y')
+        let width = +child.getAttribute('width')
+        let height = +child.getAttribute('height')
+
+        path.data.push([0x10, x, y])
+        path.data.push([0x21, width, 0])
+        path.data.push([0x21, 0, height])
+        path.data.push([0x21, -width, 0])
+        path.data.push([0x21, 0, -height])
+
+        editor.currentLayer.appendChild(path)
+      } else {
+        if (child.style.fill) context.fillStyle = child.style.fill
+        if (child.style.stroke) context.strokeStyle = child.style.stroke
+        searchSVG(child, context)
+      }
+    }
+  }
+
+  button.addEventListener('click', e => {
+    const parser = new DOMParser()
+    const document = parser.parseFromString(input.value, 'image/svg+xml')
+    searchSVG(document)
+  })
+}
