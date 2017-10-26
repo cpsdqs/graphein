@@ -30,6 +30,8 @@ module.exports = class Path extends Layer {
     this.leftContours = null
     this.rightContours = null
     this.contourTriangles = null
+    this.flatCenterLines = null
+    this.fillTriangles = null
     this.strokeVAO = null
     this.strokeAttributeBuffers = null
     this.strokeVAOLength = null
@@ -83,9 +85,13 @@ module.exports = class Path extends Layer {
     this.leftContours = []
     this.rightContours = []
 
+    this.flatCenterLines = []
+
     for (let i = 0; i < centerLines.length; i++) {
       let centerLine = centerLines[i]
       let centerNormals = getNormals(centerLine)
+
+      for (let point of centerLine) this.flatCenterLines.push(...point)
 
       let centerLengths = [...getPartialLengths(centerLine)]
 
@@ -212,6 +218,23 @@ module.exports = class Path extends Layer {
 
     tess.gluTessEndContour()
     tess.gluTessEndPolygon()
+
+    // fill
+    // evenodd winding rule
+    tess.gluTessProperty(libtess.gluEnum.GLU_TESS_WINDING_RULE, libtess.windingRule.GLU_TESS_WINDING_ODD)
+
+    this.fillTriangles = []
+    tess.gluTessBeginPolygon(this.fillTriangles)
+    tess.gluTessBeginContour()
+
+    for (let line of centerLines) {
+      for (let point of line) {
+        tess.gluTessVertex([point[0], point[1], 0], [point[0], point[1], 0])
+      }
+    }
+
+    tess.gluTessEndContour()
+    tess.gluTessEndPolygon()
   }
 
   render (gl, transform, context) {
@@ -226,14 +249,26 @@ module.exports = class Path extends Layer {
 
       if (!this.strokeAttributeBuffers) {
         this.strokeAttributeBuffers = {
-          positions: createBuffer(gl, this.contourTriangles)
+          positions: createBuffer(gl, this.contourTriangles),
+          centerLines: createBuffer(gl, this.flatCenterLines),
+          fill: createBuffer(gl, this.fillTriangles)
         }
       } else {
         this.strokeAttributeBuffers.positions.update(this.contourTriangles)
+        this.strokeAttributeBuffers.centerLines.update(this.flatCenterLines)
+        this.strokeAttributeBuffers.fill.update(this.fillTriangles)
       }
       if (!this.strokeVAO) {
         this.strokeVAO = createVAO(gl, [{
           buffer: this.strokeAttributeBuffers.positions,
+          type: gl.FLOAT,
+          size: 2
+        }, {
+          buffer: this.strokeAttributeBuffers.centerLines,
+          type: gl.FLOAT,
+          size: 2
+        }, {
+          buffer: this.strokeAttributeBuffers.fill,
           type: gl.FLOAT,
           size: 2
         }])
@@ -243,17 +278,41 @@ module.exports = class Path extends Layer {
       this.dirty = false
     }
 
-    // stroke lines if there's alpha
+    this.strokeVAO.bind()
+
+    let selected = context.selection.includes(this)
+    if (context.selection.includes(this)) {
+      // draw outlines
+      let shader = context.shaders.pathCenterLine
+      shader.bind()
+      shader.uniforms.color = [1, 0.5, 0, 1]
+      shader.uniforms.transform = transform
+
+      this.strokeVAO.draw(gl.LINE_STRIP, this.flatCenterLines.length / 2)
+    }
+
     if (strokeColor[3] && this.strokeVAOLength) {
+      // stroke lines if there's alpha
       let shader = context.shaders.path
       shader.bind()
       shader.uniforms.color = strokeColor
       shader.uniforms.transform = transform
 
-      this.strokeVAO.bind()
       this.strokeVAO.draw(gl.TRIANGLES, this.strokeVAOLength)
-      this.strokeVAO.unbind()
     }
+
+    if (fillColor[3] && this.fillTriangles.length) {
+      // fill if there's alpha
+      let shader = context.shaders.pathFill
+      shader.bind()
+      shader.uniforms.color = fillColor
+      shader.uniforms.selection_color = selected ? [1, 0.5, 0, 1] : fillColor
+      shader.uniforms.transform = transform
+
+      this.strokeVAO.draw(gl.TRIANGLES, this.fillTriangles.length / 2)
+    }
+
+    this.strokeVAO.unbind()
   }
 
   get roughLength () {
@@ -281,6 +340,7 @@ module.exports = class Path extends Layer {
 
   intersect (layer) {
     // TODO: transformations
+    // TODO: fill
     if (layer instanceof Path) {
       if (!this.contour) this.updateStrokeContours()
       if (!layer.contour) layer.updateStrokeContours()
@@ -329,6 +389,14 @@ module.exports = class Path extends Layer {
     path.left = (data.l || [])
     path.right = (data.r || [])
 
+    return path
+  }
+
+  static fromPoints (points) {
+    let path = new Path()
+    for (let i = 0; i < points.length; i++) {
+      path.data.push([i === 0 ? 0x10 : 0x20, ...points[i]])
+    }
     return path
   }
 

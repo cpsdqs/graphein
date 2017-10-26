@@ -14,6 +14,7 @@ module.exports = class Select extends Tool {
     // get objects inside selection area
     // let cells = triangulate(this.points).map(cell => cell.map(i => this.points[i]))
     // TODO: just use Path#intersect (fill) for this
+    let cells = []
 
     // get objects intersecting selection line
     let path = Path.fromPoints(this.points)
@@ -21,7 +22,7 @@ module.exports = class Select extends Tool {
     let layers = this.editor.currentLayer.children
     for (let layer of layers) {
       // check if any point is inside selected area
-      let points = layer.toPolyline()
+      // let points = layer.toPolyline()
       let inSelection = false
 
       for (let cell of cells) {

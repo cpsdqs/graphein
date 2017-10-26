@@ -103,7 +103,7 @@ module.exports = class Editor {
     })
 
     this.canvas.addEventListener('keydown', e => {
-      e.preventDefault()
+      let preventDefault = true
 
       if (e.key === '1') {
         this.scaleCanvas(0.9)
@@ -112,7 +112,9 @@ module.exports = class Editor {
       } else if (e.key === 'M' && e.shiftKey) {
         this.canvas.context.transform = mat4.create()
         this.canvas.render()
-      }
+      } else preventDefault = false
+
+      if (preventDefault) e.preventDefault()
     })
   }
 
@@ -228,9 +230,12 @@ module.exports = class Editor {
     this.cursorSize = e.pointerType === 'pen' && e.button === 5 ? 30 : 10
     this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY)
 
-    this.erasing = e.pointerType === 'pen' && e.button === 5
+    this.erasing = e.altKey || e.pointerType === 'pen' && e.button === 5
 
-    if (this.erasing) {
+    if (e.shiftKey) {
+      // TEMP: shift to select
+      this.tool = this.tools.select
+    } else if (this.erasing) {
       // TEMP: erasing!
       this.tool = this.tools.eraser
     } else this.tool = this.tools.brush
@@ -347,7 +352,9 @@ module.exports = class Editor {
       offsetY: e.offsetY,
       pressure: 0, // taper ends
       tiltX: 0,
-      tiltY: 0
+      tiltY: 0,
+      shiftKey: e.shiftKey,
+      altKey: e.altKey
     })
   }
   onMouseMove = e => {
@@ -356,7 +363,9 @@ module.exports = class Editor {
       offsetY: e.offsetY,
       pressure: 1,
       tiltX: 0,
-      tiltY: 0
+      tiltY: 0,
+      shiftKey: e.shiftKey,
+      altKey: e.altKey
     })
   }
   onMouseUp = e => {
@@ -365,7 +374,9 @@ module.exports = class Editor {
       offsetY: e.offsetY,
       pressure: 0, // taper ends
       tiltX: 0,
-      tiltY: 0
+      tiltY: 0,
+      shiftKey: e.shiftKey,
+      altKey: e.altKey
     })
   }
 }

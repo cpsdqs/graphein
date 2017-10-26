@@ -303,6 +303,8 @@ module.exports = (_temp = _class = class Path extends Layer {
     this.leftContours = null;
     this.rightContours = null;
     this.contourTriangles = null;
+    this.flatCenterLines = null;
+    this.fillTriangles = null;
     this.strokeVAO = null;
     this.strokeAttributeBuffers = null;
     this.strokeVAOLength = null;
@@ -362,9 +364,13 @@ module.exports = (_temp = _class = class Path extends Layer {
     this.leftContours = [];
     this.rightContours = [];
 
+    this.flatCenterLines = [];
+
     for (let i = 0; i < centerLines.length; i++) {
       let centerLine = centerLines[i];
       let centerNormals = getNormals(centerLine);
+
+      for (let point of centerLine) this.flatCenterLines.push(...point);
 
       let centerLengths = [...getPartialLengths(centerLine)];
 
@@ -501,6 +507,23 @@ module.exports = (_temp = _class = class Path extends Layer {
 
     tess.gluTessEndContour();
     tess.gluTessEndPolygon();
+
+    // fill
+    // evenodd winding rule
+    tess.gluTessProperty(libtess.gluEnum.GLU_TESS_WINDING_RULE, libtess.windingRule.GLU_TESS_WINDING_ODD);
+
+    this.fillTriangles = [];
+    tess.gluTessBeginPolygon(this.fillTriangles);
+    tess.gluTessBeginContour();
+
+    for (let line of centerLines) {
+      for (let point of line) {
+        tess.gluTessVertex([point[0], point[1], 0], [point[0], point[1], 0]);
+      }
+    }
+
+    tess.gluTessEndContour();
+    tess.gluTessEndPolygon();
   }
 
   render(gl, transform, context) {
@@ -515,14 +538,26 @@ module.exports = (_temp = _class = class Path extends Layer {
 
       if (!this.strokeAttributeBuffers) {
         this.strokeAttributeBuffers = {
-          positions: createBuffer(gl, this.contourTriangles)
+          positions: createBuffer(gl, this.contourTriangles),
+          centerLines: createBuffer(gl, this.flatCenterLines),
+          fill: createBuffer(gl, this.fillTriangles)
         };
       } else {
         this.strokeAttributeBuffers.positions.update(this.contourTriangles);
+        this.strokeAttributeBuffers.centerLines.update(this.flatCenterLines);
+        this.strokeAttributeBuffers.fill.update(this.fillTriangles);
       }
       if (!this.strokeVAO) {
         this.strokeVAO = createVAO(gl, [{
           buffer: this.strokeAttributeBuffers.positions,
+          type: gl.FLOAT,
+          size: 2
+        }, {
+          buffer: this.strokeAttributeBuffers.centerLines,
+          type: gl.FLOAT,
+          size: 2
+        }, {
+          buffer: this.strokeAttributeBuffers.fill,
           type: gl.FLOAT,
           size: 2
         }]);
@@ -532,17 +567,41 @@ module.exports = (_temp = _class = class Path extends Layer {
       this.dirty = false;
     }
 
-    // stroke lines if there's alpha
+    this.strokeVAO.bind();
+
+    let selected = context.selection.includes(this);
+    if (context.selection.includes(this)) {
+      // draw outlines
+      let shader = context.shaders.pathCenterLine;
+      shader.bind();
+      shader.uniforms.color = [1, 0.5, 0, 1];
+      shader.uniforms.transform = transform;
+
+      this.strokeVAO.draw(gl.LINE_STRIP, this.flatCenterLines.length / 2);
+    }
+
     if (strokeColor[3] && this.strokeVAOLength) {
+      // stroke lines if there's alpha
       let shader = context.shaders.path;
       shader.bind();
       shader.uniforms.color = strokeColor;
       shader.uniforms.transform = transform;
 
-      this.strokeVAO.bind();
       this.strokeVAO.draw(gl.TRIANGLES, this.strokeVAOLength);
-      this.strokeVAO.unbind();
     }
+
+    if (fillColor[3] && this.fillTriangles.length) {
+      // fill if there's alpha
+      let shader = context.shaders.pathFill;
+      shader.bind();
+      shader.uniforms.color = fillColor;
+      shader.uniforms.selection_color = selected ? [1, 0.5, 0, 1] : fillColor;
+      shader.uniforms.transform = transform;
+
+      this.strokeVAO.draw(gl.TRIANGLES, this.fillTriangles.length / 2);
+    }
+
+    this.strokeVAO.unbind();
   }
 
   get roughLength() {
@@ -571,6 +630,7 @@ module.exports = (_temp = _class = class Path extends Layer {
 
   intersect(layer) {
     // TODO: transformations
+    // TODO: fill
     if (layer instanceof Path) {
       if (!this.contour) this.updateStrokeContours();
       if (!layer.contour) layer.updateStrokeContours();
@@ -619,6 +679,14 @@ module.exports = (_temp = _class = class Path extends Layer {
     path.left = data.l || [];
     path.right = data.r || [];
 
+    return path;
+  }
+
+  static fromPoints(points) {
+    let path = new Path();
+    for (let i = 0; i < points.length; i++) {
+      path.data.push([i === 0 ? 0x10 : 0x20, ...points[i]]);
+    }
     return path;
   }
 
@@ -9247,13 +9315,37 @@ void main() {
 
       return shader;
     }(),
+    pathCenterLine: function () {
+      const shader = createShader(gl, `
+precision mediump float;
+
+attribute vec2 point;
+uniform mat4 transform;
+
+void main() {
+  gl_Position = transform * vec4(point, 0.0, 1.0);
+}
+        `, `
+precision highp float;
+
+uniform vec4 color;
+
+void main() {
+  gl_FragColor = color;
+}
+        `);
+
+      shader.bind();
+      shader.attributes.point.location = 1;
+
+      return shader;
+    }(),
     pathFill: function () {
       const shader = createShader(gl, `
 precision mediump float;
 
 attribute vec2 position;
 uniform mat4 transform;
-uniform bool isSelected;
 
 void main() {
   gl_Position = transform * vec4(position, 0.0, 1.0);
@@ -9262,17 +9354,11 @@ void main() {
 precision highp float;
 
 uniform vec4 color;
-uniform bool isSelected;
-
-// from stackoverflow question 4200224
-float rand(vec2 co) {
-  return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);
-}
+uniform vec4 selection_color;
 
 void main() {
-  // very hacky way of showing selection
-  if (isSelected && rand(gl_FragCoord.xy) > 0.6) {
-    gl_FragColor = vec4(1.0, 0.5, 0.0, 1.0);
+  if (mod(gl_FragCoord.x, 5.0) <= 2.0 && mod(gl_FragCoord.y, 5.0) <= 2.0) {
+    gl_FragColor = selection_color;
   } else {
     gl_FragColor = color;
   }
@@ -9280,7 +9366,7 @@ void main() {
       `);
 
       shader.bind();
-      shader.attributes.position.location = 0;
+      shader.attributes.position.location = 2;
 
       return shader;
     }()
@@ -20136,9 +20222,12 @@ module.exports = class Editor {
       this.cursorSize = e.pointerType === 'pen' && e.button === 5 ? 30 : 10;
       this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY);
 
-      this.erasing = e.pointerType === 'pen' && e.button === 5;
+      this.erasing = e.altKey || e.pointerType === 'pen' && e.button === 5;
 
-      if (this.erasing) {
+      if (e.shiftKey) {
+        // TEMP: shift to select
+        this.tool = this.tools.select;
+      } else if (this.erasing) {
         // TEMP: erasing!
         this.tool = this.tools.eraser;
       } else this.tool = this.tools.brush;
@@ -20203,7 +20292,9 @@ module.exports = class Editor {
         offsetY: e.offsetY,
         pressure: 0, // taper ends
         tiltX: 0,
-        tiltY: 0
+        tiltY: 0,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey
       });
     };
 
@@ -20213,7 +20304,9 @@ module.exports = class Editor {
         offsetY: e.offsetY,
         pressure: 1,
         tiltX: 0,
-        tiltY: 0
+        tiltY: 0,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey
       });
     };
 
@@ -20223,7 +20316,9 @@ module.exports = class Editor {
         offsetY: e.offsetY,
         pressure: 0, // taper ends
         tiltX: 0,
-        tiltY: 0
+        tiltY: 0,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey
       });
     };
 
@@ -20321,7 +20416,7 @@ module.exports = class Editor {
     });
 
     this.canvas.addEventListener('keydown', e => {
-      e.preventDefault();
+      let preventDefault = true;
 
       if (e.key === '1') {
         this.scaleCanvas(0.9);
@@ -20330,7 +20425,9 @@ module.exports = class Editor {
       } else if (e.key === 'M' && e.shiftKey) {
         this.canvas.context.transform = mat4.create();
         this.canvas.render();
-      }
+      } else preventDefault = false;
+
+      if (preventDefault) e.preventDefault();
     });
   }
 
@@ -20616,6 +20713,7 @@ module.exports = class Select extends Tool {
     // get objects inside selection area
     // let cells = triangulate(this.points).map(cell => cell.map(i => this.points[i]))
     // TODO: just use Path#intersect (fill) for this
+    let cells = [];
 
     // get objects intersecting selection line
     let path = Path.fromPoints(this.points);
@@ -20623,7 +20721,7 @@ module.exports = class Select extends Tool {
     let layers = this.editor.currentLayer.children;
     for (let layer of layers) {
       // check if any point is inside selected area
-      let points = layer.toPolyline();
+      // let points = layer.toPolyline()
       let inSelection = false;
 
       for (let cell of cells) {
