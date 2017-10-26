@@ -147,8 +147,8 @@ module.exports = class Path extends Layer {
 
       // apply minimum width
       if (this.minimumWidth) {
-        leftThickness = leftThickness.forEach(point => { point.y += this.minimumWidth / 2 })
-        rightThickness = rightThickness.forEach(point => { point.y += this.minimumWidth / 2 })
+        leftThickness.forEach(point => { point[1] += this.minimumWidth / 2 })
+        rightThickness.forEach(point => { point[1] += this.minimumWidth / 2 })
       }
 
       let leftContour = []

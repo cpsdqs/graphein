@@ -253,6 +253,11 @@ const editor = new (window.graphein.Editor)(canvas)
     return [0, 0, 0, 0]
   }
 
+  const parseLength = length => {
+    // TODO: units
+    return Number.isFinite(length) ? length : +length.replace(/[^-\d.]/g, '')
+  }
+
   const pathCommands = {
     M: 0x10,
     m: 0x11,
@@ -279,18 +284,20 @@ const editor = new (window.graphein.Editor)(canvas)
     if (!context) {
       context = {
         fillStyle: '#000000',
-        strokeStyle: 'none'
+        strokeStyle: 'none',
+        strokeWidth: 0
       }
     }
     for (let child of node.children) {
       if (child instanceof SVGPathElement) {
-        // let lineWidth = child.style.strokeWidth || 0
+        let strokeWidth = child.style.strokeWidth || context.strokeWidth
         let fillStyle = child.style.fill || context.fillStyle
-        let strokeStyle = child.style.stroke || 'none'
+        let strokeStyle = child.style.stroke || context.strokeStyle
 
         let path = new graphein.Path()
         path.fill = new graphein.Color(...parseColor(fillStyle))
         path.stroke = new graphein.Color(...parseColor(strokeStyle))
+        path.minimumWidth = parseLength(strokeWidth)
 
         let d = child.getAttribute('d') || ''
 
@@ -298,7 +305,7 @@ const editor = new (window.graphein.Editor)(canvas)
         while ((match = d.match(/([mlca])\s*((?:-?(?:\d+\.?)?\d+\s*,?\s*)+)/i))) {
           d = d.substr(match.index + match[0].length)
           let command = match[1]
-          let numbers = match[2].trim().split(/\s+|\s*,\s*/).map(x => +x)
+          let numbers = match[2].trim().split(/\s+|\s*,\s*|\s*(?=-)/).map(x => +x)
 
           for (let i = numbers.length; i < commandLengths[command]; i++) {
             numbers.push(0)
@@ -332,6 +339,8 @@ const editor = new (window.graphein.Editor)(canvas)
       } else {
         if (child.style.fill) context.fillStyle = child.style.fill
         if (child.style.stroke) context.strokeStyle = child.style.stroke
+        if (child.style.strokeWidth) context.strokeWidth = child.style.strokeWidth
+        else context.strokeWidth = 0
         searchSVG(child, context)
       }
     }
