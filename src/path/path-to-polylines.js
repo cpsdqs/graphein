@@ -38,7 +38,7 @@ module.exports = function pathToPolylines (data) {
         cursor = cursor::add(lastCursor)
       }
 
-      points.push(...bezier(lastCursor, c1, c2, cursor).slice(1))
+      points.push(...bezier(lastCursor, c1, c2, cursor, 2).slice(1))
     } else if (type === 0x50 || type === 0x51) {
       // arc
       let pos = args.slice(0, 2)

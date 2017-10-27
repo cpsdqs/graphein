@@ -350,7 +350,7 @@ module.exports = class Editor {
     this.onPointerDown({
       offsetX: e.offsetX,
       offsetY: e.offsetY,
-      pressure: 0, // taper ends
+      pressure: 1,
       tiltX: 0,
       tiltY: 0,
       shiftKey: e.shiftKey,
@@ -372,7 +372,7 @@ module.exports = class Editor {
     this.onPointerUp({
       offsetX: e.offsetX,
       offsetY: e.offsetY,
-      pressure: 0, // taper ends
+      pressure: 1,
       tiltX: 0,
       tiltY: 0,
       shiftKey: e.shiftKey,

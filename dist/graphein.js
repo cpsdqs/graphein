@@ -19897,7 +19897,7 @@ module.exports = function pathToPolylines(data) {
         cursor = (_context3 = cursor, add).call(_context3, lastCursor);
       }
 
-      points.push(...bezier(lastCursor, c1, c2, cursor).slice(1));
+      points.push(...bezier(lastCursor, c1, c2, cursor, 2).slice(1));
     } else if (type === 0x50 || type === 0x51) {
       // arc
       let pos = args.slice(0, 2);
@@ -20290,7 +20290,7 @@ module.exports = class Editor {
       this.onPointerDown({
         offsetX: e.offsetX,
         offsetY: e.offsetY,
-        pressure: 0, // taper ends
+        pressure: 1,
         tiltX: 0,
         tiltY: 0,
         shiftKey: e.shiftKey,
@@ -20314,7 +20314,7 @@ module.exports = class Editor {
       this.onPointerUp({
         offsetX: e.offsetX,
         offsetY: e.offsetY,
-        pressure: 0, // taper ends
+        pressure: 1,
         tiltX: 0,
         tiltY: 0,
         shiftKey: e.shiftKey,
@@ -20601,6 +20601,19 @@ module.exports = class Brush extends Tool {
     this.points = [];
   }
 
+  addRoundLineCap(commands) {
+    let first = commands[0];
+    let last = commands[commands.length - 1];
+
+    let firstX = first[first.length - 2];
+    let firstY = first[first.length - 1];
+    let lastX = last[last.length - 2];
+    let lastY = last[last.length - 1];
+
+    commands.unshift([0x50, firstX, 0, firstY, Math.PI, 1.5 * Math.PI]);
+    commands.push([0x50, lastX, 0, lastY, 1.5 * Math.PI, 2 * Math.PI]);
+  }
+
   stroke() {
     let path = new Path();
     path.stroke = this.color.clone();
@@ -20608,6 +20621,9 @@ module.exports = class Brush extends Tool {
     let centerLine = PathFitter.fitPath(this.points.map(p => [p.x, p.y]));
     let weightLeft = PathFitter.fitPath(this.points.map(p => [p.length, p.left]), 1);
     let weightRight = PathFitter.fitPath(this.points.map(p => [p.length, p.right]), 1);
+
+    this.addRoundLineCap(weightLeft);
+    this.addRoundLineCap(weightRight);
 
     path.data.push(...centerLine);
     path.left.push(...weightLeft);
