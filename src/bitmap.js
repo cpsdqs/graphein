@@ -63,7 +63,7 @@ module.exports = class BitmapLayer extends Layer {
       if (this.texture) this.texture.dispose()
       this.texture = createTexture(gl, this.image)
       this.texture.magFilter = gl.NEAREST
-      this.texture.minFilter = gl.NEAREST
+      this.texture.minFilter = gl.LINEAR
       this.dirty = false
     } else if (this.dirty) {
       this.texture.setPixels(this.image)
