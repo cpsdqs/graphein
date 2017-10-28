@@ -215,7 +215,27 @@ const serialized = {
 
 const image = canvas.image = window.graphein.Image.deserialize(serialized)
 
+let bitmap = new graphein.Bitmap()
+bitmap.width = 500
+bitmap.height = 250
+bitmap.transform.type = 1
+bitmap.transform.data = [1, 0, 0, 1, 0, 250]
+bitmap.ctx.font = '24px sans-serif'
+bitmap.ctx.fillText('Bitmap!', 10, 24)
+bitmap.ctx.font = '16px monospace'
+bitmap.ctx.fillText('Vector: editor.currentLayer = image.children[0]', 10, 44)
+bitmap.ctx.fillText('Bitmap: editor.currentLayer = image.children[1]', 10, 60)
+bitmap.ctx.beginPath()
+bitmap.ctx.moveTo(0, 0)
+bitmap.ctx.lineTo(500, 0)
+bitmap.ctx.stroke()
+image.appendChild(bitmap)
+
 const editor = new (window.graphein.Editor)(canvas)
+
+canvas.render()
+
+editor.currentLayer = bitmap
 
 {
   // svg import

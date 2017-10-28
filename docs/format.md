@@ -134,10 +134,10 @@ A raster image object adds the following properties:
 
 | Name | Type    | Description |
 | ---- | ------- | ----------- |
-| x    | float32 | X position
-| y    | float32 | Y position
-| w    | float32 | Width
-| h    | float32 | Height
+| x    | float32 | anchor X in percent
+| y    | float32 | anchor Y in percent
+| w    | int32   | Width
+| h    | int32   | Height
 | m    | str     | Image mime type
 | d    | bin32   | Image binary blob
 

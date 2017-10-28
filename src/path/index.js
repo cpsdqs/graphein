@@ -240,6 +240,7 @@ module.exports = class Path extends Layer {
   render (gl, transform, context) {
     let subTransform = mat4.create()
     mat4.multiply(subTransform, transform, this.transform.toMat4())
+    this.renderChildren(gl, subTransform, context)
 
     let strokeColor = this.stroke ? this.stroke.toVec4() : [0, 0, 0, 0]
     let fillColor = this.fill ? this.fill.toVec4() : [0, 0, 0, 0]

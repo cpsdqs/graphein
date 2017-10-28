@@ -81,6 +81,36 @@ void main() {
       shader.attributes.position.location = 2
 
       shader
+    },
+    bitmap: do {
+      const shader = createShader(gl, `
+precision mediump float;
+
+attribute vec2 position;
+uniform mat4 transform;
+
+varying vec2 tex_coord;
+
+void main() {
+  gl_Position = transform * vec4(position, 0.0, 1.0);
+  tex_coord = position;
+}
+        `, `
+precision highp float;
+
+uniform sampler2D texture;
+
+varying vec2 tex_coord;
+
+void main() {
+  gl_FragColor = texture2D(texture, tex_coord);
+}
+        `)
+
+      shader.bind()
+      shader.attributes.position.location = 0
+
+      shader
     }
   }
 }
