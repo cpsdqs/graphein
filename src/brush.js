@@ -8,8 +8,6 @@ module.exports = class Brush extends Tool {
   constructor (...args) {
     super(...args)
 
-    this.color = new Color(0, 0, 0, 1)
-
     this.points = []
   }
 
@@ -30,7 +28,7 @@ module.exports = class Brush extends Tool {
     if (this.editor.currentLayer.type === 'b') {
       // bitmap
       const ctx = this.editor.currentLayer.ctx
-      ctx.fillStyle = '#000'
+      ctx.fillStyle = this.editor.color.toCSS()
 
       let makeCircle = (x, y, r) => {
         ctx.beginPath()
@@ -79,7 +77,7 @@ module.exports = class Brush extends Tool {
     } else {
       // vector
       let path = new Path()
-      path.stroke = this.color.clone()
+      path.stroke = this.editor.color.clone()
 
       let centerLine = PathFitter.fitPath(this.points.map(p => [p.x, p.y]))
       let weightLeft = PathFitter.fitPath(this.points.map(p => [p.length, p.left]), 1)

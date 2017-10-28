@@ -23,6 +23,8 @@ module.exports = class Editor {
       select: new Select(this)
     }
 
+    this.color = new Color(0, 0, 0, 1)
+    this.backgroundColor = new Color(1, 1, 1, 1)
     this.tool = this.tools.brush
 
     this.currentLayer = canvas.image.children[0]
@@ -214,10 +216,10 @@ module.exports = class Editor {
     this.previewStrokes.push(this.previewStroke)
 
     if (this.erasing) {
-      this.previewStroke.stroke = new Color(0, 1, 0, 0.5)
+      this.previewStroke.stroke = this.backgroundColor
       this.previewMaxWidth = 30
     } else {
-      this.previewStroke.stroke = new Color(1, 0, 1, 0.5)
+      this.previewStroke.stroke = this.color
       this.previewMaxWidth = 10
     }
 
@@ -335,8 +337,10 @@ module.exports = class Editor {
     this.previewStroke = null
     this.previewStrokes = []
 
+    let [x, y] = this.projectPoint([e.offsetX, e.offsetY])
+
     this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY)
-    this.tool.strokeEnd(e.offsetX, e.offsetY, left, right, this.roughLength, e)
+    this.tool.strokeEnd(x, y, left, right, this.roughLength, e)
     this.lastMouse = [e.offsetX, e.offsetY]
     this.canvas.render()
   }

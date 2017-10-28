@@ -20310,8 +20310,10 @@ module.exports = class Editor {
       this.previewStroke = null;
       this.previewStrokes = [];
 
+      let [x, y] = this.projectPoint([e.offsetX, e.offsetY]);
+
       this.renderCursor(e.offsetX, e.offsetY, e.pressure, e.tiltX, e.tiltY);
-      this.tool.strokeEnd(e.offsetX, e.offsetY, left, right, this.roughLength, e);
+      this.tool.strokeEnd(x, y, left, right, this.roughLength, e);
       this.lastMouse = [e.offsetX, e.offsetY];
       this.canvas.render();
     };
@@ -20371,6 +20373,8 @@ module.exports = class Editor {
       select: new Select(this)
     };
 
+    this.color = new Color(0, 0, 0, 1);
+    this.backgroundColor = new Color(1, 1, 1, 1);
     this.tool = this.tools.brush;
 
     this.currentLayer = canvas.image.children[0];
@@ -20552,10 +20556,10 @@ module.exports = class Editor {
     this.previewStrokes.push(this.previewStroke);
 
     if (this.erasing) {
-      this.previewStroke.stroke = new Color(0, 1, 0, 0.5);
+      this.previewStroke.stroke = this.backgroundColor;
       this.previewMaxWidth = 30;
     } else {
-      this.previewStroke.stroke = new Color(1, 0, 1, 0.5);
+      this.previewStroke.stroke = this.color;
       this.previewMaxWidth = 10;
     }
 
@@ -20632,8 +20636,6 @@ module.exports = class Brush extends Tool {
   constructor(...args) {
     super(...args);
 
-    this.color = new Color(0, 0, 0, 1);
-
     this.points = [];
   }
 
@@ -20654,7 +20656,7 @@ module.exports = class Brush extends Tool {
     if (this.editor.currentLayer.type === 'b') {
       // bitmap
       const ctx = this.editor.currentLayer.ctx;
-      ctx.fillStyle = '#000';
+      ctx.fillStyle = this.editor.color.toCSS();
 
       let makeCircle = (x, y, r) => {
         ctx.beginPath();
@@ -20699,7 +20701,7 @@ module.exports = class Brush extends Tool {
     } else {
       // vector
       let path = new Path();
-      path.stroke = this.color.clone();
+      path.stroke = this.editor.color.clone();
 
       let centerLine = PathFitter.fitPath(this.points.map(p => [p.x, p.y]));
       let weightLeft = PathFitter.fitPath(this.points.map(p => [p.length, p.left]), 1);
@@ -20759,7 +20761,7 @@ module.exports = class Eraser extends Tool {
       // bitmap
       const ctx = this.editor.currentLayer.ctx;
       // duplicate code from Brush, except for this line:
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = this.editor.backgroundColor.toCSS();
 
       let makeCircle = (x, y, r) => {
         ctx.beginPath();

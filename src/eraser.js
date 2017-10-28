@@ -16,7 +16,7 @@ module.exports = class Eraser extends Tool {
       // bitmap
       const ctx = this.editor.currentLayer.ctx
       // duplicate code from Brush, except for this line:
-      ctx.fillStyle = '#fff'
+      ctx.fillStyle = this.editor.backgroundColor.toCSS()
 
       let makeCircle = (x, y, r) => {
         ctx.beginPath()
