@@ -53,27 +53,18 @@ class Canvas extends window.HTMLElement {
   getProjection () {
     let near = 0.01
     let far = 3000
+    let aspect = this.canvas.width / this.canvas.height
     let fov = Math.sqrt(2) / 2
 
     let projection = mat4.create()
-    let a = Math.tan(Math.PI / 2 - fov / 2)
-    let b = 1 / (near - far)
-
-    projection[0] = a / b / far
-    projection[5] = a
-    projection[10] = b * (near + far)
-    projection[11] = -1
-    projection[14] = 2 * b * near * far
-    projection[15] = 0
-
+    mat4.perspective(projection, fov, aspect, near, far)
     return projection
   }
 
-  getWorldTransform () {
+  getScreenTransform () {
     let world = mat4.create()
-    mat4.scale(world, this.getProjection(), [-2 / this.image.width, -2 / this.image.height, 1])
+    mat4.scale(world, world, [2 / this.image.width, -2 / this.image.height, 1])
     mat4.translate(world, world, [-this.image.width / 2, -this.image.height / 2, -Math.E])
-
     return world
   }
 
@@ -90,7 +81,9 @@ class Canvas extends window.HTMLElement {
 
   getTransform () {
     let transform = mat4.create()
-    mat4.multiply(transform, this.context.transform, this.getWorldTransform())
+    mat4.multiply(transform, transform, this.getProjection())
+    mat4.multiply(transform, transform, this.context.transform)
+    mat4.multiply(transform, transform, this.getScreenTransform())
     return transform
   }
 
@@ -99,6 +92,8 @@ class Canvas extends window.HTMLElement {
     this.gl.viewport(0, 0, this.canvas.width, this.canvas.height)
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
     this.gl.enable(this.gl.DEPTH_TEST)
+    this.gl.depthMask(true)
+    this.gl.depthFunc(this.gl.LEQUAL)
     this.gl.enable(this.gl.BLEND)
     this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA)
 

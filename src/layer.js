@@ -50,9 +50,7 @@ module.exports = registry.types.g = class Layer {
   }
 
   renderChildren (gl, transform, context) {
-    for (let i = this.children.length - 1; i >= 0; i--) {
-      this.children[i].render(gl, transform, context)
-    }
+    this.children.forEach(child => child.render(gl, transform, context))
   }
 
   appendChild (child) {

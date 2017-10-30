@@ -235,8 +235,6 @@ const editor = new (window.graphein.Editor)(canvas)
 
 canvas.render()
 
-editor.currentLayer = bitmap
-
 {
   // svg import
   const div = document.createElement('div')
