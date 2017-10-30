@@ -571,14 +571,16 @@ module.exports = (_temp = _class = class Path extends Layer {
     this.strokeVAO.bind();
 
     let selected = context.selection.includes(this);
-    if (context.selection.includes(this)) {
-      // draw outlines
-      let shader = context.shaders.pathCenterLine;
+
+    if (fillColor[3] && this.fillTriangles.length) {
+      // fill if there's alpha
+      let shader = context.shaders.pathFill;
       shader.bind();
-      shader.uniforms.color = [1, 0.5, 0, 1];
+      shader.uniforms.color = fillColor;
+      shader.uniforms.selection_color = selected ? [1, 0.5, 0, 1] : fillColor;
       shader.uniforms.transform = transform;
 
-      this.strokeVAO.draw(gl.LINE_STRIP, this.flatCenterLines.length / 2);
+      this.strokeVAO.draw(gl.TRIANGLES, this.fillTriangles.length / 2);
     }
 
     if (strokeColor[3] && this.strokeVAOLength) {
@@ -591,15 +593,14 @@ module.exports = (_temp = _class = class Path extends Layer {
       this.strokeVAO.draw(gl.TRIANGLES, this.strokeVAOLength);
     }
 
-    if (fillColor[3] && this.fillTriangles.length) {
-      // fill if there's alpha
-      let shader = context.shaders.pathFill;
+    if (context.selection.includes(this)) {
+      // draw outlines
+      let shader = context.shaders.pathCenterLine;
       shader.bind();
-      shader.uniforms.color = fillColor;
-      shader.uniforms.selection_color = selected ? [1, 0.5, 0, 1] : fillColor;
+      shader.uniforms.color = [1, 0.5, 0, 1];
       shader.uniforms.transform = transform;
 
-      this.strokeVAO.draw(gl.TRIANGLES, this.fillTriangles.length / 2);
+      this.strokeVAO.draw(gl.LINE_STRIP, this.flatCenterLines.length / 2);
     }
 
     this.strokeVAO.unbind();
