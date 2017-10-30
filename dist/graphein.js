@@ -20327,7 +20327,7 @@ module.exports = class Editor {
       this.onPointerDown({
         offsetX: e.offsetX,
         offsetY: e.offsetY,
-        pressure: 1,
+        pressure: 0,
         tiltX: 0,
         tiltY: 0,
         shiftKey: e.shiftKey,
@@ -20336,10 +20336,11 @@ module.exports = class Editor {
     };
 
     this.onMouseMove = e => {
+      let delta = Math.hypot(e.offsetX - this.lastMouse[0], e.offsetY - this.lastMouse[1]);
       this.onPointerMove({
         offsetX: e.offsetX,
         offsetY: e.offsetY,
-        pressure: 1,
+        pressure: 1 - 1 / (delta / 50 + 1.4),
         tiltX: 0,
         tiltY: 0,
         shiftKey: e.shiftKey,
@@ -20348,10 +20349,11 @@ module.exports = class Editor {
     };
 
     this.onMouseUp = e => {
+      let delta = Math.hypot(e.offsetX - this.lastMouse[0], e.offsetY - this.lastMouse[1]);
       this.onPointerUp({
         offsetX: e.offsetX,
         offsetY: e.offsetY,
-        pressure: 1,
+        pressure: 1 - 1 / (delta / 50 + 1.4),
         tiltX: 0,
         tiltY: 0,
         shiftKey: e.shiftKey,
