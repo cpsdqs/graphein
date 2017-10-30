@@ -226,6 +226,11 @@ module.exports = class Editor {
     this.canvas.image.appendChild(this.previewStroke)
   }
 
+  getPressureForDelta (a, b) {
+    let delta = Math.hypot(a[0] - b[0], a[1] - b[1])
+    return 1 - 1 / (delta / 50 + 1.4)
+  }
+
   onPointerDown = e => {
     this.down = 'pointer'
 
@@ -246,9 +251,10 @@ module.exports = class Editor {
     this.createPreviewStroke()
 
     let [x, y] = this.projectPoint([e.offsetX, e.offsetY])
+    let pressure = e.pointerType === 'mouse' ? 0 : e.pressure
 
-    let left = e.pressure * this.previewMaxWidth / 2
-    let right = e.pressure * this.previewMaxWidth / 2
+    let left = pressure * this.previewMaxWidth / 2
+    let right = pressure * this.previewMaxWidth / 2
     this.previewStroke.addRoughPoint(x, y, left, right, true)
 
     this.lastPoint = [x, y]
@@ -287,8 +293,12 @@ module.exports = class Editor {
 
     let tiltVector = [Math.cos(tiltAngle), Math.sin(tiltAngle)]
 
-    let left = e.pressure * this.previewMaxWidth / 2
-    let right = e.pressure * this.previewMaxWidth / 2
+    let pressure = e.pointerType === 'mouse'
+      ? this.getPressureForDelta([e.offsetX, e.offsetY], this.lastMouse)
+      : e.pressure
+
+    let left = pressure * this.previewMaxWidth / 2
+    let right = pressure * this.previewMaxWidth / 2
 
     // dot left normal with tilt vector to get amount
     left += this.tiltAmount * Math.abs(vecLeft.map((x, i) => x * tiltVector[i]).reduce((a, b) => a + b, 0) * this.previewMaxWidth * tiltLength)
@@ -327,8 +337,13 @@ module.exports = class Editor {
   onPointerUp = e => {
     if (this.down !== 'pointer') return
     this.down = null
-    let left = e.pressure * this.previewMaxWidth / 2
-    let right = e.pressure * this.previewMaxWidth / 2
+
+    let pressure = e.pointerType === 'mouse'
+      ? this.getPressureForDelta([e.offsetX, e.offsetY], this.lastMouse)
+      : e.pressure
+
+    let left = pressure * this.previewMaxWidth / 2
+    let right = pressure * this.previewMaxWidth / 2
 
     for (let stroke of this.previewStrokes) {
       stroke.parentNode.removeChild(stroke)
@@ -362,11 +377,10 @@ module.exports = class Editor {
     })
   }
   onMouseMove = e => {
-    let delta = Math.hypot(e.offsetX - this.lastMouse[0], e.offsetY - this.lastMouse[1])
     this.onPointerMove({
       offsetX: e.offsetX,
       offsetY: e.offsetY,
-      pressure: 1 - 1 / (delta / 50 + 1.4),
+      pressure: this.getPressureForDelta([e.offsetX, e.offsetY], this.lastMouse),
       tiltX: 0,
       tiltY: 0,
       shiftKey: e.shiftKey,
@@ -374,11 +388,10 @@ module.exports = class Editor {
     })
   }
   onMouseUp = e => {
-    let delta = Math.hypot(e.offsetX - this.lastMouse[0], e.offsetY - this.lastMouse[1])
     this.onPointerUp({
       offsetX: e.offsetX,
       offsetY: e.offsetY,
-      pressure: 1 - 1 / (delta / 50 + 1.4),
+      pressure: this.getPressureForDelta([e.offsetX, e.offsetY], this.lastMouse),
       tiltX: 0,
       tiltY: 0,
       shiftKey: e.shiftKey,
